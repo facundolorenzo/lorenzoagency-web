@@ -44,6 +44,16 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(255,90,
 .fchip b{font-family:var(--disp);font-weight:700;margin-left:4px}
 .fchip.hot{border-color:rgba(255,90,31,.5)}
 .fchip.hot.on{background:rgba(255,90,31,.14)}
+/* franjas (secciones por estado) */
+.franja{margin-bottom:12px}
+.franja-h{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;border-bottom:1px solid var(--hair);
+  color:var(--fg);font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  padding:11px 4px;cursor:pointer;text-align:left}
+.franja-h b{margin-left:auto;font-family:var(--disp);font-weight:700;color:var(--muted);font-size:13px}
+.franja.hot .franja-h{color:var(--accent)}
+.franja.hot .franja-h b{color:var(--accent)}
+.chev{display:inline-block;transition:transform .18s;color:var(--accent);font-size:12px}
+.chev.o{transform:rotate(90deg)}
 /* barra de interés */
 .ibar{width:66px;height:7px;background:var(--hair2);border-radius:99px;overflow:hidden}
 .ifill{height:100%;border-radius:99px;transition:width .25s}
@@ -169,6 +179,7 @@ let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
 let leadFilter = "todos";
+let leadCollapsed = {};
 
 const P_STATES = ["borrador","enviada","aprobada","rechazada"];
 const I_STATES = ["pendiente","pagada","vencida"];
@@ -459,40 +470,41 @@ function interestBar(r){
   return `<span class="imini"><span class="ibar"><span class="ifill ${cls}" style="width:${pct}%"></span></span><span class="n">${r}</span></span>`;
 }
 
-/* ---------- LEADS (embudo) ---------- */
+/* ---------- LEADS (embudo por franjas) ---------- */
+function leadRowHtml(l){
+  const msg = l.message||"";
+  const short = msg.length>44 ? esc(msg.slice(0,44))+"…" : (esc(msg)||"(ver)");
+  return `<tr>
+    <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${esc(String(l.createdAt||"").slice(0,10))}</td>
+    <td>${esc(l.name||"—")}</td>
+    <td>${interestBar(l.respuestas)}</td>
+    <td style="font-size:12px">${l.email?esc(l.email):""}${l.phone?`<br><span style="color:var(--muted)">${esc(l.phone)}</span>`:""}</td>
+    <td>${l.service?`<span class="lrubro">${esc(l.service)}</span>`:"—"}</td>
+    <td style="max-width:240px"><button class="linkbtn" data-openlead="${l.id}">${short}</button>${l.mailsEnviados?`<br><span style="font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.1em">${l.mailsEnviados} mail(s) enviado(s)</span>`:""}</td>
+    <td><select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select></td>
+    <td><div class="rowactions">
+      <button class="btn sm ghost" data-openlead="${l.id}">Abrir</button>
+      <button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">🗑</button></div></td>
+  </tr>`;
+}
+
 function renderLeads(){
-  const counts={todos:leads.length};
-  for(const s of L_STATES) counts[s]=leads.filter(x=>x.status===s).length;
-  const chips=[["todos","Todos"]].concat(L_STATES.map(s=>[s,L_LABELS[s]]));
-  const chipHtml=chips.map(([k,lab])=>{
-    const n=counts[k]||0; const hot=(k==="respondio");
-    return `<button class="fchip ${leadFilter===k?'on':''} ${hot&&n?'hot':''}" data-leadfilter="${k}">${esc(lab)}${n?` <b>${n}</b>`:''}</button>`;
+  if(!leads.length){
+    $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Embudo de leads</h2></div>
+      <div class="empty"><b>Sin consultas todavía.</b><br>Cuando alguien complete el formulario del sitio, aparece acá.</div>`;
+    return;
+  }
+  const ths = `<tr><th>Fecha</th><th>Nombre</th><th>Interés</th><th>Contacto</th><th>Servicio</th><th>Mensaje</th><th>Estado</th><th class="r"></th></tr>`;
+  const groups = L_STATES.map(s=>[s, leads.filter(x=>x.status===s)]).filter(([,arr])=>arr.length>0);
+  const bands = groups.map(([s,arr])=>{
+    const open = !leadCollapsed[s];
+    const hot = (s==="respondio");
+    return `<div class="franja ${hot?'hot':''}">
+      <button class="franja-h" data-franja="${s}"><span class="chev ${open?'o':''}">▸</span><span>${esc(L_LABELS[s])}</span><b>${arr.length}</b></button>
+      ${open?`<div class="tablewrap"><table>${ths}${arr.map(leadRowHtml).join("")}</table></div>`:""}
+    </div>`;
   }).join("");
-  const list = leadFilter==="todos" ? leads : leads.filter(x=>x.status===leadFilter);
-  const body = list.length ? `<div class="tablewrap"><table>
-    <tr><th>Fecha</th><th>Nombre</th><th>Interés</th><th>Contacto</th><th>Servicio</th><th>Mensaje</th><th>Estado</th><th class="r"></th></tr>
-    ${list.map(l=>{
-      const del = confirmDel && confirmDel.col==="leads" && confirmDel.id===l.id;
-      const msg = l.message||"";
-      const short = msg.length>44 ? esc(msg.slice(0,44))+"…" : (esc(msg)||"(ver)");
-      return `<tr class="${del?'confirmrow':''}">
-      <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${esc(String(l.createdAt||"").slice(0,10))}</td>
-      <td>${esc(l.name||"—")}</td>
-      <td>${interestBar(l.respuestas)}</td>
-      <td style="font-size:12px">${l.email?esc(l.email):""}${l.phone?`<br><span style="color:var(--muted)">${esc(l.phone)}</span>`:""}</td>
-      <td>${l.service?`<span class="lrubro">${esc(l.service)}</span>`:"—"}</td>
-      <td style="max-width:240px"><button class="linkbtn" data-openlead="${l.id}">${short}</button>${l.mailsEnviados?`<br><span style="font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.1em">${l.mailsEnviados} mail(s) enviado(s)</span>`:""}</td>
-      <td><select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select></td>
-      <td><div class="rowactions">
-        <button class="btn sm ghost" data-openlead="${l.id}">Abrir</button>
-        <button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">🗑</button></div></td>
-    </tr>`}).join("")}
-    </table></div>`
-    : `<div class="empty"><b>${leadFilter==="todos"?"Sin consultas todavía.":"Nada en esta columna."}</b>${leadFilter==="todos"?"<br>Cuando alguien complete el formulario del sitio, aparece acá.":""}</div>`;
-  $app().innerHTML = `
-  <div class="bar"><h2><span class="tick"></span>Embudo de leads</h2></div>
-  <div class="fchips">${chipHtml}</div>
-  ${body}`;
+  $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Embudo de leads</h2></div>${bands}`;
 }
 
 function leadModalHtml(){
@@ -553,6 +565,8 @@ function note(msg){
 document.addEventListener("click", async e=>{
   const t = e.target;
   if(!sb) return;
+  const fr = t.closest && t.closest("[data-franja]");
+  if(fr){ const s=fr.dataset.franja; leadCollapsed[s]=!leadCollapsed[s]; renderApp(); return; }
   if(t.dataset.leadfilter){ leadFilter=t.dataset.leadfilter; renderApp(); return; }
   if(t.dataset.rehacer){
     const id=t.dataset.rehacer; const l=leads.find(x=>x.id===id); if(!l) return;
