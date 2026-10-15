@@ -8,24 +8,24 @@ En Supabase → **SQL Editor** → pegá y ejecutá el archivo `panel/migracion-
 Agrega las columnas nuevas de `leads`, migra los estados viejos al embudo de 6 y crea la tabla
 `reply_examples` (aprendizaje).
 
-## 2) Desplegar las funciones `sugerir` y `enviar`
-Necesitás la CLI de Supabase (`npm i -g supabase`), logueada en el proyecto `lorenzo-agency`.
+## 2) Desplegar `sugerir` y `enviar` (desde el navegador, sin terminal)
+En Supabase → menú izquierdo **Edge Functions** → **Deploy a new function** → **Via Editor**.
 
-Cargar los secrets (una vez):
-```
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-...        # tu API key de Anthropic
-supabase secrets set ANTHROPIC_MODEL=claude-sonnet-5-5   # opcional (default ya es este)
-supabase secrets set SMTP_USER=talk@lorenzoagency.tech   # email completo de la compañía
-supabase secrets set SMTP_PASS=********                  # contraseña del buzón Private Email
-# SMTP_FROM es opcional (default = SMTP_USER)
-```
-> `SUPABASE_URL` y `SUPABASE_ANON_KEY` ya existen solos dentro de las funciones, no hay que cargarlos.
+Para cada función:
+1. Nombre: `sugerir` (y después `enviar`).
+2. Borrá el código de ejemplo y pegá el contenido completo del archivo
+   `supabase/functions/sugerir/index.ts` (y `enviar/index.ts`).
+3. Tocá **Deploy**.
 
-Desplegar:
+Cargar los secrets (una vez) → **Edge Functions → Secrets** (o Project Settings → Edge Functions):
 ```
-supabase functions deploy sugerir
-supabase functions deploy enviar
+ANTHROPIC_API_KEY = sk-ant-...            (tu API key de Anthropic)
+ANTHROPIC_MODEL   = claude-sonnet-5-5     (opcional, ya es el default)
+SMTP_USER         = talk@lorenzoagency.tech   (email completo de la compañía)
+SMTP_PASS         = ********              (contraseña del buzón Private Email)
 ```
+> `SUPABASE_URL` y `SUPABASE_ANON_KEY` ya existen solos dentro de las funciones.
+> Fuente del método por navegador: https://supabase.com/docs/guides/functions/quickstart-dashboard
 
 ## 3) Checker de respuestas (GitHub Actions, ya configurado)
 Corre solo cada 15 min (`.github/workflows/checker-respuestas.yml`). Solo faltan 2 secrets en GitHub
@@ -37,7 +37,7 @@ Corre solo cada 15 min (`.github/workflows/checker-respuestas.yml`). Solo faltan
 ---
 
 ### Qué hace cada pieza
-- **sugerir** — toma el mensaje del lead + el perfil de LORENZO (`_shared/perfil.ts`) + ejemplos
+- **sugerir** — toma el mensaje del lead + el perfil de LORENZO (dentro de `sugerir/index.ts`) + ejemplos
   aprobados del mismo rubro → pide a Claude un borrador. "Rehacer" = otra versión.
 - **enviar** — manda el mail por SMTP desde Private Email, marca el lead `enviado`, suma al
   contador y guarda el par sugerencia→final en `reply_examples` (así aprende).

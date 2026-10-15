@@ -132,6 +132,11 @@ th.r{text-align:right}
 .notes{margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid var(--hair2);padding-top:8px;white-space:pre-wrap}
 .offline{padding:40px 20px;text-align:center;color:var(--muted)}
 .confirmrow{background:rgba(229,96,76,.06)}
+.cpop-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60}
+.cpop{background:var(--bg1);border:1px solid var(--hair);border-radius:14px;padding:20px 22px;max-width:320px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.cpop-t{font-size:15px;font-weight:700;margin-bottom:4px}
+.cpop-s{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+.cpop-a{display:flex;gap:10px;justify-content:flex-end}
 .login{max-width:360px;margin:12vh auto 0;padding:0 20px}
 .login .box{background:var(--card);border:1px solid var(--hair2);border-radius:14px;padding:26px}
 .login h1{font-size:13px;letter-spacing:.2em;font-weight:600;margin-bottom:2px}
@@ -258,7 +263,7 @@ function renderApp(){
     ${tabsHtml()}
     <div id="app"></div>
     <footer><span>LORENZO AGENCY · MIAMI, FL</span><span>TALK@LORENZOAGENCY.TECH</span></footer>
-  </div>` + leadModalHtml();
+  </div>` + leadModalHtml() + confirmHtml();
   renderBody();
   document.getElementById("logout").onclick = async()=>{ await sb.auth.signOut(); };
   document.getElementById("tabs").addEventListener("click",e=>{
@@ -337,9 +342,7 @@ function proposalTable(list, actions=true){
     <td class="money">${money(p.amount)}</td>
     <td>${statusPill("proposals",p)}</td>
     <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">${esc(p.date||"")}</td>
-    ${actions&&canWrite?`<td><div class="rowactions">${del
-      ? `<button class="btn sm danger" data-delyes="proposals:${p.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
-      : `<button class="btn sm ghost" data-edit="proposals:${p.id}">Editar</button><button class="btn sm ghost" data-del="proposals:${p.id}">✕</button>`}</div></td>`:(actions?'<td></td>':'')}
+    ${actions&&canWrite?`<td><div class="rowactions"><button class="btn sm ghost" data-edit="proposals:${p.id}">Editar</button><button class="btn sm ghost" data-del="proposals:${p.id}">✕</button></div></td>`:(actions?'<td></td>':'')}
   </tr>`}).join("")}
   </table></div>`;
 }
@@ -388,9 +391,7 @@ function renderInvoices(){
       <td>${statusPill("invoices",i)}</td>
       <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">${esc(i.issued||"")}</td>
       <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">${esc(i.due||"")}</td>
-      <td><div class="rowactions">${del
-        ? `<button class="btn sm danger" data-delyes="invoices:${i.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
-        : `<button class="btn sm ghost" data-edit="invoices:${i.id}">Editar</button><button class="btn sm ghost" data-del="invoices:${i.id}">✕</button>`}</div></td>
+      <td><div class="rowactions"><button class="btn sm ghost" data-edit="invoices:${i.id}">Editar</button><button class="btn sm ghost" data-del="invoices:${i.id}">✕</button></div></td>
     </tr>`}).join("")}
     </table></div>` :
     '<div class="empty"><b>Sin facturas todavía.</b></div>'}`;
@@ -424,9 +425,7 @@ function renderClients(){
     return `<div class="clientcard">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
         <div><h3>${esc(c.name)}</h3><div class="co">${esc(c.company||"")}</div></div>
-        <div class="rowactions">${del
-          ? `<button class="btn sm danger" data-delyes="clients:${c.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
-          : `<button class="btn sm ghost" data-edit="clients:${c.id}">Editar</button><button class="btn sm ghost" data-del="clients:${c.id}">✕</button>`}</div>
+        <div class="rowactions"><button class="btn sm ghost" data-edit="clients:${c.id}">Editar</button><button class="btn sm ghost" data-del="clients:${c.id}">✕</button></div>
       </div>
       <div class="kv">
         ${c.contact?`<div><span>CONTACTO</span>${esc(c.contact)}</div>`:""}
@@ -486,9 +485,7 @@ function renderLeads(){
       <td><select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select></td>
       <td><div class="rowactions">
         <button class="btn sm ghost" data-openlead="${l.id}">Abrir</button>
-        ${del
-        ? `<button class="btn sm danger" data-delyes="leads:${l.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
-        : `<button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">🗑</button>`}</div></td>
+        <button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">🗑</button></div></td>
     </tr>`}).join("")}
     </table></div>`
     : `<div class="empty"><b>${leadFilter==="todos"?"Sin consultas todavía.":"Nada en esta columna."}</b>${leadFilter==="todos"?"<br>Cuando alguien complete el formulario del sitio, aparece acá.":""}</div>`;
@@ -529,11 +526,21 @@ function leadModalHtml(){
     <div class="lactions">
       ${l.email?`<button class="btn-reply" data-replymail="${esc(l.email)}">Copiar email / abrir webmail</button>`:``}
       <select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select>
-      ${confirmDel && confirmDel.col==="leads" && confirmDel.id===l.id
-        ? `<button class="btn sm danger" data-delyes="leads:${l.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
-        : `<button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">🗑</button>`}
+      <button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">🗑</button>
     </div>
   </div></div>`;
+}
+
+function confirmHtml(){
+  if(!confirmDel) return "";
+  const labels={proposals:"esta propuesta",invoices:"esta factura",clients:"este cliente",leads:"esta consulta"};
+  return `<div class="cpop-bg" data-delno="1"><div class="cpop">
+    <div class="cpop-t">¿Borrar ${labels[confirmDel.col]||"esto"}?</div>
+    <div class="cpop-s">No se puede deshacer.</div>
+    <div class="cpop-a">
+      <button class="btn ghost sm" data-delno="1">No</button>
+      <button class="btn sm danger" data-delyes="${confirmDel.col}:${confirmDel.id}">Sí, borrar</button>
+    </div></div></div>`;
 }
 
 /* ---------- eventos ---------- */
