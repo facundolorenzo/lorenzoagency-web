@@ -116,7 +116,6 @@ TAREA: redactá SOLO el cuerpo del email de respuesta a la consulta. Reglas:
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 900,
-        temperature: previous ? 1 : 0.7,
         system: sys,
         messages: [{ role: "user", content: user }],
       }),
