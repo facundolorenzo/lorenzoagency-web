@@ -1,14 +1,16 @@
-// Checker de respuestas — corre en GitHub Actions (cron).
-// Lee el buzón de Private Email por IMAP y detecta quién respondió.
-//  - lead que respondió  -> status 'respondio', cuenta respuestas (barra de interés), guarda último texto
-//  - lead 'enviado' sin respuesta hace +3 días -> 'sin_respuesta' (seguimiento)
-// Usa Supabase REST con la service_role key (secret). No toca el Gmail personal.
+// Checker — corre en GitHub Actions (cron). Dos trabajos:
+//  1) Lee el buzón de Private Email (IMAP) y detecta quién respondió:
+//     - mueve el lead a 'respondio', cuenta respuestas (barra de interés),
+//       guarda el texto de la respuesta y redacta un borrador de contestación.
+//     - lead 'enviado' sin respuesta hace +N días -> 'sin_respuesta'.
+//  2) Para cada lead NUEVO del sitio sin borrador, redacta el primer borrador.
+// Redacta llamando a la Edge Function `sugerir` (ahí vive el cerebro + la API key).
 import { ImapFlow } from "imapflow";
 
 const SB_URL = process.env.SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const IMAP_USER = process.env.IMAP_USER;   // email completo de la compañía
-const IMAP_PASS = process.env.IMAP_PASS;   // contraseña del buzón
+const IMAP_USER = process.env.IMAP_USER;
+const IMAP_PASS = process.env.IMAP_PASS;
 const DIAS_SIN_RESPUESTA = Number(process.env.DIAS_SIN_RESPUESTA || 3);
 
 for (const [k, v] of Object.entries({ SUPABASE_URL: SB_URL, SUPABASE_SERVICE_ROLE_KEY: SB_KEY, IMAP_USER, IMAP_PASS })) {
@@ -23,55 +25,77 @@ async function rest(path, opts = {}) {
   return txt ? JSON.parse(txt) : null;
 }
 
-const withTimeout = (promise, ms, label) =>
-  Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT: " + label + " (" + ms + "ms)")), ms))]);
+// Pide al agente un borrador de respuesta (usa la service_role key para autorizarse)
+async function draft(lead, message) {
+  try {
+    const res = await fetch(SB_URL + "/functions/v1/sugerir", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + SB_KEY, apikey: SB_KEY },
+      body: JSON.stringify({ message: message || "", name: lead.name || "", service: lead.service || "" }),
+    });
+    if (!res.ok) { console.error("   sugerir ->", res.status, (await res.text()).slice(0, 140)); return null; }
+    const j = await res.json();
+    return j.reply || null;
+  } catch (e) { console.error("   draft falló:", e && e.message); return null; }
+}
+
+const withTimeout = (p, ms, label) =>
+  Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT: " + label + " (" + ms + "ms)")), ms))]);
 
 async function main() {
-  console.log("1) Leyendo leads en espera desde Supabase...");
-  const leads = await rest(
-    "leads?select=id,email,status,fecha_primer_envio,respuestas_lead&fecha_primer_envio=not.is.null&status=in.(enviado,sin_respuesta)"
-  );
-  console.log("   leads en espera:", leads.length);
-  if (!leads.length) { console.log("No hay leads en espera de respuesta. Fin."); return; }
-
-  console.log("2) Conectando a IMAP mail.privateemail.com:993 como", IMAP_USER, "...");
-  const imap = new ImapFlow({
-    host: "mail.privateemail.com", port: 993, secure: true,
-    auth: { user: IMAP_USER, pass: IMAP_PASS }, logger: false, emitLogs: false,
-  });
-  imap.on("error", (e) => console.error("   IMAP event error:", e && e.message));
-  try {
-    await withTimeout(imap.connect(), 20000, "conectar/login IMAP — revisá IMAP_PASS o si GitHub alcanza el puerto 993");
-  } catch (e) {
-    console.error("ERROR DE CONEXIÓN IMAP:", e && e.message);
-    throw e;
+  // ===== Trabajo 2 (sin IMAP): borrador para leads nuevos del sitio =====
+  console.log("A) Leads nuevos sin borrador...");
+  const nuevos = await rest("leads?select=id,name,service,message,status,borrador&status=eq.nuevo&borrador=is.null");
+  console.log("   nuevos sin borrador:", nuevos.length);
+  for (const l of nuevos) {
+    const texto = await draft(l, l.message);
+    if (texto) { await rest("leads?id=eq." + l.id, { method: "PATCH", body: JSON.stringify({ borrador: texto }) }); console.log("   ✎ borrador listo:", l.email || l.name || l.id); }
   }
+
+  // ===== Trabajo 1 (IMAP): detectar respuestas =====
+  console.log("B) Leads esperando respuesta...");
+  const leads = await rest(
+    "leads?select=id,name,email,service,message,status,fecha_primer_envio,respuestas_lead&fecha_primer_envio=not.is.null&status=in.(enviado,sin_respuesta)"
+  );
+  console.log("   en espera:", leads.length);
+  if (!leads.length) { console.log("Nada que chequear por IMAP. Fin."); return; }
+
+  console.log("   Conectando IMAP mail.privateemail.com:993 como", IMAP_USER, "...");
+  const imap = new ImapFlow({ host: "mail.privateemail.com", port: 993, secure: true, auth: { user: IMAP_USER, pass: IMAP_PASS }, logger: false, emitLogs: false });
+  imap.on("error", (e) => console.error("   IMAP event error:", e && e.message));
+  try { await withTimeout(imap.connect(), 20000, "conectar/login IMAP (revisá IMAP_PASS)"); }
+  catch (e) { console.error("ERROR DE CONEXIÓN IMAP:", e && e.message); throw e; }
   console.log("   IMAP conectado OK ✓");
 
   const lock = await imap.getMailboxLock("INBOX");
   const now = Date.now();
   let detectadas = 0, seguimiento = 0;
-
   try {
     for (const l of leads) {
       if (!l.email) continue;
       const since = new Date(l.fecha_primer_envio);
       let uids = [];
-      try { uids = await imap.search({ from: l.email, since }, { uid: true }); } catch (e) { console.error("   search falló para", l.email, e && e.message); uids = []; }
+      try { uids = await imap.search({ from: l.email, since }, { uid: true }); } catch (e) { console.error("   search", l.email, e && e.message); uids = []; }
       const count = Array.isArray(uids) ? uids.length : 0;
+      const prev = Number(l.respuestas_lead) || 0;
 
       if (count > 0) {
-        let snippet = "";
+        // leer el texto de la última respuesta
+        let texto = "";
         try {
-          const lastUid = uids[uids.length - 1];
-          const msg = await imap.fetchOne(lastUid, { bodyParts: ["text"] }, { uid: true });
+          const msg = await imap.fetchOne(uids[uids.length - 1], { bodyParts: ["text"] }, { uid: true });
           const part = msg && msg.bodyParts && msg.bodyParts.get("text");
-          if (part) snippet = part.toString("utf8").replace(/\s+/g, " ").slice(0, 500);
-        } catch (e) { console.error("   no pude leer el cuerpo de", l.email, e && e.message); }
-        await rest("leads?id=eq." + l.id, {
-          method: "PATCH",
-          body: JSON.stringify({ status: "respondio", respuestas_lead: count, ultima_respuesta_texto: snippet || null }),
-        });
+          if (part) texto = part.toString("utf8").replace(/\s+/g, " ").trim().slice(0, 1500);
+        } catch (e) { console.error("   body", l.email, e && e.message); }
+
+        const patch = { status: "respondio", respuestas_lead: count };
+        if (texto) patch.ultima_respuesta_texto = texto;
+        // si es una respuesta NUEVA (subió el contador), redacto un borrador de contestación
+        if (count !== prev) {
+          const b = await draft(l, texto || l.message);
+          if (b) patch.borrador = b;
+        }
+        await rest("leads?id=eq." + l.id, { method: "PATCH", body: JSON.stringify(patch) });
         detectadas++;
         console.log("   ✓ respondió:", l.email, "(" + count + ")");
       } else if (l.status === "enviado") {
@@ -83,11 +107,8 @@ async function main() {
         }
       }
     }
-  } finally {
-    lock.release();
-    await imap.logout();
-  }
-  console.log("3) Listo. Respondieron:", detectadas, "· pasaron a seguimiento:", seguimiento);
+  } finally { lock.release(); await imap.logout(); }
+  console.log("Listo. Respondieron:", detectadas, "· a seguimiento:", seguimiento);
 }
 
 main().catch((e) => { console.error("FALLÓ EL CHECKER:", e && e.message ? e.message : e); process.exit(1); });

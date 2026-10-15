@@ -65,8 +65,12 @@ Deno.serve(async (req) => {
     const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supa = createClient(SB_URL, SB_ANON, { global: { headers: { Authorization: auth } } });
 
-    const { data: isAdmin } = await supa.rpc("is_admin");
-    if (!isAdmin) return json({ error: "No autorizado" }, 403);
+    // Permitido si es admin (panel) o si el que llama trae la service_role key (checker/backend)
+    const token = (auth || "").replace(/^Bearer\s+/i, "");
+    const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    let allowed = !!SERVICE && token === SERVICE;
+    if (!allowed) { const { data: isAdmin } = await supa.rpc("is_admin"); allowed = !!isAdmin; }
+    if (!allowed) return json({ error: "No autorizado" }, 403);
 
     const { message = "", name = "", service = "", previous = "" } = await req.json();
 

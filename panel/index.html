@@ -11,7 +11,7 @@
   --bg0:#0B0C0E; --bg1:#121316; --card:rgba(255,255,255,.028);
   --fg:#EFF0F3; --muted:#93969D; --faint:#6A6D74;
   --hair:rgba(236,238,243,.14); --hair2:rgba(236,238,243,.08);
-  --accent:#FF5A1F;
+  --accent:#DD7D47;
   --ok:#4CC38A; --warn:#E5B454; --bad:#E5604C; --info:#6AA5E8;
   --disp:'Archivo',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
   color-scheme:dark;
@@ -27,7 +27,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:16px;fl
 nav{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 24px}
 nav button{background:none;border:1px solid var(--hair2);color:var(--muted);font-family:var(--mono);
   font-size:11px;letter-spacing:.14em;padding:9px 16px;border-radius:999px;cursor:pointer}
-nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(255,90,31,.08)}
+nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125,71,.08)}
 .nbadge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 6px;
   margin-left:8px;border-radius:999px;background:var(--accent);color:#fff;font-family:var(--disp);font-size:11px;
   font-weight:700;line-height:1;vertical-align:middle}
@@ -42,10 +42,10 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(255,90,
 .fchips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
 .fchip{background:none;border:1px solid var(--hair2);color:var(--muted);font-family:var(--mono);font-size:10.5px;
   letter-spacing:.1em;padding:7px 12px;border-radius:999px;cursor:pointer;text-transform:uppercase}
-.fchip.on{color:var(--fg);border-color:var(--accent);background:rgba(255,90,31,.08)}
+.fchip.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125,71,.08)}
 .fchip b{font-family:var(--disp);font-weight:700;margin-left:4px}
-.fchip.hot{border-color:rgba(255,90,31,.5)}
-.fchip.hot.on{background:rgba(255,90,31,.14)}
+.fchip.hot{border-color:rgba(221,125,71,.5)}
+.fchip.hot.on{background:rgba(221,125,71,.14)}
 /* franjas (secciones por estado) */
 .franja{margin-bottom:12px}
 .franja-h{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;border-bottom:1px solid var(--hair);
@@ -74,6 +74,9 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(255,90,
   border-bottom:1px solid var(--hair2)}
 .lcontact span{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint);margin-right:4px}
 .lmsg{font-size:19px;line-height:1.5;color:var(--fg);font-weight:500;white-space:pre-wrap;word-break:break-word;margin:6px 0 6px}
+.lreplied{margin:16px 0 0;border-left:2px solid var(--accent);padding:2px 0 2px 12px}
+.lreplied-h{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin-bottom:5px}
+.lreplied-b{font-size:14px;line-height:1.55;color:#C9CBD1;white-space:pre-wrap;word-break:break-word}
 /* respuesta sugerida */
 .lreplywrap{margin:18px 0 22px;border-top:1px solid var(--hair2);padding-top:18px}
 .lreplyhead{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;
@@ -526,6 +529,7 @@ function leadModalHtml(){
       ${l.phone?`<div><span>TEL</span><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">📞 ${esc(l.phone)}</a></div>`:""}
     </div>
     <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
+    ${l.ultimaRespuesta?`<div class="lreplied"><div class="lreplied-h">↩ Respondió</div><div class="lreplied-b">${esc(l.ultimaRespuesta)}</div></div>`:""}
 
     <div class="lreplywrap">
       <div class="lreplyhead"><span>Respuesta sugerida ${cnt}</span><span class="c" style="color:var(--faint)">editá lo que quieras · el agente aprende</span></div>
