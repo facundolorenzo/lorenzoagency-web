@@ -69,6 +69,21 @@ async function esConsultaReal(message) {
   } catch (e) { console.error("   classify falló:", e && e.message); return false; }
 }
 
+// Traduce un texto al español llamando a la rama translate de `sugerir`. Ante error -> null.
+async function traducir(texto) {
+  if (!texto || !String(texto).trim()) return null;
+  try {
+    const res = await fetch(SB_URL + "/functions/v1/sugerir", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + SB_KEY, apikey: SB_KEY },
+      body: JSON.stringify({ translate: true, message: texto }),
+    });
+    if (!res.ok) { console.error("   traducir ->", res.status); return null; }
+    const j = await res.json();
+    return j.reply || null;
+  } catch (e) { console.error("   traducir falló:", e && e.message); return null; }
+}
+
 const withTimeout = (p, ms, label) =>
   Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT: " + label + " (" + ms + "ms)")), ms))]);
 
@@ -92,7 +107,7 @@ async function main() {
   console.log("   nuevos sin borrador:", nuevos.length);
   for (const l of nuevos) {
     const texto = await draft(l, l.message);
-    if (texto) { await rest("leads?id=eq." + l.id, { method: "PATCH", body: JSON.stringify({ borrador: texto }) }); console.log("   ✎ borrador listo:", l.email || l.name || l.id); }
+    if (texto) { await rest("leads?id=eq." + l.id, { method: "PATCH", body: JSON.stringify({ borrador: texto, borrador_traduccion_es: null }) }); console.log("   ✎ borrador listo:", l.email || l.name || l.id); }
   }
 
   // ===== Trabajo 1 (IMAP): detectar respuestas =====
@@ -130,7 +145,8 @@ async function main() {
         // si es una respuesta NUEVA (subió el contador), redacto un borrador de contestación
         if (count !== prev) {
           const b = await draft(l, texto || l.message);
-          if (b) patch.borrador = b;
+          if (b) { patch.borrador = b; patch.borrador_traduccion_es = null; }
+          if (texto) patch.respuesta_traduccion_es = null; // refrescar traducción de la respuesta
         }
         await rest("leads?id=eq." + l.id, { method: "PATCH", body: JSON.stringify(patch) });
         detectadas++;
@@ -187,11 +203,41 @@ async function main() {
       catch (e) { console.error("   insert lead", c.addr, e && e.message); continue; }
       nuevosMail++; known.add(c.addr);
       const lead = Array.isArray(created) ? created[0] : created;
-      try { const b = await draft({ name: row.name, service: "", message: mensaje }, mensaje); if (b && lead && lead.id) await rest("leads?id=eq." + lead.id, { method: "PATCH", body: JSON.stringify({ borrador: b }) }); } catch (e) {}
+      try { const b = await draft({ name: row.name, service: "", message: mensaje }, mensaje); if (b && lead && lead.id) await rest("leads?id=eq." + lead.id, { method: "PATCH", body: JSON.stringify({ borrador: b, borrador_traduccion_es: null }) }); } catch (e) {}
       console.log("   + lead nuevo desde email:", c.addr);
     }
     console.log("   leads nuevos desde email:", nuevosMail, "· descartados por el agente:", descartadosIA);
   } finally { lock.release(); await imap.logout(); }
+
+  // ===== Trabajo D: traducciones al español para que SHAI lea sin re-traducir =====
+  // Genera y GUARDA la traducción cuando falta (mensaje, borrador y respuesta del lead).
+  // Para leads en español la "traducción" es el mismo texto (así la API siempre tiene algo).
+  console.log("D) Traducciones para SHAI...");
+  const paraTrad = await rest(
+    "leads?select=id,message,borrador,ultima_respuesta_texto,idioma,traduccion_es,borrador_traduccion_es,respuesta_traduccion_es" +
+    "&or=(idioma.is.null,traduccion_es.is.null,borrador_traduccion_es.is.null,respuesta_traduccion_es.is.null)&limit=40"
+  );
+  let traducidos = 0;
+  for (const l of paraTrad) {
+    const idioma = l.idioma || detectLang(l.message || "");
+    const patch = {};
+    if (!l.idioma) patch.idioma = idioma;
+    const esIngles = idioma === "en";
+    // mensaje del lead
+    if (l.message && l.traduccion_es == null)
+      patch.traduccion_es = esIngles ? (await traducir(l.message)) : l.message;
+    // borrador de respuesta
+    if (l.borrador && l.borrador_traduccion_es == null)
+      patch.borrador_traduccion_es = esIngles ? (await traducir(l.borrador)) : l.borrador;
+    // respuesta que mandó el lead
+    if (l.ultima_respuesta_texto && l.respuesta_traduccion_es == null)
+      patch.respuesta_traduccion_es = esIngles ? (await traducir(l.ultima_respuesta_texto)) : l.ultima_respuesta_texto;
+    if (Object.keys(patch).length) {
+      try { await rest("leads?id=eq." + l.id, { method: "PATCH", body: JSON.stringify(patch) }); traducidos++; } catch (e) { console.error("   trad patch", l.id, e && e.message); }
+    }
+  }
+  console.log("   traducciones guardadas:", traducidos);
+
   console.log("Listo. Respondieron:", detectadas, "· a seguimiento:", seguimiento);
 }
 

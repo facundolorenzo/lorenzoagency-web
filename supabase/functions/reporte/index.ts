@@ -40,6 +40,22 @@ Deno.serve(async (req) => {
 
     // Con service_role conviene un cliente que no herede el JWT (bypassa RLS)
     const db = (SERVICE && token === SERVICE) ? createClient(SB_URL, SERVICE) : supa;
+
+    // Traducir al español llamando a la rama translate de `sugerir` (fallback si falta en la base)
+    async function traducir(texto: string): Promise<string | null> {
+      if (!texto || !SERVICE) return null;
+      try {
+        const r = await fetch(SB_URL + "/functions/v1/sugerir", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + SERVICE, apikey: SERVICE },
+          body: JSON.stringify({ translate: true, message: texto }),
+        });
+        if (!r.ok) return null;
+        const j = await r.json();
+        return j.reply || null;
+      } catch { return null; }
+    }
+
     const { data: leads } = await db.from("leads").select("*").order("created_at", { ascending: false });
     const L = leads || [];
     const lang = (l: any) => l.idioma || detectLang(l.message || "");
@@ -67,6 +83,45 @@ Deno.serve(async (req) => {
     const nuevosDetalle = L.filter((l: any) => l.status === "nuevo").map((l: any) => ({ nombre: nombre(l), email: l.email || null, idioma: lang(l), servicio: l.service || null }));
     const calientes = L.filter((l: any) => l.status === "respondio").map((l: any) => ({ nombre: nombre(l), email: l.email || null, idioma: lang(l) }));
 
+    // ===== REVISAR: por cada ítem a revisar, ORIGINAL + IDIOMA + TRADUCCIÓN al español =====
+    // Usa la traducción guardada en la base; si falta y el lead es inglés, la traduce AHORA y la guarda (cache).
+    const paraHoyLeads = L.filter((l: any) =>
+      l.status === "nuevo" || l.status === "respondio" ||
+      (["enviado", "sin_respuesta"].includes(l.status) && vencido(l))
+    );
+    const revisar: any[] = [];
+    for (const l of paraHoyLeads) {
+      const idi = lang(l);
+      const esIngles = idi === "en";
+      let mensaje_es = l.traduccion_es, borrador_es = l.borrador_traduccion_es, respuesta_es = l.respuesta_traduccion_es;
+      const patch: Record<string, string | null> = {};
+      if (esIngles) {
+        if (l.message && mensaje_es == null) { mensaje_es = await traducir(l.message); patch.traduccion_es = mensaje_es; }
+        if (l.borrador && borrador_es == null) { borrador_es = await traducir(l.borrador); patch.borrador_traduccion_es = borrador_es; }
+        if (l.ultima_respuesta_texto && respuesta_es == null) { respuesta_es = await traducir(l.ultima_respuesta_texto); patch.respuesta_traduccion_es = respuesta_es; }
+      } else {
+        // español: la "traducción" es el mismo texto
+        mensaje_es = mensaje_es ?? l.message ?? null;
+        borrador_es = borrador_es ?? l.borrador ?? null;
+        respuesta_es = respuesta_es ?? l.ultima_respuesta_texto ?? null;
+      }
+      if (Object.keys(patch).length) { try { await db.from("leads").update(patch).eq("id", l.id); } catch { /* cache best-effort */ } }
+      revisar.push({
+        id: l.id,
+        nombre: nombre(l),
+        email: l.email || null,
+        idioma: idi,
+        estado: l.status,
+        accion: l.status === "nuevo" ? "Responder" : l.status === "respondio" ? "Contestar" : (l.next_action_tipo === "llamada" ? "Llamar" : "Seguimiento"),
+        mensaje: l.message || null,            // lo que escribió el lead (original)
+        mensaje_es: mensaje_es || null,        // traducción al español
+        borrador: l.borrador || null,          // respuesta sugerida (original, en el idioma del lead)
+        borrador_es: borrador_es || null,      // traducción al español del borrador
+        respuesta: l.ultima_respuesta_texto || null,  // última respuesta del lead (original)
+        respuesta_es: respuesta_es || null,    // traducción al español
+      });
+    }
+
     const resumenTexto =
       `Reporte LORENZO Agency. Tenés ${paraHoy.length} acciones para hoy. ` +
       `${nuevos} consultas nuevas sin contestar${nuevos ? ` (${nuevosDetalle.filter(n => n.idioma === "es").length} en español, ${nuevosDetalle.filter(n => n.idioma === "en").length} en inglés)` : ""}. ` +
@@ -78,6 +133,7 @@ Deno.serve(async (req) => {
       fecha: new Date().toISOString(),
       acciones_para_hoy: paraHoy.length,
       para_hoy: paraHoy,
+      revisar,
       totales: { nuevos, enviados, respondieron: resp, sin_respuesta: sinr, ganados: gan, perdidos: perd },
       tasa_respuesta: tasaResp,
       tasa_cierre: tasaCierre,
