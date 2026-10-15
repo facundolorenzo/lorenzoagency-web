@@ -433,10 +433,6 @@ function leadModalHtml(){
   if(!openLeadId) return "";
   const l = leads.find(x=>x.id===openLeadId);
   if(!l) return "";
-  const first = (l.name||"").split(" ")[0];
-  const subject = encodeURIComponent("Re: Your inquiry — LORENZO Agency");
-  const body = encodeURIComponent("Hi "+(first||"")+",\n\n");
-  const reply = l.email ? `mailto:${l.email}?subject=${subject}&body=${body}` : "";
   return `<div class="lmodal" data-closeleadbg="1"><div class="lcard">
     <div class="lhead">
       <div><div class="lname">${esc(l.name||"—")}</div>
@@ -449,7 +445,7 @@ function leadModalHtml(){
     </div>
     <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
     <div class="lactions">
-      ${reply?`<a class="btn-reply" href="${reply}">Responder por email</a>`:`<span style="color:var(--muted);font-size:12px">Sin email para responder</span>`}
+      ${l.email?`<button class="btn-reply" data-replymail="${esc(l.email)}">Responder por email</button>`:`<span style="color:var(--muted);font-size:12px">Sin email para responder</span>`}
       <select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option ${l.status===s?"selected":""}>${s}</option>`).join("")}</select>
       ${confirmDel && confirmDel.col==="leads" && confirmDel.id===l.id
         ? `<button class="btn sm danger" data-delyes="leads:${l.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
@@ -467,6 +463,13 @@ function note(msg){
 
 document.addEventListener("click", async e=>{
   const t = e.target; if(!sb || !isAdmin && !t.dataset.cycle) { /* invitados: solo leen */ }
+  if(t.dataset.replymail){
+    const em=t.dataset.replymail;
+    try{ await navigator.clipboard.writeText(em); note("📋 "+em+" copiado — en Private Email tocá Redactar y pegalo en 'Para'"); }
+    catch(e){ note("Copiá este email: "+em); }
+    window.open("https://privateemail.com/","_blank","noopener");
+    return;
+  }
   if(t.dataset.openlead){ openLeadId=t.dataset.openlead; confirmDel=null; renderApp(); return; }
   if(t.dataset.closelead || t.dataset.closeleadbg){ openLeadId=null; renderApp(); return; }
   if(t.dataset.new){ formOpen=t.dataset.new; editing=null; renderApp(); return; }
