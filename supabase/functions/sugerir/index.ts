@@ -60,6 +60,7 @@ const json = (o: unknown, status = 200) =>
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
+    console.log("sugerir: inicio");
     const auth = req.headers.get("Authorization") || "";
     const SB_URL = Deno.env.get("SUPABASE_URL")!;
     const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -94,6 +95,7 @@ Deno.serve(async (req) => {
 
     const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
     const MODEL = Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-5-5";
+    console.log("sugerir: autorizado, llamando a Claude con modelo", MODEL, "key?", ANTHROPIC_KEY ? "sí" : "NO");
 
     const sys = PERFIL + ejemplosTxt + `
 
@@ -119,11 +121,13 @@ TAREA: redactá SOLO el cuerpo del email de respuesta a la consulta. Reglas:
         messages: [{ role: "user", content: user }],
       }),
     });
-    if (!r.ok) { const tx = await r.text(); return json({ error: "Claude " + r.status + ": " + tx.slice(0, 200) }, 502); }
+    console.log("sugerir: Claude respondió status", r.status);
+    if (!r.ok) { const tx = await r.text(); console.error("sugerir: Claude error", r.status, tx.slice(0, 300)); return json({ error: "Claude " + r.status + ": " + tx.slice(0, 200) }, 502); }
     const out = await r.json();
     const reply = (out.content || []).map((c: { text?: string }) => c.text || "").join("").trim();
     return json({ reply });
   } catch (err) {
+    console.error("sugerir: EXCEPCIÓN", (err as Error)?.stack || String(err));
     return json({ error: String((err as Error)?.message || err) }, 500);
   }
 });
