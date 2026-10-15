@@ -6,6 +6,22 @@
 //  2) Para cada lead NUEVO del sitio sin borrador, redacta el primer borrador.
 // Redacta llamando a la Edge Function `sugerir` (ahí vive el cerebro + la API key).
 import { ImapFlow } from "imapflow";
+import { simpleParser } from "mailparser";
+
+// Baja el mail completo y lo parsea bien (decodifica quoted-printable, UTF-8, multipart).
+// Devuelve el texto limpio, sin el historial citado (lo de "> ..." y "El ... escribió:").
+async function cuerpoLimpio(imap, uid) {
+  try {
+    const msg = await imap.fetchOne(uid, { source: true }, { uid: true });
+    if (!msg || !msg.source) return "";
+    const p = await simpleParser(msg.source);
+    let t = String(p.text || "");
+    t = t.split(/\r?\n/).filter((l) => !/^\s*>/.test(l)).join("\n");           // saca líneas citadas
+    t = t.replace(/\n?\s*El .*?escribi[óo]:[\s\S]*$/i, "")                      // corta historial ES
+         .replace(/\n?\s*On .*?wrote:[\s\S]*$/i, "");                          // corta historial EN
+    return t.replace(/\s+/g, " ").trim();
+  } catch (e) { console.error("   parse mail:", e && e.message); return ""; }
+}
 
 const SB_URL = process.env.SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -106,13 +122,8 @@ async function main() {
       const prev = Number(l.respuestas_lead) || 0;
 
       if (count > 0) {
-        // leer el texto de la última respuesta
-        let texto = "";
-        try {
-          const msg = await imap.fetchOne(uids[uids.length - 1], { bodyParts: ["text"] }, { uid: true });
-          const part = msg && msg.bodyParts && msg.bodyParts.get("text");
-          if (part) texto = part.toString("utf8").replace(/\s+/g, " ").trim().slice(0, 1500);
-        } catch (e) { console.error("   body", l.email, e && e.message); }
+        // leer el texto de la última respuesta (parseado y limpio)
+        const texto = (await cuerpoLimpio(imap, uids[uids.length - 1])).slice(0, 1500);
 
         const patch = { status: "respondio", respuestas_lead: count };
         if (texto) patch.ultima_respuesta_texto = texto;
@@ -140,7 +151,7 @@ async function main() {
     const allLeads = await rest("leads?select=email");
     const known = new Set((allLeads || []).map((x) => (x.email || "").toLowerCase()).filter(Boolean));
     known.add((IMAP_USER || "").toLowerCase());
-    const SKIP = /(no-?reply|noreply|mailer-daemon|postmaster|donotreply|do-not-reply|notifications?@|bounce|@.*(mailchimp|sendgrid|amazonses|substack))/i;
+    const SKIP = /(no-?reply|noreply|mailer-daemon|postmaster|donotreply|do-not-reply|notifications?@|bounce|formsubmit|@.*(mailchimp|sendgrid|amazonses|substack))/i;
 
     // 1) recolectar remitentes candidatos — con encabezados para filtrar promos/automáticos
     //    (List-Unsubscribe / Precedence: bulk|list / Auto-Submitted = correo masivo o automático = se descarta)
@@ -164,12 +175,7 @@ async function main() {
     let nuevosMail = 0, descartadosIA = 0;
     for (const c of byAddr.values()) {
       if (nuevosMail >= 40) { console.log("   corte de seguridad: 40 por corrida"); break; }
-      let texto = "";
-      try {
-        const m = await imap.fetchOne(c.uid, { bodyParts: ["text"] }, { uid: true });
-        const part = m && m.bodyParts && m.bodyParts.get("text");
-        if (part) texto = part.toString("utf8").replace(/\s+/g, " ").trim().slice(0, 1500);
-      } catch (e) { /* sin cuerpo, uso solo el asunto */ }
+      const texto = (await cuerpoLimpio(imap, c.uid)).slice(0, 1500);
       const mensaje = (c.subject ? c.subject + "\n\n" : "") + texto;
 
       // Filtro con el agente: solo entra si es una consulta real de una persona

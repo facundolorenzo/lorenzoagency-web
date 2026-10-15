@@ -13,8 +13,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Instalar imapflow
-        run: npm install imapflow@1
+      - name: Instalar dependencias
+        run: npm install imapflow@1 mailparser@3
       - name: Detectar respuestas
         run: node scripts/checker-respuestas.mjs
         env:
