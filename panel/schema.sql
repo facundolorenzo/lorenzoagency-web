@@ -160,5 +160,5 @@ exception when duplicate_object then null; end $$;
 -- =====================================================================
 -- ÚLTIMO PASO: ponete como admin. Cambiá el email por el tuyo.
 -- =====================================================================
-insert into public.admins (email) values ('TU-EMAIL@ACA.COM')
+insert into public.admins (email) values ('facundoluislorenzo@gmail.com')
   on conflict (email) do nothing;
