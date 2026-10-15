@@ -118,6 +118,7 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125
 nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
   outline:2px solid var(--accent);outline-offset:2px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
 .stat{background:var(--card);border:1px solid var(--hair2);border-radius:10px;padding:18px}
 .stat .l{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
 .stat .v{font-size:26px;font-weight:800;margin-top:8px;font-variant-numeric:tabular-nums}
@@ -354,7 +355,7 @@ async function runDraft(id, isRehacer){
 
 /* ============================ RENDER ============================ */
 function tabsHtml(){
-  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"]]
+  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"]]
                     : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
   const nuevos = leads.filter(x=>x.status==='nuevo').length;
   const hoyN = isAdmin ? leadsHoy().length : 0;
@@ -390,6 +391,7 @@ function renderApp(){
 function renderBody(){
   if(tab==="hoy") renderHoy();
   else if(tab==="resumen") renderResumen();
+  else if(tab==="analisis") renderAnalisis();
   else if(tab==="propuestas") renderProposals();
   else if(tab==="facturas") renderInvoices();
   else if(tab==="clientes") renderClients();
@@ -462,6 +464,96 @@ function renderResumen(){
   <div class="bar"><h2><span class="tick"></span>Últimas propuestas</h2></div>
   ${proposals.length? proposalTable(proposals.slice(0,5), false) :
     '<div class="empty"><b>Sin propuestas todavía.</b><br>Creá la primera desde la pestaña Propuestas — el número se asigna solo.</div>'}`;
+}
+
+/* ---------- ANÁLISIS (cerebro) ---------- */
+function renderAnalisis(){
+  const total = leads.length;
+  if(!total){ $app().innerHTML = `<div class="empty"><b>Todavía no hay datos para analizar.</b><br>Cuando empieces a mover leads (enviar, responder, ganar, perder), acá vas a ver <b>dónde se te caen los deals y por qué</b>, con recomendaciones basadas en estudios de ventas.</div>`; return; }
+
+  const inState = (...s)=>leads.filter(l=>s.includes(l.status));
+  const gan = inState("ganado").length, perd = inState("perdido").length;
+  const contactados = leads.filter(l=>Number(l.mailsEnviados)>0 || ["enviado","sin_respuesta","respondio","ganado","perdido"].includes(l.status)).length;
+  const respondieron = leads.filter(l=>Number(l.respuestas)>0 || l.status==="respondio").length;
+  const sinContactar = total - contactados;
+  const cerrados = gan+perd;
+
+  // ---- Embudo ----
+  const paso = (label,n,base)=>{ const pct = base? Math.round(n/base*100):0; return {label,n,pct}; };
+  const F = [
+    paso("Leads totales", total, total),
+    paso("Contactados", contactados, total),
+    paso("Respondieron", respondieron, contactados||1),
+    paso("Ganados", gan, respondieron||1),
+  ];
+  const funnelHtml = F.map((p,i)=>`
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+        <span>${p.label}</span><span style="font-family:var(--mono);color:var(--muted)">${p.n}${i>0?` · ${p.pct}%`:""}</span>
+      </div>
+      <div style="height:9px;background:var(--hair2);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${i===0?100:Math.max(3,p.pct)}%;background:var(--accent);opacity:${1-i*0.18}"></div>
+      </div>
+    </div>`).join("");
+
+  // ---- Motivos de pérdida ----
+  const perdidos = inState("perdido");
+  const motivos = {};
+  perdidos.forEach(l=>{ const m=(l.cierreMotivo&&l.cierreMotivo!=="ganado")?l.cierreMotivo:"(sin motivo)"; motivos[m]=(motivos[m]||0)+1; });
+  const motivosArr = Object.entries(motivos).sort((a,b)=>b[1]-a[1]);
+  const topMotivo = motivosArr[0];
+  const motivosHtml = motivosArr.length
+    ? motivosArr.map(([m,n])=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--hair2)"><span>${esc(m)}</span><span style="font-family:var(--mono);color:var(--accent)">${n}</span></div>`).join("")
+    : `<div style="color:var(--muted);font-size:13px">Todavía no marcaste ningún lead como Perdido con motivo.</div>`;
+
+  // ---- Win rate por servicio ----
+  const porServ = {};
+  leads.forEach(l=>{ if(l.status==="ganado"||l.status==="perdido"){ const k=l.service||"(sin rubro)"; porServ[k]=porServ[k]||{g:0,p:0}; if(l.status==="ganado")porServ[k].g++; else porServ[k].p++; } });
+  const servArr = Object.entries(porServ).sort((a,b)=>(b[1].g+b[1].p)-(a[1].g+a[1].p));
+  const servHtml = servArr.length
+    ? servArr.map(([k,v])=>{ const tot=v.g+v.p; const wr=tot?Math.round(v.g/tot*100):0; return `<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--hair2)"><span>${esc(k)}</span><span style="font-family:var(--mono);color:var(--muted)">${v.g}/${tot} · <span style="color:${wr>=50?'var(--ok)':'var(--accent)'}">${wr}%</span></span></div>`; }).join("")
+    : `<div style="color:var(--muted);font-size:13px">Cuando cierres deals (ganados/perdidos) por rubro, vas a ver acá qué nicho convierte mejor.</div>`;
+
+  // ---- Velocidad de respuesta (de lead creado a primer mail) ----
+  let horas=[];
+  leads.forEach(l=>{ const t=touchesOf(l.id).filter(x=>x.tipo==="mail"); if(t.length){ const first=t.reduce((a,b)=>new Date(a.createdAt)<new Date(b.createdAt)?a:b); const h=(new Date(first.createdAt)-new Date(l.createdAt))/3600000; if(h>=0&&h<24*14) horas.push(h); } });
+  const velProm = horas.length? (horas.reduce((a,b)=>a+b,0)/horas.length) : null;
+  const velTxt = velProm===null? "sin datos aún" : (velProm<1? "menos de 1 h" : velProm<24? velProm.toFixed(1)+" h" : (velProm/24).toFixed(1)+" días");
+
+  // ---- Diagnóstico (prioriza el agujero más grande) ----
+  let diag;
+  if(sinContactar >= Math.max(3, total*0.3)){
+    diag = `Tenés <b>${sinContactar} leads sin contactar</b>. Según Harvard Business Review, contactar en la <b>primera hora</b> multiplica por 7 las chances de calificar al lead (vs. esperar 24 h). Prioridad #1: vaciar <b>PARA HOY</b> rápido.`;
+  } else if(velProm!==null && velProm>1){
+    diag = `Estás respondiendo en promedio en <b>${velTxt}</b>. Los estudios muestran que bajar a <b>menos de 5 minutos</b> puede multiplicar por 100 el contacto. Si podés, respondé los nuevos apenas entran.`;
+  } else if(contactados && respondieron/contactados < 0.25){
+    diag = `De los que contactaste, <b>responden pocos (${Math.round(respondieron/contactados*100)}%)</b>. El cuello está en el <b>primer mensaje</b>: probá otro asunto y un primer renglón más directo. Usá "Rehacer" para variar el enfoque.`;
+  } else if(topMotivo){
+    diag = `Donde más perdés es por <b>${esc(topMotivo[0])}</b> (${topMotivo[1]} caso/s). ${topMotivo[0]==="precio"?"Mostrá valor antes del número y proponé una llamada para cotizar en contexto.":topMotivo[0]==="timing"||topMotivo[0]==="no era el momento"?"No los pierdas: armá un seguimiento a 30-60 días para cuando sea el momento.":topMotivo[0]==="desapareció"?"Sumá un toque extra en la cadencia antes de darlos por perdidos.":"Revisá qué faltó en esos cierres (campo 'Qué faltó')."}`;
+  } else if(cerrados){
+    diag = `Vas <b>${gan} ganados / ${perd} perdidos</b>. Buen ritmo — seguí cargando el motivo de cada cierre para que el análisis sea más preciso.`;
+  } else {
+    diag = `Todavía no cerraste deals. Cuando marques Ganado/Perdido con su motivo, acá te voy a decir <b>dónde ajustar</b>.`;
+  }
+
+  $app().innerHTML = `
+    <div class="panel" style="border-left:3px solid var(--accent)">
+      <div class="bar"><h2><span class="tick"></span>Diagnóstico</h2></div>
+      <div style="font-size:14px;line-height:1.6;color:#E6E7EB">${diag}</div>
+    </div>
+    <div class="grid" style="margin-top:4px">
+      <div class="stat"><span class="l">Velocidad de respuesta</span><div class="v">${velTxt}</div><div class="s">de lead nuevo a primer mail</div></div>
+      <div class="stat"><span class="l">Tasa de cierre</span><div class="v">${cerrados?Math.round(gan/cerrados*100):0}%</div><div class="s">${gan} ganados de ${cerrados} cerrados</div></div>
+      <div class="stat"><span class="l">Sin contactar</span><div class="v">${sinContactar}</div><div class="s">esperando primer toque</div></div>
+    </div>
+    <div class="panel">
+      <div class="bar"><h2><span class="tick"></span>Embudo</h2></div>
+      ${funnelHtml}
+    </div>
+    <div class="grid2">
+      <div class="panel"><div class="bar"><h2><span class="tick"></span>Por qué se pierden</h2></div>${motivosHtml}</div>
+      <div class="panel"><div class="bar"><h2><span class="tick"></span>Cierre por rubro</h2></div>${servHtml}</div>
+    </div>`;
 }
 
 function statusPill(col,d){ return `<span class="pill p-${esc(d.status)}" data-cycle="${col}:${d.id}" title="Click para cambiar estado" role="button" tabindex="0">${esc(d.status).toUpperCase()}</span>`; }
