@@ -73,7 +73,28 @@ Deno.serve(async (req) => {
     if (!allowed) { const { data: isAdmin } = await supa.rpc("is_admin"); allowed = !!isAdmin; }
     if (!allowed) return json({ error: "No autorizado" }, 403);
 
-    const { message = "", name = "", service = "", previous = "" } = await req.json();
+    const body = await req.json();
+    const { message = "", name = "", service = "", previous = "", translate = false } = body;
+
+    // ===== Rama TRADUCIR: solo para que Facu lea. No se usa para enviar. =====
+    if (translate) {
+      const KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
+      const MDL = Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-5-5";
+      const rt = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        body: JSON.stringify({
+          model: MDL,
+          max_tokens: 1200,
+          system: "Traducí al español rioplatense, fiel y natural. Devolvé SOLO la traducción, sin comentarios, sin comillas, sin notas. Mantené el formato (saltos de línea, firma).",
+          messages: [{ role: "user", content: message }],
+        }),
+      });
+      if (!rt.ok) { const tx = await rt.text(); return json({ error: "Claude " + rt.status + ": " + tx.slice(0, 200) }, 502); }
+      const ot = await rt.json();
+      const tr = (ot.content || []).map((c: { text?: string }) => c.text || "").join("").trim();
+      return json({ reply: tr });
+    }
 
     // Ejemplos aprobados del mismo rubro → aprendizaje (bloque 7)
     let ejemplos: Array<{ suggestion?: string; final?: string }> = [];
