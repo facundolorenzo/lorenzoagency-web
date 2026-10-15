@@ -74,7 +74,32 @@ Deno.serve(async (req) => {
     if (!allowed) return json({ error: "No autorizado" }, 403);
 
     const body = await req.json();
-    const { message = "", name = "", service = "", previous = "", translate = false } = body;
+    const { message = "", name = "", service = "", previous = "", translate = false, classify = false } = body;
+
+    // ===== Rama CLASIFICAR: ¿es una consulta real de una persona, o promo/automático? =====
+    // Devuelve { consulta: true|false }. La usa el checker antes de crear un lead desde un email.
+    if (classify) {
+      const KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
+      const MDL = Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-5-5";
+      const rc = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        body: JSON.stringify({
+          model: MDL,
+          max_tokens: 5,
+          system: `Clasificá un email que llegó al buzón de una agencia (LORENZO Agency).
+Respondé SOLO "SI" o "NO".
+"SI" = es una consulta/mensaje REAL de una persona: pregunta por servicios, quiere contratar, pide presupuesto, consulta algo concreto, responde a una propuesta, quiere reunirse.
+"NO" = es promoción, newsletter, publicidad, notificación automática, factura de un proveedor, cobro, verificación de cuenta, spam, o cualquier cosa que NO sea una persona consultando por el negocio.
+Ante la duda, respondé NO.`,
+          messages: [{ role: "user", content: (message || "").slice(0, 2000) }],
+        }),
+      });
+      if (!rc.ok) { const tx = await rc.text(); return json({ error: "Claude " + rc.status + ": " + tx.slice(0, 200) }, 502); }
+      const oc = await rc.json();
+      const ans = (oc.content || []).map((c: { text?: string }) => c.text || "").join("").trim().toUpperCase();
+      return json({ consulta: ans.startsWith("SI") || ans.startsWith("SÍ") });
+    }
 
     // ===== Rama TRADUCIR =====
     //  translate:true, message                       -> traduce al español (para leer/editar)

@@ -39,6 +39,20 @@ async function draft(lead, message) {
   } catch (e) { console.error("   draft falló:", e && e.message); return null; }
 }
 
+// ¿Es una consulta real de una persona? (le pregunta al agente). Ante error -> false (no crea lead).
+async function esConsultaReal(message) {
+  try {
+    const res = await fetch(SB_URL + "/functions/v1/sugerir", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + SB_KEY, apikey: SB_KEY },
+      body: JSON.stringify({ classify: true, message: message || "" }),
+    });
+    if (!res.ok) { console.error("   classify ->", res.status); return false; }
+    const j = await res.json();
+    return !!j.consulta;
+  } catch (e) { console.error("   classify falló:", e && e.message); return false; }
+}
+
 const withTimeout = (p, ms, label) =>
   Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT: " + label + " (" + ms + "ms)")), ms))]);
 
@@ -128,20 +142,26 @@ async function main() {
     known.add((IMAP_USER || "").toLowerCase());
     const SKIP = /(no-?reply|noreply|mailer-daemon|postmaster|donotreply|do-not-reply|notifications?@|bounce|@.*(mailchimp|sendgrid|amazonses|substack))/i;
 
-    // 1) recolectar remitentes candidatos (solo envelope, liviano)
+    // 1) recolectar remitentes candidatos — con encabezados para filtrar promos/automáticos
+    //    (List-Unsubscribe / Precedence: bulk|list / Auto-Submitted = correo masivo o automático = se descarta)
     const byAddr = new Map();
     try {
-      for await (const msg of imap.fetch({ since: since3 }, { uid: true, envelope: true })) {
+      for await (const msg of imap.fetch({ since: since3 }, { uid: true, envelope: true, headers: ["list-unsubscribe", "precedence", "auto-submitted", "x-autoreply", "list-id"] })) {
         const env = msg.envelope || {};
         const fromObj = (env.from && env.from[0]) || {};
         const addr = (fromObj.address || "").toLowerCase();
         if (!addr || known.has(addr) || SKIP.test(addr)) continue;
+        const hdr = (msg.headers ? msg.headers.toString("utf8") : "").toLowerCase();
+        const esMasivo = hdr.includes("list-unsubscribe") || hdr.includes("list-id") ||
+                         /precedence:\s*(bulk|list|junk)/.test(hdr) ||
+                         /auto-submitted:\s*(?!no)/.test(hdr) || hdr.includes("x-autoreply");
+        if (esMasivo) { console.log("   · descartado (promo/automático):", addr); continue; }
         byAddr.set(addr, { uid: msg.uid, addr, name: fromObj.name || "", subject: env.subject || "" });
       }
     } catch (e) { console.error("   fetch entrantes:", e && e.message); }
 
-    // 2) crear un lead por remitente nuevo (con borrador listo)
-    let nuevosMail = 0;
+    // 2) por cada candidato: leer cuerpo -> el agente decide si es consulta real -> recién ahí crea el lead
+    let nuevosMail = 0, descartadosIA = 0;
     for (const c of byAddr.values()) {
       if (nuevosMail >= 40) { console.log("   corte de seguridad: 40 por corrida"); break; }
       let texto = "";
@@ -151,6 +171,10 @@ async function main() {
         if (part) texto = part.toString("utf8").replace(/\s+/g, " ").trim().slice(0, 1500);
       } catch (e) { /* sin cuerpo, uso solo el asunto */ }
       const mensaje = (c.subject ? c.subject + "\n\n" : "") + texto;
+
+      // Filtro con el agente: solo entra si es una consulta real de una persona
+      if (!(await esConsultaReal(mensaje))) { descartadosIA++; console.log("   · descartado por el agente (no es consulta):", c.addr); continue; }
+
       const row = { name: c.name || c.addr, email: c.addr, message: mensaje, status: "nuevo", idioma: detectLang(mensaje), created_at: new Date().toISOString() };
       let created = null;
       try { created = await rest("leads", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(row) }); }
@@ -160,7 +184,7 @@ async function main() {
       try { const b = await draft({ name: row.name, service: "", message: mensaje }, mensaje); if (b && lead && lead.id) await rest("leads?id=eq." + lead.id, { method: "PATCH", body: JSON.stringify({ borrador: b }) }); } catch (e) {}
       console.log("   + lead nuevo desde email:", c.addr);
     }
-    console.log("   leads nuevos desde email:", nuevosMail);
+    console.log("   leads nuevos desde email:", nuevosMail, "· descartados por el agente:", descartadosIA);
   } finally { lock.release(); await imap.logout(); }
   console.log("Listo. Respondieron:", detectadas, "· a seguimiento:", seguimiento);
 }
