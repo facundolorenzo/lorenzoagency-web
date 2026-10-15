@@ -76,18 +76,27 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { message = "", name = "", service = "", previous = "", translate = false } = body;
 
-    // ===== Rama TRADUCIR: solo para que Facu lea. No se usa para enviar. =====
+    // ===== Rama TRADUCIR =====
+    //  translate:true, message                       -> traduce al español (para leer/editar)
+    //  translate:true, to:"match", reference, message -> traduce el message al MISMO idioma del reference (para enviar)
     if (translate) {
       const KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
       const MDL = Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-5-5";
+      const toMatch = body.to === "match" && body.reference;
+      const sysT = toMatch
+        ? "Traducí el TEXTO al MISMO idioma del texto de REFERENCIA (si la referencia está en inglés, traducí al inglés). Natural, fiel y en registro de negocios. Devolvé SOLO la traducción, sin comentarios, sin comillas, sin notas. Mantené el formato (saltos de línea, firma)."
+        : "Traducí al español rioplatense, fiel y natural. Devolvé SOLO la traducción, sin comentarios, sin comillas, sin notas. Mantené el formato (saltos de línea, firma).";
+      const userT = toMatch
+        ? `REFERENCIA (idioma destino):\n${body.reference}\n\nTEXTO A TRADUCIR:\n${message}`
+        : message;
       const rt = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
         body: JSON.stringify({
           model: MDL,
           max_tokens: 1200,
-          system: "Traducí al español rioplatense, fiel y natural. Devolvé SOLO la traducción, sin comentarios, sin comillas, sin notas. Mantené el formato (saltos de línea, firma).",
-          messages: [{ role: "user", content: message }],
+          system: sysT,
+          messages: [{ role: "user", content: userT }],
         }),
       });
       if (!rt.ok) { const tx = await rt.text(); return json({ error: "Claude " + rt.status + ": " + tx.slice(0, 200) }, 502); }

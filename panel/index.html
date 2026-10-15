@@ -210,7 +210,7 @@ let leadFilter = "todos";
 let leadCollapsed = {};
 let touches = [];
 let callLeadId = null, closeLeadId = null;
-let tradActivo = false, tradOriginal = "";
+let tradActivo = false, tradOriginal = "", tradShown = "";
 const CAD_DIAS = [0,1,3,5,7,10,14];
 const CAD_TIPO = ["mail","llamada","mail","llamada","mail","llamada","mail"];
 const CALL_RES = {atendio_interesado:"Atendió interesado",atendio_frio:"Atendió frío",no_atendio:"No atendió",mensaje:"Dejé mensaje",agendo:"Agendó reunión"};
@@ -669,11 +669,11 @@ function leadModalHtml(){
 
     <div class="lreplywrap">
       <div class="lreplyhead"><span>Respuesta sugerida ${cnt}</span><span class="c" style="color:var(--faint)">editá lo que quieras · el agente aprende</span></div>
-      <div id="tradhint" class="tradhint" style="display:none">⇄ Leyendo en español · se enviará el original</div>
+      <div id="tradhint" class="tradhint" style="display:none">⇄ En español · podés editar · se envía en el idioma del lead</div>
       <textarea class="lreply" id="lreply" placeholder="Tocá ↻ Rehacer para que el agente redacte una respuesta, o escribí vos directamente.">${esc(l.borrador||"")}</textarea>
       <div class="lreplyactions">
         <button class="btn ghost sm" data-rehacer="${l.id}">↻ Rehacer</button>
-        <button class="btn ghost sm btn-trad" data-traducir="1" title="Traducir al español (solo para leer)">⇄ Traducir</button>
+        <button class="btn ghost sm btn-trad" data-traducir="1" title="Traducir al español (podés editar)">⇄ Traducir</button>
         ${l.email?`<button class="btn" data-enviarmail="${l.id}">Enviar</button>`:`<span style="color:var(--muted);font-size:12px">Sin email para enviar</span>`}
         <span class="lsent">${sent}</span>
       </div>
@@ -728,21 +728,27 @@ document.addEventListener("click", async e=>{
   if(t.dataset.traducir){
     const ta=document.getElementById("lreply"); if(!ta) return;
     const hint=document.getElementById("tradhint");
-    if(tradActivo){ // volver al original (el que se envía)
-      ta.value=tradOriginal; ta.readOnly=false; autoGrow(ta);
-      tradActivo=false; tradOriginal="";
+    if(tradActivo){ // Ver original: paso lo que haya (editado o no) al idioma original
+      t.disabled=true; t.innerHTML="…";
+      try{
+        let orig;
+        if((ta.value||"").trim()===tradShown.trim()){ orig=tradOriginal; } // no editó -> original exacto
+        else { const o=await callFn("sugerir",{translate:true,to:"match",reference:tradOriginal,message:ta.value}); orig=(o&&o.reply)||tradOriginal; }
+        ta.value=orig; tradOriginal=orig; ta.readOnly=false; autoGrow(ta);
+      }catch(err){ note("No pude volver al original: "+err.message); }
+      tradActivo=false; tradShown="";
       if(hint) hint.style.display="none";
-      t.innerHTML="⇄ Traducir"; t.title="Traducir al español (solo para leer)"; return;
+      t.disabled=false; t.innerHTML="⇄ Traducir"; t.title="Traducir al español (podés editar)"; return;
     }
     if(!(ta.value||"").trim()){ note("No hay texto para traducir."); return; }
     t.disabled=true; t.innerHTML="Traduciendo…";
     try{
       const out=await callFn("sugerir", { translate:true, message:ta.value });
       if(out && out.reply){
-        tradOriginal=ta.value; tradActivo=true;
-        ta.value=out.reply; ta.readOnly=true; autoGrow(ta);
+        tradOriginal=ta.value; tradShown=out.reply; tradActivo=true;
+        ta.value=out.reply; ta.readOnly=false; autoGrow(ta); // editable: podés corregir en español
         if(hint) hint.style.display="block";
-        t.innerHTML="↩ Ver original"; t.title="Volver al texto que se envía (idioma original)";
+        t.innerHTML="↩ Ver original"; t.title="Volver al idioma original (traduce tu edición)";
       } else { note("No pude traducir."); t.innerHTML="⇄ Traducir"; }
     }catch(err){ note("No pude traducir: "+err.message); t.innerHTML="⇄ Traducir"; }
     t.disabled=false; return;
@@ -750,10 +756,21 @@ document.addEventListener("click", async e=>{
   if(t.dataset.enviarmail){
     const id=t.dataset.enviarmail; const l=leads.find(x=>x.id===id); if(!l) return;
     const ta=document.getElementById("lreply");
-    const bodyTxt=(tradActivo ? tradOriginal : (ta?ta.value:"")).trim();
-    if(!bodyTxt){ note("Escribí o generá una respuesta antes de enviar."); return; }
+    if(!(ta?ta.value:"").trim()){ note("Escribí o generá una respuesta antes de enviar."); return; }
     if(!l.email){ note("Este lead no tiene email."); return; }
-    t.disabled=true; const prev=t.textContent; t.textContent="Enviando…";
+    t.disabled=true; const prev=t.textContent;
+    // Resolver el texto que SE ENVÍA (siempre en el idioma del lead)
+    let bodyTxt;
+    if(tradActivo){
+      if((ta.value||"").trim()===tradShown.trim()){ bodyTxt=tradOriginal.trim(); } // no editó -> original exacto
+      else {
+        t.textContent="Traduciendo…";
+        try{ const o=await callFn("sugerir",{translate:true,to:"match",reference:tradOriginal,message:ta.value}); bodyTxt=((o&&o.reply)||"").trim(); }
+        catch(err){ note("No pude traducir tu edición para enviar: "+err.message); t.disabled=false; t.textContent=prev; return; }
+      }
+    } else { bodyTxt=ta.value.trim(); }
+    if(!bodyTxt){ note("No pude preparar el texto a enviar."); t.disabled=false; t.textContent=prev; return; }
+    t.textContent="Enviando…";
     try{
       await callFn("enviar", {
         lead_id:id, to:l.email,
@@ -801,12 +818,12 @@ document.addEventListener("click", async e=>{
     return;
   }
   if(t.dataset.openlead){
-    openLeadId=t.dataset.openlead; confirmDel=null; tradActivo=false; tradOriginal=""; renderApp();
+    openLeadId=t.dataset.openlead; confirmDel=null; tradActivo=false; tradOriginal=""; tradShown=""; renderApp();
     const ol = leads.find(x=>x.id===openLeadId);
     if(ol && !(ol.borrador && String(ol.borrador).trim())) runDraft(openLeadId, false);
     return;
   }
-  if(t.dataset.closelead || t.dataset.closeleadbg){ openLeadId=null; tradActivo=false; tradOriginal=""; renderApp(); return; }
+  if(t.dataset.closelead || t.dataset.closeleadbg){ openLeadId=null; tradActivo=false; tradOriginal=""; tradShown=""; renderApp(); return; }
   if(t.dataset.new){ formOpen=t.dataset.new; editing=null; renderApp(); return; }
   if(t.dataset.cancel){ formOpen=null; editing=null; renderApp(); return; }
   if(t.dataset.edit){ const[col,id]=t.dataset.edit.split(":"); editing={col,id}; formOpen=col; confirmDel=null; renderApp(); return; }
