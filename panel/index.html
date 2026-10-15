@@ -53,9 +53,11 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(255,90,
 .btn-reply:hover{background:transparent;border-color:var(--accent);color:var(--accent)}
 .lrubro{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--accent);
   border:1px solid rgba(255,90,31,.4);border-radius:999px;padding:3px 9px;text-transform:uppercase;white-space:nowrap}
-.btn-trash{margin-left:auto;background:rgba(229,96,76,.12);border:1px solid rgba(229,96,76,.4);color:var(--bad);
+.btn-trash{background:rgba(229,96,76,.12);border:1px solid rgba(229,96,76,.4);color:var(--bad);
   border-radius:8px;padding:9px 13px;font-size:15px;line-height:1;cursor:pointer}
 .btn-trash:hover{background:rgba(229,96,76,.22)}
+.lactions .btn-trash{margin-left:auto}
+.rowactions .btn-trash{padding:6px 9px;font-size:13px}
 nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
   outline:2px solid var(--accent);outline-offset:2px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
@@ -423,7 +425,7 @@ function renderLeads(){
         <button class="btn sm ghost" data-openlead="${l.id}">Abrir</button>
         ${del
         ? `<button class="btn sm danger" data-delyes="leads:${l.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
-        : `<button class="btn sm ghost" data-del="leads:${l.id}">✕</button>`}</div></td>
+        : `<button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">🗑</button>`}</div></td>
     </tr>`}).join("")}
     </table></div>` :
     '<div class="empty"><b>Sin consultas todavía.</b><br>Cuando alguien complete el formulario del sitio, aparece acá.</div>'}`;
