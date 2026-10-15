@@ -432,7 +432,27 @@ function renderResumen(){
       <div style="margin-top:10px;font-size:13px;color:#C9CBD1">${msg}</div>
     </div>`;
   }
-  $app().innerHTML = goalHtml + `
+  // ----- Hoy en ventas (resumen de leads · lo que lee Jai para el reporte) -----
+  let ventasHtml="";
+  if(isAdmin){
+    const cnt=s=>leads.filter(x=>x.status===s).length;
+    const nuevos=cnt("nuevo"), enviados=cnt("enviado"), resp=cnt("respondio"), sinr=cnt("sin_respuesta"), gan=cnt("ganado"), perd=cnt("perdido");
+    const contactados=enviados+resp+sinr+gan+perd;
+    const tasaResp = contactados ? Math.round(resp/contactados*100) : 0;
+    const tasaCierre = (gan+perd) ? Math.round(gan/(gan+perd)*100) : 0;
+    const es=leads.filter(l=>langOf(l)==="es").length, en=leads.filter(l=>langOf(l)==="en").length;
+    const hoyN=leadsHoy().length;
+    ventasHtml=`<div class="bar"><h2><span class="tick"></span>Hoy en ventas</h2></div>
+    <div class="grid">
+      <div class="stat"><span class="l">Para hoy</span><div class="v">${hoyN}</div><div class="s">acciones pendientes</div></div>
+      <div class="stat"><span class="l">Nuevos</span><div class="v">${nuevos}</div><div class="s">sin contestar</div></div>
+      <div class="stat"><span class="l">Respondieron</span><div class="v">${resp}</div><div class="s">calientes — seguir</div></div>
+      <div class="stat"><span class="l">Tasa de respuesta</span><div class="v">${tasaResp}%</div><div class="s">de los contactados</div></div>
+      <div class="stat"><span class="l">Ganados / Perdidos</span><div class="v">${gan} / ${perd}</div><div class="s">cierre ${tasaCierre}%</div></div>
+      <div class="stat"><span class="l">Idioma</span><div class="v">${es} ES · ${en} EN</div><div class="s">ES vos · EN closer</div></div>
+    </div>`;
+  }
+  $app().innerHTML = ventasHtml + goalHtml + `
   <div class="grid">
     <div class="stat"><span class="l">Pipeline (enviadas)</span><div class="v">${money(sum(sent))}</div><div class="s">${sent.length} propuesta(s) esperando respuesta</div></div>
     <div class="stat"><span class="l">Aprobado</span><div class="v">${money(sum(appr))}</div><div class="s">${appr.length} propuesta(s) ganada(s)</div></div>
