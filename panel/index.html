@@ -783,7 +783,7 @@ document.addEventListener("click", async e=>{
         tradOriginal=ta.value; tradShown=out.reply; tradActivo=true;
         ta.value=out.reply; ta.readOnly=false; autoGrow(ta); // editable: podés corregir en español
         if(hint) hint.style.display="block";
-        t.innerHTML="↩ Ver original"; t.title="Volver al idioma original (traduce tu edición)";
+        t.innerHTML="↩ Ver cómo se envía"; t.title="Te muestra el texto en el idioma del lead, con tu edición ya traducida (eso es lo que se manda)";
       } else { note("No pude traducir."); t.innerHTML="⇄ Traducir"; }
     }catch(err){ note("No pude traducir: "+err.message); t.innerHTML="⇄ Traducir"; }
     t.disabled=false; return;
