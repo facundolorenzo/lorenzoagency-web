@@ -1,0 +1,74 @@
+// Edge Function: enviar
+// Manda el email por SMTP (Private Email) y actualiza el lead:
+//   status -> enviado, +1 al contador de mails, fechas, borrador guardado.
+// Guarda el par (sugerencia -> texto final) en reply_examples para que el agente aprenda.
+// Seguridad: solo admin. Credenciales SMTP en env.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+const json = (o: unknown, status = 200) =>
+  new Response(JSON.stringify(o), { status, headers: { ...cors, "content-type": "application/json" } });
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  try {
+    const auth = req.headers.get("Authorization") || "";
+    const SB_URL = Deno.env.get("SUPABASE_URL")!;
+    const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supa = createClient(SB_URL, SB_ANON, { global: { headers: { Authorization: auth } } });
+
+    const { data: isAdmin } = await supa.rpc("is_admin");
+    if (!isAdmin) return json({ error: "No autorizado" }, 403);
+
+    const { lead_id, to, subject, body, suggestion = "" } = await req.json();
+    if (!to || !body) return json({ error: "Falta destinatario o cuerpo" }, 400);
+
+    const USER = Deno.env.get("SMTP_USER")!;          // email completo de la compañía
+    const PASS = Deno.env.get("SMTP_PASS")!;          // contraseña del buzón Private Email
+    const FROM = Deno.env.get("SMTP_FROM") || USER;
+
+    // Enviar por SMTP — Private Email: mail.privateemail.com, 465 SSL
+    const client = new SMTPClient({
+      connection: { hostname: "mail.privateemail.com", port: 465, tls: true, auth: { username: USER, password: PASS } },
+    });
+    await client.send({
+      from: FROM,
+      to,
+      subject: subject || "Respuesta — LORENZO Agency",
+      content: body,
+      html: String(body).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>"),
+    });
+    await client.close();
+
+    // Actualizar el lead + aprendizaje (RLS admin cubre la escritura)
+    if (lead_id) {
+      const now = new Date().toISOString();
+      const { data: cur } = await supa.from("leads")
+        .select("mails_enviados,fecha_primer_envio,service").eq("id", lead_id).maybeSingle();
+      const envios = (cur?.mails_enviados || 0) + 1;
+      await supa.from("leads").update({
+        status: "enviado",
+        mails_enviados: envios,
+        fecha_primer_envio: cur?.fecha_primer_envio || now,
+        fecha_ultimo_envio: now,
+        borrador: body,
+      }).eq("id", lead_id);
+
+      // Guardar el ejemplo (sirva o no haya habido edición, el final es oro)
+      try {
+        await supa.from("reply_examples").insert({
+          lead_id, service: cur?.service || null, suggestion: suggestion || null, final: body,
+        });
+      } catch (_e) { /* no romper el envío si falla el aprendizaje */ }
+    }
+
+    return json({ ok: true });
+  } catch (err) {
+    return json({ error: String((err as Error)?.message || err) }, 500);
+  }
+});

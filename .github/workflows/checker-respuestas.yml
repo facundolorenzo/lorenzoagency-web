@@ -1,0 +1,25 @@
+name: Checker de respuestas (IMAP -> panel)
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # cada 15 minutos
+  workflow_dispatch:
+
+jobs:
+  checker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Instalar imapflow
+        run: npm install imapflow@1
+      - name: Detectar respuestas
+        run: node scripts/checker-respuestas.mjs
+        env:
+          SUPABASE_URL: https://noxvfulftytfizzaunln.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          IMAP_USER: ${{ secrets.IMAP_USER }}
+          IMAP_PASS: ${{ secrets.IMAP_PASS }}
+          DIAS_SIN_RESPUESTA: '3'
