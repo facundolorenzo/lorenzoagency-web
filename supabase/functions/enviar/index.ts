@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     const USER = Deno.env.get("SMTP_USER")!;          // email completo de la compañía
     const PASS = Deno.env.get("SMTP_PASS")!;          // contraseña del buzón Private Email
-    const FROM = Deno.env.get("SMTP_FROM") || USER;
+    const FROM = Deno.env.get("SMTP_FROM") || ("LORENZO Agency <" + USER + ">");
 
     // Enviar por SMTP — Private Email: mail.privateemail.com, 465 SSL
     const client = new SMTPClient({
