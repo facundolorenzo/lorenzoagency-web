@@ -41,6 +41,11 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125
 .btn-trad{color:var(--info);border-color:rgba(106,165,232,.5)!important}
 .btn-trad:hover{background:rgba(106,165,232,.12)}
 .tradhint{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--info);background:rgba(106,165,232,.1);border:1px solid rgba(106,165,232,.3);border-radius:8px;padding:6px 10px;margin-bottom:8px}
+.langchip{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;border-radius:999px;padding:3px 9px;cursor:pointer;background:transparent;transition:.15s}
+.langchip.es{color:#67c998;border:1px solid rgba(103,201,152,.45)}
+.langchip.es:hover{background:rgba(103,201,152,.12)}
+.langchip.en{color:var(--info);border:1px solid rgba(106,165,232,.45)}
+.langchip.en:hover{background:rgba(106,165,232,.12)}
 /* embudo */
 .fchips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
 .fchip{background:none;border:1px solid var(--hair2);color:var(--muted);font-family:var(--mono);font-size:10.5px;
@@ -237,6 +242,28 @@ const today = () => new Date().toISOString().slice(0,10);
 const ICON_TRASH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;pointer-events:none"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v6M14 11v6"/></svg>';
 function autoGrow(ta){ if(!ta) return; ta.style.height='auto'; const max=Math.round((window.innerHeight||800)*0.62); ta.style.height=Math.min(ta.scrollHeight+2,max)+'px'; }
 
+/* Detección de idioma (ES/EN) — heurística, gratis e instantánea. Facu puede corregir tocando el chip. */
+function detectLang(txt){
+  const t=" "+String(txt||"").toLowerCase()+" ";
+  if(!t.trim()) return "es";
+  let es=0, en=0;
+  if(/[ñáéíóúü¿¡]/.test(t)) es+=3;
+  const ES=[" que "," los "," las "," una "," para "," con "," por "," pero "," como "," tengo "," quiero "," hola "," gracias "," cuánto "," cuanto "," precio "," necesito "," hacer "," están "," estan "," muy "," más "," mas "," también "," tambien "," cómo "," buenas "," saludos "];
+  const EN=[" the "," you "," your "," and "," for "," with "," have "," want "," hello "," hi "," thanks "," thank "," how "," much "," price "," need "," would "," could "," please "," we "," our "," about "," looking "," interested "];
+  for(const w of ES) if(t.includes(w)) es++;
+  for(const w of EN) if(t.includes(w)) en++;
+  if(es===en) return "es"; // empate -> español (Facu es el default)
+  return es>en ? "es" : "en";
+}
+// Idioma efectivo de un lead: lo guardado, o la detección sobre su mensaje.
+const langOf = l => l.idioma || detectLang(l.message||"");
+// Chip visual ES/EN (clickable para corregir). who: 'vos' (ES) / 'closer' (EN)
+function langChip(l){
+  const lg=langOf(l);
+  const who = lg==="es" ? "llamás vos" : "closer EN";
+  return `<button class="langchip ${lg}" data-togglelang="${l.id}" title="Idioma del lead — ${lg==='es'?'español':'inglés'}. Tocá para cambiar.">${lg.toUpperCase()} · ${who}</button>`;
+}
+
 function nextNumber(list, prefix){
   let max = 0;
   for(const d of list){
@@ -256,7 +283,8 @@ const FROM = {
                   borrador:r.borrador, mailsEnviados:Number(r.mails_enviados)||0, respuestas:Number(r.respuestas_lead)||0,
                   ultimoEnvio:r.fecha_ultimo_envio, primerEnvio:r.fecha_primer_envio, ultimaRespuesta:r.ultima_respuesta_texto,
                   cadenciaPaso:Number(r.cadencia_paso)||0, nextAt:r.next_action_at, nextTipo:r.next_action_tipo,
-                  segActivo:r.seguimiento_activo!==false, cierreMotivo:r.cierre_motivo, cierreFalto:r.cierre_falto, cierreObs:r.cierre_obs}),
+                  segActivo:r.seguimiento_activo!==false, cierreMotivo:r.cierre_motivo, cierreFalto:r.cierre_falto, cierreObs:r.cierre_obs,
+                  idioma:r.idioma||null}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
 };
 const TO = {
@@ -553,7 +581,7 @@ function leadRowHtml(l){
   const short = msg.length>44 ? esc(msg.slice(0,44))+"…" : (esc(msg)||"(ver)");
   return `<tr>
     <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${esc(String(l.createdAt||"").slice(0,10))}</td>
-    <td>${esc(l.name||"—")}</td>
+    <td>${esc(l.name||"—")}<div style="margin-top:6px">${langChip(l)}</div></td>
     <td>${interestBar(l.respuestas)}</td>
     <td style="font-size:12px;line-height:1.5">${l.email?`<div style="word-break:break-all">${esc(l.email)}</div>`:""}${l.phone?`<div style="margin-top:7px"><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">📞 ${esc(l.phone)}</a></div>`:""}</td>
     <td>${l.service?`<span class="lrubro">${esc(l.service)}</span>`:"—"}</td>
@@ -656,7 +684,7 @@ function leadModalHtml(){
   const sent = l.ultimoEnvio ? `Último envío: ${esc(String(l.ultimoEnvio).slice(0,16).replace("T"," "))}` : "";
   return `<div class="lmodal" data-closeleadbg="1"><div class="lcard">
     <div class="lhead">
-      <div><div class="lname">${esc(l.name||"—")}</div>
+      <div><div class="lname">${esc(l.name||"—")} &nbsp;${langChip(l)}</div>
         <div class="lmeta">${esc(String(l.createdAt||"").slice(0,10))}${l.service?` &nbsp;·&nbsp; <span class="lrubro">${esc(l.service)}</span>`:""} &nbsp;·&nbsp; ${interestBar(l.respuestas)}</div></div>
       <button class="btn ghost sm" data-closelead="1">✕</button>
     </div>
@@ -724,6 +752,13 @@ document.addEventListener("click", async e=>{
   const fr = t.closest && t.closest("[data-franja]");
   if(fr){ const s=fr.dataset.franja; leadCollapsed[s]=!leadCollapsed[s]; renderApp(); return; }
   if(t.dataset.leadfilter){ leadFilter=t.dataset.leadfilter; renderApp(); return; }
+  if(t.dataset.togglelang){
+    const id=t.dataset.togglelang; const l=leads.find(x=>x.id===id); if(!l) return;
+    const next = langOf(l)==="es" ? "en" : "es";
+    l.idioma=next; // optimista
+    try{ await sb.from("leads").update({idioma:next}).eq("id",id); }catch(e){}
+    renderApp(); return;
+  }
   if(t.dataset.rehacer){ await runDraft(t.dataset.rehacer, true); return; }
   if(t.dataset.traducir){
     const ta=document.getElementById("lreply"); if(!ta) return;
