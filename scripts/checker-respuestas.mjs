@@ -42,6 +42,19 @@ async function draft(lead, message) {
 const withTimeout = (p, ms, label) =>
   Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("TIMEOUT: " + label + " (" + ms + "ms)")), ms))]);
 
+// Detección de idioma (ES/EN) — misma heurística que el panel. Facu puede corregir el chip.
+function detectLang(txt) {
+  const t = " " + String(txt || "").toLowerCase() + " ";
+  if (!t.trim()) return "es";
+  let es = 0, en = 0;
+  if (/[ñáéíóúü¿¡]/.test(t)) es += 3;
+  const ES = [" que ", " los ", " las ", " una ", " para ", " con ", " por ", " pero ", " como ", " tengo ", " quiero ", " hola ", " gracias ", " cuánto ", " cuanto ", " precio ", " necesito ", " hacer ", " están ", " estan ", " muy ", " más ", " mas ", " también ", " tambien ", " cómo ", " buenas ", " saludos "];
+  const EN = [" the ", " you ", " your ", " and ", " for ", " with ", " have ", " want ", " hello ", " hi ", " thanks ", " thank ", " how ", " much ", " price ", " need ", " would ", " could ", " please ", " we ", " our ", " about ", " looking ", " interested "];
+  for (const w of ES) if (t.includes(w)) es++;
+  for (const w of EN) if (t.includes(w)) en++;
+  return es >= en ? "es" : "en";
+}
+
 async function main() {
   // ===== Trabajo 2 (sin IMAP): borrador para leads nuevos del sitio =====
   console.log("A) Leads nuevos sin borrador...");
@@ -57,8 +70,7 @@ async function main() {
   const leads = await rest(
     "leads?select=id,name,email,service,message,status,fecha_primer_envio,respuestas_lead&fecha_primer_envio=not.is.null&status=in.(enviado,sin_respuesta)"
   );
-  console.log("   en espera:", leads.length);
-  if (!leads.length) { console.log("Nada que chequear por IMAP. Fin."); return; }
+  console.log("   en espera:", leads.length, "(igual conecto IMAP para capturar entrantes nuevos)");
 
   console.log("   Conectando IMAP mail.privateemail.com:993 como", IMAP_USER, "...");
   const imap = new ImapFlow({ host: "mail.privateemail.com", port: 993, secure: true, auth: { user: IMAP_USER, pass: IMAP_PASS }, logger: false, emitLogs: false });
@@ -107,6 +119,48 @@ async function main() {
         }
       }
     }
+    // ===== Trabajo 3 (IMAP): emails nuevos a la empresa -> leads =====
+    console.log("C) Emails nuevos entrantes -> leads...");
+    const INBOUND_DIAS = Number(process.env.INBOUND_DIAS || 2);
+    const since3 = new Date(now - INBOUND_DIAS * 86400000);
+    const allLeads = await rest("leads?select=email");
+    const known = new Set((allLeads || []).map((x) => (x.email || "").toLowerCase()).filter(Boolean));
+    known.add((IMAP_USER || "").toLowerCase());
+    const SKIP = /(no-?reply|noreply|mailer-daemon|postmaster|donotreply|do-not-reply|notifications?@|bounce|@.*(mailchimp|sendgrid|amazonses|substack))/i;
+
+    // 1) recolectar remitentes candidatos (solo envelope, liviano)
+    const byAddr = new Map();
+    try {
+      for await (const msg of imap.fetch({ since: since3 }, { uid: true, envelope: true })) {
+        const env = msg.envelope || {};
+        const fromObj = (env.from && env.from[0]) || {};
+        const addr = (fromObj.address || "").toLowerCase();
+        if (!addr || known.has(addr) || SKIP.test(addr)) continue;
+        byAddr.set(addr, { uid: msg.uid, addr, name: fromObj.name || "", subject: env.subject || "" });
+      }
+    } catch (e) { console.error("   fetch entrantes:", e && e.message); }
+
+    // 2) crear un lead por remitente nuevo (con borrador listo)
+    let nuevosMail = 0;
+    for (const c of byAddr.values()) {
+      if (nuevosMail >= 40) { console.log("   corte de seguridad: 40 por corrida"); break; }
+      let texto = "";
+      try {
+        const m = await imap.fetchOne(c.uid, { bodyParts: ["text"] }, { uid: true });
+        const part = m && m.bodyParts && m.bodyParts.get("text");
+        if (part) texto = part.toString("utf8").replace(/\s+/g, " ").trim().slice(0, 1500);
+      } catch (e) { /* sin cuerpo, uso solo el asunto */ }
+      const mensaje = (c.subject ? c.subject + "\n\n" : "") + texto;
+      const row = { name: c.name || c.addr, email: c.addr, message: mensaje, status: "nuevo", idioma: detectLang(mensaje), created_at: new Date().toISOString() };
+      let created = null;
+      try { created = await rest("leads", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(row) }); }
+      catch (e) { console.error("   insert lead", c.addr, e && e.message); continue; }
+      nuevosMail++; known.add(c.addr);
+      const lead = Array.isArray(created) ? created[0] : created;
+      try { const b = await draft({ name: row.name, service: "", message: mensaje }, mensaje); if (b && lead && lead.id) await rest("leads?id=eq." + lead.id, { method: "PATCH", body: JSON.stringify({ borrador: b }) }); } catch (e) {}
+      console.log("   + lead nuevo desde email:", c.addr);
+    }
+    console.log("   leads nuevos desde email:", nuevosMail);
   } finally { lock.release(); await imap.logout(); }
   console.log("Listo. Respondieron:", detectadas, "· a seguimiento:", seguimiento);
 }
