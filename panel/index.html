@@ -31,6 +31,23 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(255,90,
 .nbadge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 6px;
   margin-left:8px;border-radius:999px;background:var(--accent);color:#fff;font-family:var(--disp);font-size:11px;
   font-weight:700;line-height:1;vertical-align:middle}
+.lsel{background:var(--bg1);border:1px solid var(--hair);border-radius:7px;color:var(--fg);font-family:var(--mono);
+  font-size:10.5px;letter-spacing:.08em;padding:6px 8px;text-transform:uppercase;width:auto;cursor:pointer}
+.linkbtn{background:none;border:none;color:#C9CBD1;font-family:var(--disp);font-size:12.5px;text-align:left;
+  cursor:pointer;padding:0;text-decoration:underline;text-decoration-color:var(--hair)}
+.linkbtn:hover{color:var(--fg)}
+.lmodal{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;
+  padding:20px;z-index:50}
+.lcard{background:var(--bg1);border:1px solid var(--hair);border-radius:14px;padding:22px;max-width:520px;width:100%;
+  max-height:85vh;overflow:auto}
+.lhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.lname{font-size:18px;font-weight:700}
+.lmeta{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:4px}
+.lcontact{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:#C9CBD1;margin-bottom:14px;padding-bottom:14px;
+  border-bottom:1px solid var(--hair2)}
+.lcontact span{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint);margin-right:4px}
+.lmsg{font-size:14px;line-height:1.6;color:var(--fg);white-space:pre-wrap;word-break:break-word;margin-bottom:18px}
+.lactions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
   outline:2px solid var(--accent);outline-offset:2px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
@@ -58,7 +75,7 @@ th.r{text-align:right}
 .pill{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;padding:4px 10px;
   border-radius:999px;border:1px solid;cursor:pointer;user-select:none;white-space:nowrap}
 .p-borrador,.p-nuevo{color:var(--muted);border-color:var(--hair)}
-.p-enviada,.p-contactado{color:var(--info);border-color:rgba(106,165,232,.45)}
+.p-enviada,.p-contactado,.p-respondido{color:var(--info);border-color:rgba(106,165,232,.45)}
 .p-aprobada,.p-pagada,.p-cerrado{color:var(--ok);border-color:rgba(76,195,138,.45)}
 .p-rechazada,.p-vencida{color:var(--bad);border-color:rgba(229,96,76,.45)}
 .p-pendiente{color:var(--warn);border-color:rgba(229,180,84,.45)}
@@ -111,11 +128,11 @@ const YEAR = new Date().getFullYear();
 let isAdmin = false, canWrite = false, goal = 0, sessionEmail = "";
 let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
-let editing = null, confirmDel = null, formOpen = null;
+let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
 
 const P_STATES = ["borrador","enviada","aprobada","rechazada"];
 const I_STATES = ["pendiente","pagada","vencida"];
-const L_STATES = ["nuevo","contactado","cerrado"];
+const L_STATES = ["nuevo","respondido","cerrado"];
 
 const money = n => "$" + (Number(n)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -185,7 +202,7 @@ function renderApp(){
     ${tabsHtml()}
     <div id="app"></div>
     <footer><span>LORENZO AGENCY · MIAMI, FL</span><span>TALK@LORENZOAGENCY.TECH</span></footer>
-  </div>`;
+  </div>` + leadModalHtml();
   renderBody();
   document.getElementById("logout").onclick = async()=>{ await sb.auth.signOut(); };
   document.getElementById("tabs").addEventListener("click",e=>{
@@ -385,19 +402,49 @@ function renderLeads(){
     <tr><th>Fecha</th><th>Nombre</th><th>Contacto</th><th>Servicio</th><th>Mensaje</th><th>Estado</th><th class="r"></th></tr>
     ${leads.map(l=>{
       const del = confirmDel && confirmDel.col==="leads" && confirmDel.id===l.id;
+      const msg = l.message||"";
+      const short = msg.length>44 ? esc(msg.slice(0,44))+"…" : (esc(msg)||"(ver)");
       return `<tr class="${del?'confirmrow':''}">
       <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${esc(String(l.createdAt||"").slice(0,10))}</td>
       <td>${esc(l.name||"—")}</td>
       <td style="font-size:12px">${l.email?esc(l.email):""}${l.phone?`<br><span style="color:var(--muted)">${esc(l.phone)}</span>`:""}</td>
       <td style="font-size:12px">${esc(l.service||"—")}</td>
-      <td style="font-size:12.5px;max-width:320px">${esc(l.message||"")}</td>
-      <td>${statusPill("leads",l)}</td>
-      <td><div class="rowactions">${del
+      <td style="max-width:260px"><button class="linkbtn" data-openlead="${l.id}">${short}</button></td>
+      <td><select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option ${l.status===s?"selected":""}>${s}</option>`).join("")}</select></td>
+      <td><div class="rowactions">
+        <button class="btn sm ghost" data-openlead="${l.id}">Abrir</button>
+        ${del
         ? `<button class="btn sm danger" data-delyes="leads:${l.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
         : `<button class="btn sm ghost" data-del="leads:${l.id}">✕</button>`}</div></td>
     </tr>`}).join("")}
     </table></div>` :
     '<div class="empty"><b>Sin consultas todavía.</b><br>Cuando alguien complete el formulario del sitio, aparece acá.</div>'}`;
+}
+
+function leadModalHtml(){
+  if(!openLeadId) return "";
+  const l = leads.find(x=>x.id===openLeadId);
+  if(!l) return "";
+  const first = (l.name||"").split(" ")[0];
+  const subject = encodeURIComponent("Re: Your inquiry — LORENZO Agency");
+  const body = encodeURIComponent("Hi "+(first||"")+",\n\n");
+  const mailto = l.email ? `mailto:${l.email}?subject=${subject}&body=${body}` : "";
+  return `<div class="lmodal" data-closeleadbg="1"><div class="lcard">
+    <div class="lhead">
+      <div><div class="lname">${esc(l.name||"—")}</div>
+        <div class="lmeta">${esc(String(l.createdAt||"").slice(0,10))} · ${esc(l.service||"")}</div></div>
+      <button class="btn ghost sm" data-closelead="1">✕</button>
+    </div>
+    <div class="lcontact">
+      ${l.email?`<div><span>EMAIL</span>${esc(l.email)}</div>`:""}
+      ${l.phone?`<div><span>TEL</span>${esc(l.phone)}</div>`:""}
+    </div>
+    <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
+    <div class="lactions">
+      ${mailto?`<a class="btn" href="${mailto}">Responder por email</a>`:`<span style="color:var(--muted);font-size:12px">Sin email para responder</span>`}
+      <select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option ${l.status===s?"selected":""}>${s}</option>`).join("")}</select>
+    </div>
+  </div></div>`;
 }
 
 /* ---------- eventos ---------- */
@@ -409,6 +456,8 @@ function note(msg){
 
 document.addEventListener("click", async e=>{
   const t = e.target; if(!sb || !isAdmin && !t.dataset.cycle) { /* invitados: solo leen */ }
+  if(t.dataset.openlead){ openLeadId=t.dataset.openlead; confirmDel=null; renderApp(); return; }
+  if(t.dataset.closelead || t.dataset.closeleadbg){ openLeadId=null; renderApp(); return; }
   if(t.dataset.new){ formOpen=t.dataset.new; editing=null; renderApp(); return; }
   if(t.dataset.cancel){ formOpen=null; editing=null; renderApp(); return; }
   if(t.dataset.edit){ const[col,id]=t.dataset.edit.split(":"); editing={col,id}; formOpen=col; confirmDel=null; renderApp(); return; }
@@ -464,6 +513,15 @@ document.addEventListener("submit", async e=>{
     if(error){ note("No se pudo guardar: "+error.message); return; }
     formOpen=null; editing=null; await loadAll();
   }catch(err){ note("No se pudo guardar: "+err.message); }
+});
+
+// cambio de estado del lead (dropdown)
+document.addEventListener("change", async e=>{
+  const t = e.target;
+  if(t.dataset && t.dataset.lstatus){
+    const { error } = await sb.from("leads").update({ status: t.value }).eq("id", t.dataset.lstatus);
+    if(error) note("No se pudo cambiar el estado: "+error.message); else await loadAll();
+  }
 });
 
 /* ---------- login ---------- */
