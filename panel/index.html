@@ -436,7 +436,7 @@ function leadModalHtml(){
   const first = (l.name||"").split(" ")[0];
   const subject = encodeURIComponent("Re: Your inquiry — LORENZO Agency");
   const body = encodeURIComponent("Hi "+(first||"")+",\n\n");
-  const reply = l.email ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(l.email)}&su=${subject}&body=${body}` : "";
+  const reply = l.email ? `mailto:${l.email}?subject=${subject}&body=${body}` : "";
   return `<div class="lmodal" data-closeleadbg="1"><div class="lcard">
     <div class="lhead">
       <div><div class="lname">${esc(l.name||"—")}</div>
@@ -449,7 +449,7 @@ function leadModalHtml(){
     </div>
     <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
     <div class="lactions">
-      ${reply?`<a class="btn-reply" href="${reply}" target="_blank" rel="noopener">Responder por email</a>`:`<span style="color:var(--muted);font-size:12px">Sin email para responder</span>`}
+      ${reply?`<a class="btn-reply" href="${reply}">Responder por email</a>`:`<span style="color:var(--muted);font-size:12px">Sin email para responder</span>`}
       <select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option ${l.status===s?"selected":""}>${s}</option>`).join("")}</select>
       ${confirmDel && confirmDel.col==="leads" && confirmDel.id===l.id
         ? `<button class="btn sm danger" data-delyes="leads:${l.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
