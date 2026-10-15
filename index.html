@@ -574,10 +574,14 @@
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 (function(){
   var reduce=matchMedia("(prefers-reduced-motion:reduce)").matches;
   var MAIL="talk@lorenzoagency.tech";
+  var SB_URL="https://noxvfulftytfizzaunln.supabase.co";
+  var SB_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5veHZmdWxmdHl0Zml6emF1bmxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwMjQ0ODcsImV4cCI6MjEwNzYwMDQ4N30.LACsP_3Ji5aUxMlw8JFI7LoTpdtB8zLcSs7RyrLUR-o";
+  var sbLead=(window.supabase&&SB_URL)?window.supabase.createClient(SB_URL,SB_ANON):null;
   var mlink=document.getElementById("maillink");
   mlink.textContent=MAIL; mlink.href="mailto:"+MAIL;
   /* mail de los specs: abre el correo y además copia la dirección */
@@ -1029,23 +1033,27 @@
     var sendBtn=form.querySelector(".send");
     var n=form.nombre.value.trim();
     sendBtn.textContent="Sending…"; sendBtn.disabled=true;
-    fetch("https://formsubmit.co/ajax/"+MAIL,{
-      method:"POST",
-      headers:{"Content-Type":"application/json","Accept":"application/json"},
-      body:JSON.stringify({
-        nombre:n, email:form.email.value.trim(), telefono:form.telefono.value.trim()||"—",
-        servicio:form.servicio.value, mensaje:form.mensaje.value.trim(),
-        _subject:"New inquiry — LORENZO Agency ("+form.servicio.value+")"
-      })
-    }).then(function(r){ if(!r.ok) throw 0; return r.json(); })
-    .then(function(){
+    var lead={ name:n, email:form.email.value.trim(), phone:form.telefono.value.trim()||null,
+      service:form.servicio.value, message:form.mensaje.value.trim(), source:"website" };
+    var done=function(){
       ok.innerHTML='Done'+(n?", "+n.split(" ")[0]:"")+'. We got your message — we reply within 24h.';
       ok.classList.add("show"); sendBtn.textContent="Sent ✓"; form.reset();
-    })
-    .catch(function(){
+    };
+    var fail=function(){
       ok.innerHTML='Couldn&#39;t send from here. Email us directly at <span class="mailline">'+MAIL+'</span> — we reply within 24h.';
       ok.classList.add("show"); sendBtn.textContent="Send →"; sendBtn.disabled=false;
-    });
+    };
+    // aviso por email (best-effort, no bloquea)
+    try{ fetch("https://formsubmit.co/ajax/"+MAIL,{method:"POST",
+      headers:{"Content-Type":"application/json","Accept":"application/json"},
+      body:JSON.stringify({ nombre:n, email:lead.email, telefono:lead.phone||"—",
+        servicio:lead.service, mensaje:lead.message,
+        _subject:"New inquiry — LORENZO Agency ("+lead.service+")" })
+    }).catch(function(){}); }catch(e){}
+    // guardar en el panel (Supabase) — camino principal
+    if(sbLead){
+      sbLead.from("leads").insert(lead).then(function(res){ if(res&&res.error) fail(); else done(); },fail);
+    } else { fail(); }
   });
 
   /* ---------- tema ---------- */
