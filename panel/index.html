@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Panel · LORENZO Agency</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg0:#0B0C0E; --bg1:#121316; --card:rgba(255,255,255,.028);
+  --fg:#EFF0F3; --muted:#93969D; --faint:#6A6D74;
+  --hair:rgba(236,238,243,.14); --hair2:rgba(236,238,243,.08);
+  --accent:#FF5A1F;
+  --ok:#4CC38A; --warn:#E5B454; --bad:#E5604C; --info:#6AA5E8;
+  --disp:'Archivo',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+  color-scheme:dark;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:radial-gradient(circle at 85% -10%,rgba(232,235,242,.06),transparent 45%),var(--bg0);
+  color:var(--fg);font-family:var(--disp);font-size:14px;min-height:100vh;padding-block:0 48px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  padding:22px 0 18px;border-bottom:1px solid var(--hair2)}
+.wordmark b{font-weight:600;font-size:13px;letter-spacing:.2em}
+.wordmark span{color:var(--muted);font-size:10px;letter-spacing:.3em;margin-left:10px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 24px}
+nav button{background:none;border:1px solid var(--hair2);color:var(--muted);font-family:var(--mono);
+  font-size:11px;letter-spacing:.14em;padding:9px 16px;border-radius:999px;cursor:pointer}
+nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(255,90,31,.08)}
+nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.stat{background:var(--card);border:1px solid var(--hair2);border-radius:10px;padding:18px}
+.stat .l{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.stat .v{font-size:26px;font-weight:800;margin-top:8px;font-variant-numeric:tabular-nums}
+.stat .s{font-size:12px;color:var(--faint);margin-top:4px}
+.bar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}
+.bar h2{font-size:17px;font-weight:700;letter-spacing:.02em}
+.bar .tick{display:inline-block;width:18px;height:2px;background:var(--accent);margin-right:10px;vertical-align:middle}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:600;
+  font-size:13px;cursor:pointer;font-family:var(--disp)}
+.btn.ghost{background:none;border:1px solid var(--hair);color:var(--fg)}
+.btn.sm{padding:6px 10px;font-size:12px}
+.btn.danger{background:rgba(229,96,76,.15);color:var(--bad);border:1px solid rgba(229,96,76,.4)}
+input,select,textarea{background:var(--bg1);border:1px solid var(--hair);border-radius:8px;color:var(--fg);
+  padding:10px 12px;font-family:var(--disp);font-size:13px;width:100%}
+textarea{min-height:70px;resize:vertical}
+table{width:100%;border-collapse:collapse}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;
+  text-align:left;padding:0 10px 10px;border-bottom:1px solid var(--hair)}
+td{padding:12px 10px;border-bottom:1px solid var(--hair2);font-size:13px;vertical-align:top}
+td.money{font-family:var(--mono);font-size:12.5px;text-align:right;white-space:nowrap}
+th.r{text-align:right}
+.pill{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;padding:4px 10px;
+  border-radius:999px;border:1px solid;cursor:pointer;user-select:none;white-space:nowrap}
+.p-borrador,.p-nuevo{color:var(--muted);border-color:var(--hair)}
+.p-enviada,.p-contactado{color:var(--info);border-color:rgba(106,165,232,.45)}
+.p-aprobada,.p-pagada,.p-cerrado{color:var(--ok);border-color:rgba(76,195,138,.45)}
+.p-rechazada,.p-vencida{color:var(--bad);border-color:rgba(229,96,76,.45)}
+.p-pendiente{color:var(--warn);border-color:rgba(229,180,84,.45)}
+.panel{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:20px;margin-bottom:20px}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.form .full{grid-column:1/-1}
+.form label{display:block}
+.form .fl{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);
+  text-transform:uppercase;margin-bottom:6px;display:block}
+.empty{border:1px dashed var(--hair);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
+.empty b{color:var(--fg)}
+.rowactions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.tablewrap{overflow-x:auto}
+.clientcard{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:18px}
+.clients{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.clientcard h3{font-size:15px;font-weight:700}
+.clientcard .co{color:var(--muted);font-size:12.5px;margin-top:2px}
+.clientcard .kv{margin-top:10px;font-size:12.5px;line-height:1.7;color:#C9CBD1;word-break:break-word}
+.clientcard .kv span{color:var(--faint);font-family:var(--mono);font-size:10px;letter-spacing:.1em;margin-right:6px}
+.notes{margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid var(--hair2);padding-top:8px;white-space:pre-wrap}
+.offline{padding:40px 20px;text-align:center;color:var(--muted)}
+.confirmrow{background:rgba(229,96,76,.06)}
+.login{max-width:360px;margin:12vh auto 0;padding:0 20px}
+.login .box{background:var(--card);border:1px solid var(--hair2);border-radius:14px;padding:26px}
+.login h1{font-size:13px;letter-spacing:.2em;font-weight:600;margin-bottom:2px}
+.login .sub{color:var(--muted);font-size:12px;letter-spacing:.2em;font-family:var(--mono);margin-bottom:22px}
+.login label{display:block;margin-bottom:14px}
+.login .fl{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;display:block}
+.login .err{color:var(--bad);font-size:12.5px;margin-top:10px;min-height:16px}
+@media(max-width:480px){.bar h2{font-size:15px}}
+footer{margin-top:40px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint);
+  display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--hair2);padding-top:12px}
+</style>
+</head>
+<body>
+<div id="root"><div class="offline">Cargando el panel…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+"use strict";
+
+/* ---------- Supabase ---------- */
+const cfg = window.LORENZO_CONFIG || {};
+let sb = null;
+const configured = cfg.SUPABASE_URL && cfg.SUPABASE_URL.indexOf("PEGAR_") !== 0;
+if(configured){ sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY); }
+
+const YEAR = new Date().getFullYear();
+let isAdmin = false, canWrite = false, goal = 0, sessionEmail = "";
+let proposals = [], invoices = [], clients = [], leads = [];
+let tab = "resumen";
+let editing = null, confirmDel = null, formOpen = null;
+
+const P_STATES = ["borrador","enviada","aprobada","rechazada"];
+const I_STATES = ["pendiente","pagada","vencida"];
+const L_STATES = ["nuevo","contactado","cerrado"];
+
+const money = n => "$" + (Number(n)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = () => new Date().toISOString().slice(0,10);
+
+function nextNumber(list, prefix){
+  let max = 0;
+  for(const d of list){
+    const m = String(d.number||"").match(new RegExp("^"+prefix+"-(\\d{4})-(\\d+)$"));
+    if(m && Number(m[1])===YEAR) max = Math.max(max, Number(m[2]));
+  }
+  return prefix+"-"+YEAR+"-"+String(max+1).padStart(3,"0");
+}
+const clientName = id => (clients.find(c=>c.id===id)||{}).name || "";
+
+/* ---------- mapeos DB (snake_case) <-> UI (camelCase) ---------- */
+const FROM = {
+  proposals: r=>({id:r.id,number:r.number,clientId:r.client_id,clientFree:r.client_free,title:r.title,amount:r.amount,status:r.status,date:r.date,notes:r.notes,fileUrl:r.file_url,fileName:r.file_name,createdAt:r.created_at}),
+  invoices:  r=>({id:r.id,number:r.number,clientId:r.client_id,amount:r.amount,status:r.status,issued:r.issued,due:r.due,notes:r.notes,createdAt:r.created_at}),
+  clients:   r=>({id:r.id,name:r.name,company:r.company,contact:r.contact,email:r.email,phone:r.phone,notes:r.notes,createdAt:r.created_at}),
+  leads:     r=>({id:r.id,name:r.name,email:r.email,phone:r.phone,service:r.service,message:r.message,status:r.status,createdAt:r.created_at}),
+};
+const TO = {
+  proposals: d=>({number:d.number,client_id:d.clientId||null,client_free:d.clientFree||null,title:d.title,amount:Number(d.amount)||0,status:d.status,date:d.date||null,notes:d.notes||null,file_url:d.fileUrl||null,file_name:d.fileName||null,updated_at:new Date().toISOString()}),
+  invoices:  d=>({number:d.number,client_id:d.clientId||null,amount:Number(d.amount)||0,status:d.status,issued:d.issued||null,due:d.due||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
+  clients:   d=>({name:d.name,company:d.company||null,contact:d.contact||null,email:d.email||null,phone:d.phone||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
+};
+
+/* ---------- carga de datos ---------- */
+async function loadAll(){
+  if(!sb) return;
+  const pr = await sb.from("proposals").select("*").order("created_at",{ascending:false});
+  proposals = (pr.data||[]).map(FROM.proposals);
+  if(isAdmin){
+    const [inv, cl, ld, st] = await Promise.all([
+      sb.from("invoices").select("*").order("created_at",{ascending:false}),
+      sb.from("clients").select("*").order("created_at",{ascending:false}),
+      sb.from("leads").select("*").order("created_at",{ascending:false}),
+      sb.from("settings").select("*").eq("key","goal").maybeSingle(),
+    ]);
+    invoices = (inv.data||[]).map(FROM.invoices);
+    clients  = (cl.data||[]).map(FROM.clients);
+    leads    = (ld.data||[]).map(FROM.leads);
+    goal = st.data ? Number(st.data.monthly_goal)||0 : 0;
+  }
+  renderApp();
+}
+
+/* ============================ RENDER ============================ */
+function tabsHtml(){
+  const t = [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
+  if(isAdmin) t.push(["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"]);
+  return `<nav id="tabs">${t.map(([k,l])=>`<button data-t="${k}" class="${tab===k?'on':''}">${l}${k==='leads'&&leads.filter(x=>x.status==='nuevo').length?` (${leads.filter(x=>x.status==='nuevo').length})`:''}</button>`).join("")}</nav>`;
+}
+
+function renderApp(){
+  const el = document.getElementById("root");
+  el.innerHTML = `<div class="wrap">
+    <header>
+      <span class="wordmark"><b>LORENZO</b><span>AGENCY · PANEL</span></span>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--faint)">${esc(sessionEmail)}</span>
+        <button class="btn ghost sm" id="logout">Salir</button>
+      </div>
+    </header>
+    ${tabsHtml()}
+    <div id="app"></div>
+    <footer><span>LORENZO AGENCY · MIAMI, FL</span><span>TALK@LORENZOAGENCY.TECH</span></footer>
+  </div>`;
+  renderBody();
+  document.getElementById("logout").onclick = async()=>{ await sb.auth.signOut(); };
+  document.getElementById("tabs").addEventListener("click",e=>{
+    const b=e.target.closest("button[data-t]"); if(!b) return;
+    tab=b.dataset.t; formOpen=null; editing=null; confirmDel=null; renderApp();
+  });
+}
+
+function renderBody(){
+  if(tab==="resumen") renderResumen();
+  else if(tab==="propuestas") renderProposals();
+  else if(tab==="facturas") renderInvoices();
+  else if(tab==="clientes") renderClients();
+  else if(tab==="leads") renderLeads();
+}
+const $app = () => document.getElementById("app");
+
+function renderResumen(){
+  const sum = a=>a.reduce((s,x)=>s+(Number(x.amount)||0),0);
+  const sent = proposals.filter(p=>p.status==="enviada");
+  const appr = proposals.filter(p=>p.status==="aprobada");
+  const pend = invoices.filter(i=>i.status!=="pagada");
+  const paid = invoices.filter(i=>i.status==="pagada");
+  const mkey = new Date().toISOString().slice(0,7);
+  const cobradoMes = sum(paid.filter(i=>String(i.issued||"").slice(0,7)===mkey));
+  let goalHtml="";
+  if(isAdmin){
+    const pct = goal>0 ? Math.min(100, cobradoMes/goal*100) : 0;
+    const avg = proposals.length ? sum(proposals)/proposals.length : 0;
+    let msg;
+    if(!goal) msg="Definí el objetivo del mes para ver el avance.";
+    else if(cobradoMes>=goal) msg="🏆 Objetivo superado por "+money(cobradoMes-goal)+" — subí la vara el mes que viene.";
+    else { const gap=goal-cobradoMes;
+      msg="Faltan "+money(gap)+(avg>0?" · ≈ "+Math.ceil(gap/avg)+" propuesta(s) más como las tuyas":"")+". ¿Qué podés cerrar esta semana?"; }
+    goalHtml=`<div class="panel">
+      <div class="bar"><h2><span class="tick"></span>Objetivo del mes</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="goalinput" type="number" min="0" step="100" value="${goal||""}" placeholder="5000" style="width:130px">
+          <button class="btn sm" data-goalsave="1">Guardar</button>
+        </div></div>
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <div><span style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums">${money(cobradoMes)}</span>
+        <span style="color:var(--muted)"> cobrado este mes${goal?" de "+money(goal):""}</span></div>
+        ${goal?`<div style="font-family:var(--mono);font-size:12px;color:var(--muted)">${pct.toFixed(0)}%</div>`:""}
+      </div>
+      <div style="height:8px;background:var(--hair2);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${(goal&&cobradoMes>=goal)?'var(--ok)':'var(--accent)'}"></div>
+      </div>
+      <div style="margin-top:10px;font-size:13px;color:#C9CBD1">${msg}</div>
+    </div>`;
+  }
+  $app().innerHTML = goalHtml + `
+  <div class="grid">
+    <div class="stat"><span class="l">Pipeline (enviadas)</span><div class="v">${money(sum(sent))}</div><div class="s">${sent.length} propuesta(s) esperando respuesta</div></div>
+    <div class="stat"><span class="l">Aprobado</span><div class="v">${money(sum(appr))}</div><div class="s">${appr.length} propuesta(s) ganada(s)</div></div>
+    ${isAdmin?`<div class="stat"><span class="l">Por cobrar</span><div class="v">${money(sum(pend))}</div><div class="s">${pend.length} factura(s) abiertas</div></div>
+    <div class="stat"><span class="l">Cobrado</span><div class="v">${money(sum(paid))}</div><div class="s">${paid.length} factura(s) pagadas</div></div>`:""}
+  </div>
+  <div class="bar"><h2><span class="tick"></span>Últimas propuestas</h2></div>
+  ${proposals.length? proposalTable(proposals.slice(0,5), false) :
+    '<div class="empty"><b>Sin propuestas todavía.</b><br>Creá la primera desde la pestaña Propuestas — el número se asigna solo.</div>'}`;
+}
+
+function statusPill(col,d){ return `<span class="pill p-${esc(d.status)}" data-cycle="${col}:${d.id}" title="Click para cambiar estado" role="button" tabindex="0">${esc(d.status).toUpperCase()}</span>`; }
+
+function proposalTable(list, actions=true){
+  return `<div class="tablewrap"><table>
+  <tr><th>Nº</th><th>Cliente</th><th>Título</th><th class="r">Monto</th><th>Estado</th><th>Fecha</th>${actions?'<th class="r"></th>':''}</tr>
+  ${list.map(p=>{
+    const del = confirmDel && confirmDel.col==="proposals" && confirmDel.id===p.id;
+    return `<tr class="${del?'confirmrow':''}">
+    <td style="font-family:var(--mono);font-size:12px;white-space:nowrap">${esc(p.number)}${p.fileUrl?` <a href="${esc(p.fileUrl)}" target="_blank" title="${esc(p.fileName||"PDF")}" style="color:var(--accent);text-decoration:none">📄</a>`:""}</td>
+    <td>${esc(clientName(p.clientId)||p.clientFree||"—")}</td>
+    <td>${esc(p.title)}</td>
+    <td class="money">${money(p.amount)}</td>
+    <td>${statusPill("proposals",p)}</td>
+    <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">${esc(p.date||"")}</td>
+    ${actions&&canWrite?`<td><div class="rowactions">${del
+      ? `<button class="btn sm danger" data-delyes="proposals:${p.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
+      : `<button class="btn sm ghost" data-edit="proposals:${p.id}">Editar</button><button class="btn sm ghost" data-del="proposals:${p.id}">✕</button>`}</div></td>`:(actions?'<td></td>':'')}
+  </tr>`}).join("")}
+  </table></div>`;
+}
+
+function renderProposals(){
+  const d = editing && editing.col==="proposals" ? proposals.find(p=>p.id===editing.id) : null;
+  $app().innerHTML = `
+  <div class="bar"><h2><span class="tick"></span>Propuestas</h2>
+    ${canWrite?`<button class="btn" data-new="proposals">+ Nueva propuesta</button>`:''}</div>
+  ${(formOpen==="proposals")? proposalForm(d) : ""}
+  ${proposals.length? proposalTable(proposals) :
+    '<div class="empty"><b>Sin propuestas todavía.</b><br>La numeración sigue el formato LA-'+YEAR+'-001, 002, …</div>'}`;
+}
+function proposalForm(d){
+  const num = d? d.number : nextNumber(proposals,"LA");
+  return `<div class="panel"><form id="f-proposals" class="form">
+    <label><span class="fl">Número</span><input name="number" value="${esc(num)}" required></label>
+    <label><span class="fl">Cliente</span><select name="clientId"><option value="">— elegir —</option>
+      ${clients.map(c=>`<option value="${esc(c.id)}" ${d&&d.clientId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
+    <label><span class="fl">Título</span><input name="title" value="${esc(d?d.title:"")}" required placeholder="Localización creole — 7 cursos"></label>
+    <label><span class="fl">Monto USD</span><input name="amount" type="number" step="0.01" min="0" value="${esc(d?d.amount:"")}" required></label>
+    <label><span class="fl">Estado</span><select name="status">${P_STATES.map(s=>`<option ${d&&d.status===s?"selected":""}>${s}</option>`).join("")}</select></label>
+    <label><span class="fl">Fecha</span><input name="date" type="date" value="${esc(d?d.date:today())}"></label>
+    <label class="full"><span class="fl">Notas</span><textarea name="notes" placeholder="Condiciones, pagos, próximos pasos…">${esc(d?d.notes:"")}</textarea></label>
+    <label class="full"><span class="fl">PDF de la propuesta ${d&&d.fileUrl?`(actual: ${esc(d.fileName||"archivo")} — subir uno nuevo lo reemplaza)`:"(opcional)"}</span><input name="__file" type="file" accept="application/pdf"></label>
+    <div class="full" style="display:flex;gap:10px">
+      <button class="btn" type="submit">${d?"Guardar cambios":"Crear propuesta"}</button>
+      <button class="btn ghost" type="button" data-cancel="1">Cancelar</button>
+    </div></form></div>`;
+}
+
+function renderInvoices(){
+  const d = editing && editing.col==="invoices" ? invoices.find(p=>p.id===editing.id) : null;
+  $app().innerHTML = `
+  <div class="bar"><h2><span class="tick"></span>Facturas</h2>
+    ${canWrite?`<button class="btn" data-new="invoices">+ Nueva factura</button>`:''}</div>
+  ${(formOpen==="invoices")? invoiceForm(d) : ""}
+  ${invoices.length? `<div class="tablewrap"><table>
+    <tr><th>Nº</th><th>Cliente</th><th class="r">Monto</th><th>Estado</th><th>Emitida</th><th>Vence</th><th class="r"></th></tr>
+    ${invoices.map(i=>{
+      const del = confirmDel && confirmDel.col==="invoices" && confirmDel.id===i.id;
+      return `<tr class="${del?'confirmrow':''}">
+      <td style="font-family:var(--mono);font-size:12px">${esc(i.number)}</td>
+      <td>${esc(clientName(i.clientId)||"—")}</td>
+      <td class="money">${money(i.amount)}</td>
+      <td>${statusPill("invoices",i)}</td>
+      <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">${esc(i.issued||"")}</td>
+      <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">${esc(i.due||"")}</td>
+      <td><div class="rowactions">${del
+        ? `<button class="btn sm danger" data-delyes="invoices:${i.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
+        : `<button class="btn sm ghost" data-edit="invoices:${i.id}">Editar</button><button class="btn sm ghost" data-del="invoices:${i.id}">✕</button>`}</div></td>
+    </tr>`}).join("")}
+    </table></div>` :
+    '<div class="empty"><b>Sin facturas todavía.</b></div>'}`;
+}
+function invoiceForm(d){
+  const num = d? d.number : nextNumber(invoices,"INV");
+  return `<div class="panel"><form id="f-invoices" class="form">
+    <label><span class="fl">Número</span><input name="number" value="${esc(num)}" required></label>
+    <label><span class="fl">Cliente</span><select name="clientId"><option value="">— elegir —</option>
+      ${clients.map(c=>`<option value="${esc(c.id)}" ${d&&d.clientId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
+    <label><span class="fl">Monto USD</span><input name="amount" type="number" step="0.01" min="0" value="${esc(d?d.amount:"")}" required></label>
+    <label><span class="fl">Estado</span><select name="status">${I_STATES.map(s=>`<option ${d&&d.status===s?"selected":""}>${s}</option>`).join("")}</select></label>
+    <label><span class="fl">Emitida</span><input name="issued" type="date" value="${esc(d?d.issued:today())}"></label>
+    <label><span class="fl">Vence</span><input name="due" type="date" value="${esc(d?d.due:"")}"></label>
+    <label class="full"><span class="fl">Concepto / notas</span><textarea name="notes">${esc(d?d.notes:"")}</textarea></label>
+    <div class="full" style="display:flex;gap:10px">
+      <button class="btn" type="submit">${d?"Guardar cambios":"Crear factura"}</button>
+      <button class="btn ghost" type="button" data-cancel="1">Cancelar</button>
+    </div></form></div>`;
+}
+
+function renderClients(){
+  const d = editing && editing.col==="clients" ? clients.find(p=>p.id===editing.id) : null;
+  $app().innerHTML = `
+  <div class="bar"><h2><span class="tick"></span>Clientes y contactos</h2>
+    ${canWrite?`<button class="btn" data-new="clients">+ Nuevo cliente</button>`:''}</div>
+  ${(formOpen==="clients")? clientForm(d) : ""}
+  ${clients.length? `<div class="clients">${clients.map(c=>{
+    const del = confirmDel && confirmDel.col==="clients" && confirmDel.id===c.id;
+    const props = proposals.filter(p=>p.clientId===c.id);
+    return `<div class="clientcard">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+        <div><h3>${esc(c.name)}</h3><div class="co">${esc(c.company||"")}</div></div>
+        <div class="rowactions">${del
+          ? `<button class="btn sm danger" data-delyes="clients:${c.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
+          : `<button class="btn sm ghost" data-edit="clients:${c.id}">Editar</button><button class="btn sm ghost" data-del="clients:${c.id}">✕</button>`}</div>
+      </div>
+      <div class="kv">
+        ${c.contact?`<div><span>CONTACTO</span>${esc(c.contact)}</div>`:""}
+        ${c.email?`<div><span>EMAIL</span>${esc(c.email)}</div>`:""}
+        ${c.phone?`<div><span>TEL</span>${esc(c.phone)}</div>`:""}
+        ${props.length?`<div><span>PROPUESTAS</span>${props.map(p=>esc(p.number)).join(", ")}</div>`:""}
+      </div>
+      ${c.notes?`<div class="notes">${esc(c.notes)}</div>`:""}
+    </div>`}).join("")}</div>` :
+    '<div class="empty"><b>Sin clientes todavía.</b></div>'}`;
+}
+function clientForm(d){
+  return `<div class="panel"><form id="f-clients" class="form">
+    <label><span class="fl">Nombre</span><input name="name" value="${esc(d?d.name:"")}" required placeholder="Compass"></label>
+    <label><span class="fl">Empresa / división</span><input name="company" value="${esc(d?d.company:"")}"></label>
+    <label><span class="fl">Contacto</span><input name="contact" value="${esc(d?d.contact:"")}" placeholder="Nombre y rol"></label>
+    <label><span class="fl">Email</span><input name="email" type="email" value="${esc(d?d.email:"")}"></label>
+    <label><span class="fl">Teléfono</span><input name="phone" value="${esc(d?d.phone:"")}"></label>
+    <label class="full"><span class="fl">Notas internas</span><textarea name="notes" placeholder="Historial, acuerdos, datos del deal…">${esc(d?d.notes:"")}</textarea></label>
+    <div class="full" style="display:flex;gap:10px">
+      <button class="btn" type="submit">${d?"Guardar cambios":"Crear cliente"}</button>
+      <button class="btn ghost" type="button" data-cancel="1">Cancelar</button>
+    </div></form></div>`;
+}
+
+function renderLeads(){
+  $app().innerHTML = `
+  <div class="bar"><h2><span class="tick"></span>Consultas del sitio</h2></div>
+  ${leads.length? `<div class="tablewrap"><table>
+    <tr><th>Fecha</th><th>Nombre</th><th>Contacto</th><th>Servicio</th><th>Mensaje</th><th>Estado</th><th class="r"></th></tr>
+    ${leads.map(l=>{
+      const del = confirmDel && confirmDel.col==="leads" && confirmDel.id===l.id;
+      return `<tr class="${del?'confirmrow':''}">
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${esc(String(l.createdAt||"").slice(0,10))}</td>
+      <td>${esc(l.name||"—")}</td>
+      <td style="font-size:12px">${l.email?esc(l.email):""}${l.phone?`<br><span style="color:var(--muted)">${esc(l.phone)}</span>`:""}</td>
+      <td style="font-size:12px">${esc(l.service||"—")}</td>
+      <td style="font-size:12.5px;max-width:320px">${esc(l.message||"")}</td>
+      <td>${statusPill("leads",l)}</td>
+      <td><div class="rowactions">${del
+        ? `<button class="btn sm danger" data-delyes="leads:${l.id}">Borrar</button><button class="btn sm ghost" data-delno="1">No</button>`
+        : `<button class="btn sm ghost" data-del="leads:${l.id}">✕</button>`}</div></td>
+    </tr>`}).join("")}
+    </table></div>` :
+    '<div class="empty"><b>Sin consultas todavía.</b><br>Cuando alguien complete el formulario del sitio, aparece acá.</div>'}`;
+}
+
+/* ---------- eventos ---------- */
+function note(msg){
+  const n=document.createElement("div");
+  n.style.cssText="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d1e23;border:1px solid var(--hair);padding:10px 16px;border-radius:8px;font-size:13px;z-index:9";
+  n.textContent=msg; document.body.appendChild(n); setTimeout(()=>n.remove(),4200);
+}
+
+document.addEventListener("click", async e=>{
+  const t = e.target; if(!sb || !isAdmin && !t.dataset.cycle) { /* invitados: solo leen */ }
+  if(t.dataset.new){ formOpen=t.dataset.new; editing=null; renderApp(); return; }
+  if(t.dataset.cancel){ formOpen=null; editing=null; renderApp(); return; }
+  if(t.dataset.edit){ const[col,id]=t.dataset.edit.split(":"); editing={col,id}; formOpen=col; confirmDel=null; renderApp(); return; }
+  if(t.dataset.del){ const[col,id]=t.dataset.del.split(":"); confirmDel={col,id}; renderApp(); return; }
+  if(t.dataset.delno){ confirmDel=null; renderApp(); return; }
+  if(t.dataset.delyes){
+    const[col,id]=t.dataset.delyes.split(":"); confirmDel=null;
+    const {error}=await sb.from(col).delete().eq("id",id);
+    if(error) note("No se pudo borrar: "+error.message); else await loadAll();
+    return;
+  }
+  if(t.dataset.goalsave){
+    const v=Number(document.getElementById("goalinput").value)||0;
+    const {error}=await sb.from("settings").upsert({key:"goal",monthly_goal:v,updated_at:new Date().toISOString()});
+    if(error) note("No se pudo guardar el objetivo: "+error.message); else await loadAll();
+    return;
+  }
+  if(t.dataset.cycle){
+    const[col,id]=t.dataset.cycle.split(":");
+    const list = col==="proposals"?proposals:col==="invoices"?invoices:leads;
+    const states = col==="proposals"?P_STATES:col==="invoices"?I_STATES:L_STATES;
+    const d=list.find(x=>x.id===id); if(!d) return;
+    const next=states[(states.indexOf(d.status)+1)%states.length];
+    const {error}=await sb.from(col).update({status:next}).eq("id",id);
+    if(error) note("No se pudo cambiar el estado: "+error.message); else await loadAll();
+    return;
+  }
+});
+
+document.addEventListener("submit", async e=>{
+  const f=e.target; if(!f.id||!f.id.startsWith("f-")) return;
+  e.preventDefault();
+  const col=f.id.slice(2);
+  const data=Object.fromEntries(new FormData(f).entries());
+  const fileInput=f.querySelector('input[type="file"]');
+  delete data.__file;
+  try{
+    if(fileInput && fileInput.files && fileInput.files[0]){
+      const file=fileInput.files[0];
+      const path=Date.now()+"-"+file.name.replace(/[^\w.\-]/g,"_");
+      const up=await sb.storage.from("proposals").upload(path,file,{upsert:false});
+      if(up.error){ note("No se pudo subir el PDF; el resto se guarda igual."); }
+      else{ const {data:pub}=sb.storage.from("proposals").getPublicUrl(path); data.fileUrl=pub.publicUrl; data.fileName=file.name; }
+    }
+    if(editing && editing.col===col && !data.fileUrl){
+      const prev=(col==="proposals"?proposals:col==="invoices"?invoices:clients).find(x=>x.id===editing.id);
+      if(prev && prev.fileUrl){ data.fileUrl=prev.fileUrl; data.fileName=prev.fileName||""; }
+    }
+    const row=TO[col](data);
+    let error;
+    if(editing && editing.col===col){ ({error}=await sb.from(col).update(row).eq("id",editing.id)); }
+    else { row.created_at=new Date().toISOString(); ({error}=await sb.from(col).insert(row)); }
+    if(error){ note("No se pudo guardar: "+error.message); return; }
+    formOpen=null; editing=null; await loadAll();
+  }catch(err){ note("No se pudo guardar: "+err.message); }
+});
+
+/* ---------- login ---------- */
+function renderLogin(err){
+  document.getElementById("root").innerHTML = `
+  <div class="login"><div class="box">
+    <h1>LORENZO</h1><div class="sub">AGENCY · PANEL</div>
+    <form id="loginf">
+      <label><span class="fl">Email</span><input name="email" type="email" required autocomplete="username"></label>
+      <label><span class="fl">Contraseña</span><input name="password" type="password" required autocomplete="current-password"></label>
+      <button class="btn" type="submit" style="width:100%">Entrar</button>
+      <div class="err">${err?esc(err):""}</div>
+    </form>
+  </div></div>`;
+  document.getElementById("loginf").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const {email,password}=Object.fromEntries(new FormData(e.target).entries());
+    const btn=e.target.querySelector("button"); btn.textContent="Entrando…"; btn.disabled=true;
+    const {error}=await sb.auth.signInWithPassword({email,password});
+    if(error){ renderLogin("Email o contraseña incorrectos."); }
+  });
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  if(!configured){
+    document.getElementById("root").innerHTML='<div class="offline">Panel sin configurar.<br>Falta pegar las credenciales de Supabase en config.js.</div>';
+    return;
+  }
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ renderLogin(); return; }
+  sessionEmail = session.user.email||"";
+  const {data:adm}=await sb.rpc("is_admin");
+  isAdmin=!!adm; canWrite=isAdmin;
+  if(!isAdmin) tab="propuestas";
+  await loadAll();
+  // realtime: sincroniza entre dispositivos
+  sb.channel("panel-rt").on("postgres_changes",{event:"*",schema:"public"},()=>loadAll()).subscribe();
+}
+sb && sb.auth.onAuthStateChange((_e,session)=>{
+  if(session && document.getElementById("loginf")){ boot(); }
+  else if(!session){ renderLogin(); }
+});
+boot();
+</script>
+</body>
+</html>
