@@ -65,8 +65,10 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125
 .imini .n{font-family:var(--mono);font-size:10px;color:var(--faint)}
 .lmodal{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;
   padding:20px;z-index:50}
-.lcard{background:var(--bg1);border:1px solid var(--hair);border-radius:16px;padding:26px 28px;max-width:780px;width:100%;
-  max-height:88vh;overflow:auto}
+.lcard{background:linear-gradient(180deg,rgba(32,33,38,.78),rgba(16,17,20,.82));
+  backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);
+  border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:26px 30px;max-width:920px;width:100%;
+  max-height:90vh;overflow:auto;box-shadow:0 30px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08)}
 .lhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
 .lname{font-size:18px;font-weight:700}
 .lmeta{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:4px}
@@ -82,7 +84,7 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125
 .lreplyhead{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;
   margin-bottom:8px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .lreplyhead .c{color:var(--accent)}
-.lreply{min-height:280px;font-size:15px;line-height:1.6;resize:vertical;color:#F2F3F6;border-radius:14px;padding:16px 18px;
+.lreply{min-height:220px;font-size:15px;line-height:1.6;resize:vertical;color:#F2F3F6;border-radius:14px;padding:16px 18px;overflow:hidden;
   background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
   backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);
   border:1px solid rgba(255,255,255,.12);
@@ -205,6 +207,7 @@ const money = n => "$" + (Number(n)||0).toLocaleString("en-US",{minimumFractionD
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today = () => new Date().toISOString().slice(0,10);
 const ICON_TRASH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;pointer-events:none"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v6M14 11v6"/></svg>';
+function autoGrow(ta){ if(!ta) return; ta.style.height='auto'; const max=Math.round((window.innerHeight||800)*0.62); ta.style.height=Math.min(ta.scrollHeight+2,max)+'px'; }
 
 function nextNumber(list, prefix){
   let max = 0;
@@ -280,7 +283,7 @@ async function runDraft(id, isRehacer){
   try{
     const out = await callFn("sugerir", { lead_id:id, message:msg, name:l.name||"", email:l.email||"", service:l.service||"", previous: (isRehacer && ta.dataset.orig) ? ta.dataset.orig : "" });
     if(out && out.reply){
-      ta.value = out.reply; ta.dataset.orig = out.reply;
+      ta.value = out.reply; ta.dataset.orig = out.reply; autoGrow(ta);
       try{ await sb.from("leads").update({ borrador: out.reply }).eq("id", id); }catch(e){}
       if(isRehacer) note("Nueva sugerencia lista.");
     } else if(isRehacer){ note("El agente no devolvió texto."); }
@@ -311,6 +314,7 @@ function renderApp(){
     <footer><span>LORENZO AGENCY · MIAMI, FL</span><span>TALK@LORENZOAGENCY.TECH</span></footer>
   </div>` + leadModalHtml() + confirmHtml();
   renderBody();
+  const _lr=document.getElementById("lreply"); if(_lr) autoGrow(_lr);
   document.getElementById("logout").onclick = async()=>{ await sb.auth.signOut(); };
   document.getElementById("tabs").addEventListener("click",e=>{
     const b=e.target.closest("button[data-t]"); if(!b) return;
@@ -694,6 +698,9 @@ document.addEventListener("submit", async e=>{
     formOpen=null; editing=null; await loadAll();
   }catch(err){ note("No se pudo guardar: "+err.message); }
 });
+
+// el cuadro de respuesta crece solo con el texto
+document.addEventListener("input", e=>{ if(e.target && e.target.id==="lreply") autoGrow(e.target); });
 
 // cambio de estado del lead (dropdown)
 document.addEventListener("change", async e=>{
