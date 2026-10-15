@@ -36,6 +36,8 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(255,90,
 .linkbtn{background:none;border:none;color:#C9CBD1;font-family:var(--disp);font-size:12.5px;text-align:left;
   cursor:pointer;padding:0;text-decoration:underline;text-decoration-color:var(--hair)}
 .linkbtn:hover{color:var(--fg)}
+.telink{color:var(--accent);text-decoration:none;font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;white-space:nowrap}
+.telink:hover{text-decoration:underline}
 /* embudo */
 .fchips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
 .fchip{background:none;border:1px solid var(--hair2);color:var(--muted);font-family:var(--mono);font-size:10.5px;
@@ -478,7 +480,7 @@ function leadRowHtml(l){
     <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${esc(String(l.createdAt||"").slice(0,10))}</td>
     <td>${esc(l.name||"—")}</td>
     <td>${interestBar(l.respuestas)}</td>
-    <td style="font-size:12px">${l.email?esc(l.email):""}${l.phone?`<br><span style="color:var(--muted)">${esc(l.phone)}</span>`:""}</td>
+    <td style="font-size:12px;line-height:1.5">${l.email?`<div style="word-break:break-all">${esc(l.email)}</div>`:""}${l.phone?`<div style="margin-top:7px"><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">📞 ${esc(l.phone)}</a></div>`:""}</td>
     <td>${l.service?`<span class="lrubro">${esc(l.service)}</span>`:"—"}</td>
     <td style="max-width:240px"><button class="linkbtn" data-openlead="${l.id}">${short}</button>${l.mailsEnviados?`<br><span style="font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.1em">${l.mailsEnviados} mail(s) enviado(s)</span>`:""}</td>
     <td><select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select></td>
@@ -521,7 +523,7 @@ function leadModalHtml(){
     </div>
     <div class="lcontact">
       ${l.email?`<div><span>EMAIL</span>${esc(l.email)}</div>`:""}
-      ${l.phone?`<div><span>TEL</span>${esc(l.phone)}</div>`:""}
+      ${l.phone?`<div><span>TEL</span><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">📞 ${esc(l.phone)}</a></div>`:""}
     </div>
     <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
 
