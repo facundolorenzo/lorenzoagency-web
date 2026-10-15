@@ -258,6 +258,26 @@ async function callFn(name, body){
   return res.json();
 }
 
+// Genera (o regenera) el borrador del lead. auto=true cuando se abre el lead sin borrador.
+async function runDraft(id, isRehacer){
+  const l = leads.find(x=>x.id===id); if(!l) return;
+  const ta = document.getElementById("lreply"); if(!ta) return;
+  const btn = document.querySelector('[data-rehacer="'+id+'"]');
+  const prevLabel = btn ? btn.textContent : "";
+  if(btn){ btn.disabled=true; btn.textContent="Pensando…"; }
+  if(!isRehacer){ ta.placeholder = "El agente está redactando la respuesta…"; }
+  const msg = (l.ultimaRespuesta && String(l.ultimaRespuesta).trim()) ? l.ultimaRespuesta : (l.message||"");
+  try{
+    const out = await callFn("sugerir", { lead_id:id, message:msg, name:l.name||"", email:l.email||"", service:l.service||"", previous: (isRehacer && ta.dataset.orig) ? ta.dataset.orig : "" });
+    if(out && out.reply){
+      ta.value = out.reply; ta.dataset.orig = out.reply;
+      try{ await sb.from("leads").update({ borrador: out.reply }).eq("id", id); }catch(e){}
+      if(isRehacer) note("Nueva sugerencia lista.");
+    } else if(isRehacer){ note("El agente no devolvió texto."); }
+  }catch(err){ note(isRehacer ? err.message : ("No pude redactar: "+err.message)); }
+  if(btn){ btn.disabled=false; btn.textContent=prevLabel||"↻ Rehacer"; }
+}
+
 /* ============================ RENDER ============================ */
 function tabsHtml(){
   const t = [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
@@ -574,18 +594,7 @@ document.addEventListener("click", async e=>{
   const fr = t.closest && t.closest("[data-franja]");
   if(fr){ const s=fr.dataset.franja; leadCollapsed[s]=!leadCollapsed[s]; renderApp(); return; }
   if(t.dataset.leadfilter){ leadFilter=t.dataset.leadfilter; renderApp(); return; }
-  if(t.dataset.rehacer){
-    const id=t.dataset.rehacer; const l=leads.find(x=>x.id===id); if(!l) return;
-    const ta=document.getElementById("lreply");
-    t.disabled=true; const prev=t.textContent; t.textContent="Pensando…";
-    try{
-      const out = await callFn("sugerir", { lead_id:id, message:l.message||"", name:l.name||"", email:l.email||"", service:l.service||"", previous: ta?ta.value:"" });
-      if(ta && out && out.reply){ ta.value = out.reply; ta.dataset.orig = out.reply; note("Nueva sugerencia lista. Editala si querés y tocá Enviar."); }
-      else note("El agente no devolvió texto.");
-    }catch(err){ note(err.message); }
-    t.disabled=false; t.textContent=prev;
-    return;
-  }
+  if(t.dataset.rehacer){ await runDraft(t.dataset.rehacer, true); return; }
   if(t.dataset.enviarmail){
     const id=t.dataset.enviarmail; const l=leads.find(x=>x.id===id); if(!l) return;
     const ta=document.getElementById("lreply");
@@ -612,7 +621,12 @@ document.addEventListener("click", async e=>{
     window.open("https://privateemail.com/","_blank","noopener");
     return;
   }
-  if(t.dataset.openlead){ openLeadId=t.dataset.openlead; confirmDel=null; renderApp(); return; }
+  if(t.dataset.openlead){
+    openLeadId=t.dataset.openlead; confirmDel=null; renderApp();
+    const ol = leads.find(x=>x.id===openLeadId);
+    if(ol && !(ol.borrador && String(ol.borrador).trim())) runDraft(openLeadId, false);
+    return;
+  }
   if(t.dataset.closelead || t.dataset.closeleadbg){ openLeadId=null; renderApp(); return; }
   if(t.dataset.new){ formOpen=t.dataset.new; editing=null; renderApp(); return; }
   if(t.dataset.cancel){ formOpen=null; editing=null; renderApp(); return; }
