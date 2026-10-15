@@ -40,6 +40,7 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125
 .telink:hover{text-decoration:underline}
 .btn-trad{color:var(--info);border-color:rgba(106,165,232,.5)!important}
 .btn-trad:hover{background:rgba(106,165,232,.12)}
+.tradhint{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--info);background:rgba(106,165,232,.1);border:1px solid rgba(106,165,232,.3);border-radius:8px;padding:6px 10px;margin-bottom:8px}
 /* embudo */
 .fchips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
 .fchip{background:none;border:1px solid var(--hair2);color:var(--muted);font-family:var(--mono);font-size:10.5px;
@@ -668,6 +669,7 @@ function leadModalHtml(){
 
     <div class="lreplywrap">
       <div class="lreplyhead"><span>Respuesta sugerida ${cnt}</span><span class="c" style="color:var(--faint)">editá lo que quieras · el agente aprende</span></div>
+      <div id="tradhint" class="tradhint" style="display:none">⇄ Leyendo en español · se enviará el original</div>
       <textarea class="lreply" id="lreply" placeholder="Tocá ↻ Rehacer para que el agente redacte una respuesta, o escribí vos directamente.">${esc(l.borrador||"")}</textarea>
       <div class="lreplyactions">
         <button class="btn ghost sm" data-rehacer="${l.id}">↻ Rehacer</button>
@@ -725,9 +727,11 @@ document.addEventListener("click", async e=>{
   if(t.dataset.rehacer){ await runDraft(t.dataset.rehacer, true); return; }
   if(t.dataset.traducir){
     const ta=document.getElementById("lreply"); if(!ta) return;
+    const hint=document.getElementById("tradhint");
     if(tradActivo){ // volver al original (el que se envía)
       ta.value=tradOriginal; ta.readOnly=false; autoGrow(ta);
       tradActivo=false; tradOriginal="";
+      if(hint) hint.style.display="none";
       t.innerHTML="⇄ Traducir"; t.title="Traducir al español (solo para leer)"; return;
     }
     if(!(ta.value||"").trim()){ note("No hay texto para traducir."); return; }
@@ -737,6 +741,7 @@ document.addEventListener("click", async e=>{
       if(out && out.reply){
         tradOriginal=ta.value; tradActivo=true;
         ta.value=out.reply; ta.readOnly=true; autoGrow(ta);
+        if(hint) hint.style.display="block";
         t.innerHTML="↩ Ver original"; t.title="Volver al texto que se envía (idioma original)";
       } else { note("No pude traducir."); t.innerHTML="⇄ Traducir"; }
     }catch(err){ note("No pude traducir: "+err.message); t.innerHTML="⇄ Traducir"; }
