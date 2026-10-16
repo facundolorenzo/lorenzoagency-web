@@ -301,6 +301,7 @@ const money = n => "$" + (Number(n)||0).toLocaleString("en-US",{minimumFractionD
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today = () => new Date().toISOString().slice(0,10);
 const ICON_TRASH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;pointer-events:none"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v6M14 11v6"/></svg>';
+const ICON_PHONE = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1.5px;pointer-events:none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
 function autoGrow(ta){ if(!ta) return; ta.style.height='auto'; const max=Math.round((window.innerHeight||800)*0.62); ta.style.height=Math.min(ta.scrollHeight+2,max)+'px'; }
 
 /* Detección de idioma (ES/EN) — heurística, gratis e instantánea. Facu puede corregir tocando el chip. */
@@ -795,7 +796,7 @@ function leadRowHtml(l){
     <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${esc(String(l.createdAt||"").slice(0,10))}</td>
     <td>${esc(l.name||"—")}<div style="margin-top:6px">${langChip(l)}</div></td>
     <td>${interestBar(l.respuestas)}</td>
-    <td style="font-size:12px;line-height:1.5">${l.email?`<div style="word-break:break-all">${esc(l.email)}</div>`:""}${l.phone?`<div style="margin-top:7px"><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">📞 ${esc(l.phone)}</a></div>`:""}</td>
+    <td style="font-size:12px;line-height:1.5">${l.email?`<div style="word-break:break-all">${esc(l.email)}</div>`:""}${l.phone?`<div style="margin-top:7px"><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">${ICON_PHONE} ${esc(l.phone)}</a></div>`:""}</td>
     <td>${l.service?`<span class="lrubro">${esc(l.service)}</span>`:"—"}</td>
     <td style="max-width:240px"><button class="linkbtn" data-openlead="${l.id}">${short}</button>${l.mailsEnviados?`<br><span style="font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.1em">${l.mailsEnviados} mail(s) enviado(s)</span>`:""}</td>
     <td><select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select></td>
@@ -843,12 +844,12 @@ function renderHoy(){
   const body = items.length ? `<div class="tablewrap"><table>
     <tr><th>Acción</th><th>Nombre</th><th>Servicio</th><th>Contacto</th><th class="r"></th></tr>
     ${items.map(({l,a})=>`<tr>
-      <td><span class="hchip ${a.hot?'hot':''}">${a.tipo==='llamada'?'📞 ':''}${esc(a.label)}</span></td>
+      <td><span class="hchip ${a.hot?'hot':''}">${a.tipo==='llamada'?ICON_PHONE+' ':''}${esc(a.label)}</span></td>
       <td>${esc(l.name||'—')}</td>
       <td>${l.service?`<span class="lrubro">${esc(l.service)}</span>`:'—'}</td>
-      <td style="font-size:12px">${l.email?esc(l.email):''}${l.phone?`<br><a href="tel:${esc(String(l.phone).replace(/[^\\d+]/g,''))}" class="telink">📞 ${esc(l.phone)}</a>`:''}</td>
+      <td style="font-size:12px">${l.email?esc(l.email):''}${l.phone?`<br><a href="tel:${esc(String(l.phone).replace(/[^\\d+]/g,''))}" class="telink">${ICON_PHONE} ${esc(l.phone)}</a>`:''}</td>
       <td><div class="rowactions">
-        ${a.tipo==='llamada'?`<button class="btn sm" data-calllead="${l.id}">Registrar llamada</button>`:''}
+        ${a.tipo==='llamada'?`<button class="btn sm" data-calllead="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">${ICON_PHONE} Llamar</button>`:''}
         <button class="btn sm ${a.hot?'':'ghost'}" data-openlead="${l.id}">Abrir</button>
       </div></td>
     </tr>`).join('')}
@@ -863,7 +864,7 @@ function callModalHtml(){
   if(!callLeadId) return "";
   const l=leads.find(x=>x.id===callLeadId); if(!l) return "";
   return `<div class="cpop-bg" data-closecall="1"><div class="cpop" style="max-width:470px">
-    <div class="cpop-t">📞 Llamada — ${esc(l.name||'')}</div>
+    <div class="cpop-t"><span style="color:var(--ok)">${ICON_PHONE}</span> Llamada — ${esc(l.name||'')}</div>
     <div class="cpop-s">Poné la llamada en <b>altavoz</b> cerca de la compu y <b>avisale</b> que tomás notas ("te aviso que la llamada se transcribe"). Tocá 🎙 y hablá normal.</div>
     <div class="cpop-s">Arrancá presentándote: <b>"Mi nombre es ___, soy ___ de LORENZO Agency"</b> y preguntale el nombre — así el agente identifica a cada uno y arma la ficha del cliente.</div>
     <div style="display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap">
@@ -912,7 +913,7 @@ function leadModalHtml(){
     </div>
     <div class="lcontact">
       ${l.email?`<div><span>EMAIL</span>${esc(l.email)}</div>`:""}
-      ${l.phone?`<div><span>TEL</span><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">📞 ${esc(l.phone)}</a></div>`:""}
+      ${l.phone?`<div><span>TEL</span><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">${ICON_PHONE} ${esc(l.phone)}</a></div>`:""}
     </div>
     ${cierreBarHtml(l)}
     <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
@@ -940,7 +941,7 @@ function leadModalHtml(){
       }).join('')}</div>`; })()}
 
     <div class="lactions">
-      ${l.phone?`<button class="btn ghost sm" data-calllead="${l.id}">📞 Registrar llamada</button>`:``}
+      ${l.phone?`<button class="btn ghost sm" data-calllead="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">${ICON_PHONE} Llamar</button>`:``}
       <button class="btn ghost sm" data-ganado="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">✓ Ganado</button>
       <button class="btn ghost sm" data-perdido="${l.id}" style="color:var(--bad);border-color:rgba(229,96,76,.4)">✕ Perdido</button>
       ${l.email?`<button class="btn-reply" data-replymail="${esc(l.email)}">Webmail</button>`:``}
