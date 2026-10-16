@@ -241,20 +241,34 @@ function startTranscripcion(lang){
   const ta = document.getElementById("callnote");
   transcripcion = (ta && ta.value) ? ta.value.trim()+" " : "";
   recog = new SR();
-  recog.lang = lang === "en" ? "en-US" : "es-US";
+  callLang = (lang === "en") ? "en" : "es";
+  recog.lang = callLang === "en" ? "en-US" : "es-US";
   recog.continuous = true; recog.interimResults = true;
+  // Auto-idioma: si las primeras frases vienen con confianza baja, el idioma elegido está mal -> cambia solo.
+  let confSum = 0, confN = 0, autoCambio = false;
   recog.onresult = (e)=>{
     let interim = "";
     for(let i = e.resultIndex; i < e.results.length; i++){
       const r = e.results[i];
-      if(r.isFinal) transcripcion += r[0].transcript.trim()+"\n"; // cada frase en su línea (ayuda a separar turnos)
+      if(r.isFinal){
+        transcripcion += r[0].transcript.trim()+"\n"; // cada frase en su línea (ayuda a separar turnos)
+        const c = r[0].confidence;
+        if(typeof c === "number" && c > 0){ confSum += c; confN++; }
+        if(!autoCambio && confN >= 2 && (confSum/confN) < 0.55){
+          autoCambio = true;
+          callLang = (callLang === "es") ? "en" : "es";
+          confSum = 0; confN = 0;
+          note("🎙 Detecté que la llamada es en "+(callLang==="en"?"inglés":"español")+" — cambié el micrófono solo.");
+          try{ recog.stop(); }catch(_e){} // onend relanza con el idioma nuevo
+        }
+      }
       else interim += r[0].transcript;
     }
     const t = document.getElementById("callnote");
     if(t){ t.value = transcripcion + interim; t.scrollTop = t.scrollHeight; }
   };
   recog.onerror = (e)=>{ if(e.error !== "no-speech" && e.error !== "aborted") note("Transcripción: "+e.error); };
-  recog.onend = ()=>{ if(transcribiendo && recog){ try{ recog.start(); }catch(_e){} } }; // el navegador corta solo; relanzar
+  recog.onend = ()=>{ if(transcribiendo && recog){ recog.lang = callLang === "en" ? "en-US" : "es-US"; try{ recog.start(); }catch(_e){} } }; // el navegador corta solo; relanzar (con el idioma vigente)
   try{ recog.start(); }catch(_e){}
   transcribiendo = true;
   return true;
@@ -854,7 +868,7 @@ function callModalHtml(){
     <div class="cpop-s">Arrancá presentándote: <b>"Mi nombre es ___, soy ___ de LORENZO Agency"</b> y preguntale el nombre — así el agente identifica a cada uno y arma la ficha del cliente.</div>
     <div style="display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap">
       <button class="btn ghost sm" data-trans="1">🎙 Transcribir en vivo</button>
-      <span style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted)">IDIOMA</span>
+      <span style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted)" title="Se ajusta solo si detecta otro idioma; estos botones son para forzarlo a mano">IDIOMA (auto)</span>
       <button class="btn ghost sm" data-calllang="es" style="${(callLang||langOf(l))==='es'?'border-color:var(--accent);color:var(--accent)':''}">ES</button>
       <button class="btn ghost sm" data-calllang="en" style="${(callLang||langOf(l))==='en'?'border-color:var(--accent);color:var(--accent)':''}">EN</button>
       <span id="translive" style="display:none;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:#e05c5c">● CAPTURANDO TEXTO</span>
