@@ -276,6 +276,20 @@ function startTranscripcion(lang){
 function stopTranscripcion(){
   transcribiendo = false;
   if(recog){ try{ recog.stop(); }catch(_e){} recog = null; }
+  clearInterval(transTimer); transTimer = null;
+}
+let transTimer = null, transStart = 0;
+function startRelojTrans(){
+  transStart = Date.now();
+  clearInterval(transTimer);
+  transTimer = setInterval(()=>{
+    const el = document.getElementById("translive");
+    if(!el) return;
+    const s = Math.floor((Date.now()-transStart)/1000);
+    const ta = document.getElementById("callnote");
+    const chars = ta ? ta.value.trim().length : 0;
+    el.textContent = "● CAPTURANDO "+Math.floor(s/60)+":"+String(s%60).padStart(2,"0")+(chars>250?" · listo para analizar":"");
+  }, 1000);
 }
 const CAD_DIAS = [0,1,3,5,7,10,14];
 const CAD_TIPO = ["mail","llamada","mail","llamada","mail","llamada","mail"];
@@ -1063,7 +1077,8 @@ document.addEventListener("click", async e=>{
       if(live) live.style.display="none";
     } else if(startTranscripcion(callLang || (l ? langOf(l) : "es"))){
       t.textContent="⏹ Detener";
-      if(live) live.style.display="inline";
+      if(live){ live.style.display="inline"; live.textContent="● CAPTURANDO 0:00"; }
+      startRelojTrans();
     }
     return;
   }
