@@ -83,6 +83,9 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125
 .cbar-sug-a{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
 .cbar-set{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 .cbar-set input{flex:1 1 100%;background:rgba(0,0,0,.25);border:1px solid var(--hair2);border-radius:7px;padding:7px 10px;color:var(--fg);font-size:12px}
+/* títulos de sección dentro de la ficha del lead */
+.sect{margin:22px 0 10px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.sect::after{content:"";flex:1;height:1px;background:var(--hair2)}
 .lmodal{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;
   padding:20px;z-index:50}
 .lcard{background:linear-gradient(180deg,rgba(32,33,38,.78),rgba(16,17,20,.82));
@@ -956,6 +959,13 @@ function leadModalHtml(){
   if(!l) return "";
   const cnt = l.mailsEnviados ? `<span class="c">${l.mailsEnviados} enviado(s)</span>` : "";
   const sent = l.ultimoEnvio ? `Último envío: ${esc(String(l.ultimoEnvio).slice(0,16).replace("T"," "))}` : "";
+  const ts = touchesOf(l.id);
+  const llamadas = ts.filter(x=>x.tipo==="llamada");
+  const analisis = ts.filter(x=>x.tipo==="nota" && /^(🧠|📊)/.test(String(x.texto||"")));
+  const resto = ts.filter(x=>x.tipo!=="llamada" && !analisis.includes(x));
+  const fmtT = x => String(x.createdAt||"").slice(0,16).replace("T"," ");
+  const item = (x,extra)=>`<div class="tl"><div class="tl-dot"></div><div class="tl-b"><span class="w">${esc(fmtT(x))}${extra||""}</span>${x.texto?`<div style="margin-top:3px;color:var(--muted);white-space:pre-wrap">${esc(String(x.texto).slice(0,250))}${String(x.texto).length>250?"…":""}</div>`:""}</div></div>`;
+  const LT={mail:"Mail enviado",nota:"Nota"};
   return `<div class="lmodal" data-closeleadbg="1"><div class="lcard">
     <div class="lhead">
       <div><div class="lname">${esc(l.name||"—")} &nbsp;${langChip(l)}</div>
@@ -966,10 +976,21 @@ function leadModalHtml(){
       ${l.email?`<div><span>EMAIL</span>${esc(l.email)}</div>`:""}
       ${l.phone?`<div><span>TEL</span><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">${ICON_PHONE} ${esc(l.phone)}</a></div>`:""}
     </div>
+    <div class="lactions" style="margin:12px 0 2px">
+      ${l.phone?`<button class="btn ghost sm" data-calllead="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">${ICON_PHONE} Llamar</button>`:``}
+      <button class="btn ghost sm" data-ganado="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">✓ Ganado</button>
+      <button class="btn ghost sm" data-perdido="${l.id}" style="color:var(--bad);border-color:rgba(229,96,76,.4)">✕ Perdido</button>
+      ${l.email?`<button class="btn-reply" data-replymail="${esc(l.email)}">Webmail</button>`:``}
+      <select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select>
+      <button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">${ICON_TRASH}</button>
+    </div>
     ${cierreBarHtml(l)}
-    <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
-    ${l.ultimaRespuesta?`<div class="lreplied"><div class="lreplied-h">↩ Respondió</div><div class="lreplied-b">${esc(l.ultimaRespuesta)}</div></div>`:""}
 
+    <div class="sect">📧 Email · lo que escribió</div>
+    <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
+    ${l.ultimaRespuesta?`<div class="lreplied"><div class="lreplied-h">↩ Su última respuesta</div><div class="lreplied-b">${esc(l.ultimaRespuesta)}</div></div>`:""}
+
+    <div class="sect">✍️ Email · tu respuesta</div>
     <div class="lreplywrap">
       <div class="lreplyhead"><span>Respuesta sugerida ${cnt}</span><span class="c" style="color:var(--faint)">editá lo que quieras · el agente aprende</span></div>
       <div id="tradhint" class="tradhint" style="display:none">⇄ En español · podés editar · se envía en el idioma del lead</div>
@@ -982,23 +1003,14 @@ function leadModalHtml(){
       </div>
     </div>
 
-    ${(function(){ const ts=touchesOf(l.id); if(!ts.length) return '';
-      const LT={mail:'Mail enviado',llamada:'Llamada',nota:'Nota'};
-      return `<div class="tline"><div class="tline-h">Línea de tiempo</div>${ts.map(x=>{
-        const f=String(x.createdAt||'').slice(0,16).replace('T',' ');
-        const r=x.resultado?(' · '+(CALL_RES[x.resultado]||x.resultado)):'';
-        const c=x.texto?`<div style="margin-top:3px;color:var(--muted);white-space:pre-wrap">${esc(String(x.texto).slice(0,200))}${String(x.texto).length>200?'…':''}</div>`:'';
-        return `<div class="tl"><div class="tl-dot"></div><div class="tl-b"><span class="w">${esc(f)} · ${esc(LT[x.tipo]||x.tipo)}${esc(r)}</span>${c}</div></div>`;
-      }).join('')}</div>`; })()}
+    ${llamadas.length?`<div class="sect"><span style="color:var(--ok)">${ICON_PHONE}</span> Llamadas (${llamadas.length})</div>
+      <div class="tline" style="margin-top:0">${llamadas.map(x=>item(x," · "+esc(CALL_RES[x.resultado]||x.resultado||""))).join("")}</div>`:""}
 
-    <div class="lactions">
-      ${l.phone?`<button class="btn ghost sm" data-calllead="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">${ICON_PHONE} Llamar</button>`:``}
-      <button class="btn ghost sm" data-ganado="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">✓ Ganado</button>
-      <button class="btn ghost sm" data-perdido="${l.id}" style="color:var(--bad);border-color:rgba(229,96,76,.4)">✕ Perdido</button>
-      ${l.email?`<button class="btn-reply" data-replymail="${esc(l.email)}">Webmail</button>`:``}
-      <select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select>
-      <button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">${ICON_TRASH}</button>
-    </div>
+    ${analisis.length?`<div class="sect">🧠 Análisis del agente</div>
+      <div class="tline" style="margin-top:0">${analisis.map(x=>item(x,"")).join("")}</div>`:""}
+
+    ${resto.length?`<div class="sect">Historial</div>
+      <div class="tline" style="margin-top:0">${resto.map(x=>item(x," · "+esc(LT[x.tipo]||x.tipo))).join("")}</div>`:""}
   </div></div>`;
 }
 
