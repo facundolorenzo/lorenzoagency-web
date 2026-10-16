@@ -14,8 +14,26 @@ se agregan en una fase 2, aparte.
 import os
 import httpx
 
-PANEL_URL = os.environ.get("LORENZO_PANEL_URL", "https://noxvfulftytfizzaunln.supabase.co").rstrip("/")
-PANEL_KEY = os.environ.get("LORENZO_PANEL_KEY", "")
+# Cargar el .env aunque se corra el módulo suelto (py -3 -m motor.lorenzo_panel).
+# Sin esto, al correr aislado nadie carga el .env y da un 401 "fantasma".
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
+
+
+def _url() -> str:
+    return os.environ.get("LORENZO_PANEL_URL", "https://noxvfulftytfizzaunln.supabase.co").rstrip("/")
+
+
+def _key() -> str:
+    return os.environ.get("LORENZO_PANEL_KEY", "")
+
+
+# Compatibilidad: constantes a nivel módulo (se leen al importar)
+PANEL_URL = _url()
+PANEL_KEY = _key()
 
 
 async def get_reporte() -> dict:
@@ -28,12 +46,13 @@ async def get_reporte() -> dict:
       - nuevos_detalle[], calientes[]
     Ante error devuelve {"error": "..."} (SHAI puede leer el error en voz).
     """
-    if not PANEL_KEY:
+    key = _key()
+    if not key:
         return {"error": "Falta LORENZO_PANEL_KEY en el .env de SHAI."}
-    url = f"{PANEL_URL}/functions/v1/reporte"
+    url = f"{_url()}/functions/v1/reporte"
     headers = {
-        "Authorization": f"Bearer {PANEL_KEY}",
-        "apikey": PANEL_KEY,
+        "Authorization": f"Bearer {key}",
+        "apikey": key,
         "Content-Type": "application/json",
     }
     try:
@@ -54,10 +73,11 @@ def resumen_para_voz(data: dict) -> str:
 
 
 async def _post(func: str, payload: dict) -> dict:
-    if not PANEL_KEY:
+    key = _key()
+    if not key:
         return {"error": "Falta LORENZO_PANEL_KEY en el .env de SHAI."}
-    url = f"{PANEL_URL}/functions/v1/{func}"
-    headers = {"Authorization": f"Bearer {PANEL_KEY}", "apikey": PANEL_KEY, "Content-Type": "application/json"}
+    url = f"{_url()}/functions/v1/{func}"
+    headers = {"Authorization": f"Bearer {key}", "apikey": key, "Content-Type": "application/json"}
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             r = await client.post(url, headers=headers, json=payload)
@@ -85,7 +105,8 @@ async def responder_enviar(lead_id: str, final: str) -> dict:
     return await _post("responder", {"lead_id": lead_id, "final": final, "send": True})
 
 
-# Prueba rápida desde terminal:  python lorenzo_panel.py
+# Prueba rápida desde la raíz del proyecto:  py -3 -m motor.lorenzo_panel
+# Debe imprimir el resumen de ventas en texto. Si aparece -> SHAI↔LORENZO conectado.
 if __name__ == "__main__":
     import asyncio
     data = asyncio.run(get_reporte())
