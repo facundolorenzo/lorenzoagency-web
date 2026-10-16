@@ -966,7 +966,7 @@ function confirmHtml(){
 /* ---------- eventos ---------- */
 function note(msg){
   const n=document.createElement("div");
-  n.style.cssText="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d1e23;border:1px solid var(--hair);padding:10px 16px;border-radius:8px;font-size:13px;z-index:9;max-width:90vw;text-align:center";
+  n.style.cssText="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d1e23;border:1px solid var(--hair);padding:10px 16px;border-radius:8px;font-size:13px;z-index:999;max-width:90vw;text-align:center";
   n.textContent=msg; document.body.appendChild(n); setTimeout(()=>n.remove(),5000);
 }
 
