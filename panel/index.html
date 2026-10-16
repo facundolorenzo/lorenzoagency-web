@@ -71,6 +71,18 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125
 .ifill.orange{background:var(--accent)}
 .imini{display:inline-flex;align-items:center;gap:7px}
 .imini .n{font-family:var(--mono);font-size:10px;color:var(--faint)}
+/* barra de cierre (avance hacia la venta) */
+.cbar-wrap{margin:14px 0;padding:12px 14px;border:1px solid var(--hair2);border-radius:10px}
+.cbar-h{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.cbar{height:9px;background:var(--hair2);border-radius:99px;overflow:hidden}
+.cbar-f{height:100%;border-radius:99px;background:var(--accent);transition:width .3s}
+.cbar-f.ok{background:var(--ok)} .cbar-f.bad{background:var(--bad)}
+.cbar-l{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--fg);margin-top:7px}
+.cbar-falta{font-size:12px;color:var(--muted);margin-top:5px}
+.cbar-sug{margin-top:11px;padding:10px 12px;border:1px dashed var(--hair2);border-radius:8px;font-size:12.5px;line-height:1.55;color:var(--fg)}
+.cbar-sug-a{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
+.cbar-set{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.cbar-set input{flex:1 1 100%;background:rgba(0,0,0,.25);border:1px solid var(--hair2);border-radius:7px;padding:7px 10px;color:var(--fg);font-size:12px}
 .lmodal{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;
   padding:20px;z-index:50}
 .lcard{background:linear-gradient(180deg,rgba(32,33,38,.78),rgba(16,17,20,.82));
@@ -318,7 +330,9 @@ const FROM = {
                   ultimoEnvio:r.fecha_ultimo_envio, primerEnvio:r.fecha_primer_envio, ultimaRespuesta:r.ultima_respuesta_texto,
                   cadenciaPaso:Number(r.cadencia_paso)||0, nextAt:r.next_action_at, nextTipo:r.next_action_tipo,
                   segActivo:r.seguimiento_activo!==false, cierreMotivo:r.cierre_motivo, cierreFalto:r.cierre_falto, cierreObs:r.cierre_obs,
-                  idioma:r.idioma||null}),
+                  idioma:r.idioma||null,
+                  cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
+                  cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
 };
 const TO = {
@@ -720,6 +734,44 @@ function interestBar(r){
   return `<span class="imini"><span class="ibar"><span class="ifill ${cls}" style="width:${pct}%"></span></span><span class="n">${r}</span></span>`;
 }
 
+/* ---------- barra de cierre (el agente sugiere, el humano aprueba) ---------- */
+const ETAPAS_CIERRE=[[10,"Contactado"],[30,"Interesado"],[55,"Evaluando"],[80,"Casi cerrado"]];
+let cierreAjuste=false; // panel de ajuste manual abierto/cerrado
+function cierreBarHtml(l){
+  if(l.status==="ganado"||l.status==="perdido"){
+    const g=l.status==="ganado";
+    return `<div class="cbar-wrap"><div class="cbar-h">Cierre</div>
+      <div class="cbar"><div class="cbar-f ${g?"ok":"bad"}" style="width:${g?100:4}%"></div></div>
+      <div class="cbar-l">${g?"100% — Ganado ✓":"0% — Perdido"}${l.cierreMotivo&&!g?` · motivo: ${esc(l.cierreMotivo)}`:""}</div></div>`;
+  }
+  const pct=l.cierrePct, sug=l.cierreSug;
+  const etiq=p=>{const e=ETAPAS_CIERRE.find(x=>x[0]===Number(p));return e?e[1]:"";};
+  let h=`<div class="cbar-wrap"><div class="cbar-h">Cierre${l.cierreFreno?` · freno: ${esc(l.cierreFreno)}`:""}</div>
+    <div class="cbar"><div class="cbar-f" style="width:${pct==null?0:pct}%"></div></div>
+    <div class="cbar-l">${pct==null?"— sin avance registrado":pct+"% — "+esc(etiq(pct))}</div>
+    ${l.cierreFalta?`<div class="cbar-falta">Falta: ${esc(l.cierreFalta)}</div>`:""}`;
+  if(sug&&sug.pct!=null&&Number(sug.pct)!==pct){
+    h+=`<div class="cbar-sug">🤖 El agente lo ve en <b>${Number(sug.pct)}% — ${esc(sug.etapa||etiq(sug.pct))}</b>
+      ${sug.freno?`<br>Freno: ${esc(sug.freno)}`:""}${sug.falta?`<br>Falta: ${esc(sug.falta)}`:""}
+      <div class="cbar-sug-a">
+        <button class="btn sm" data-avaplicar="${l.id}">✓ Aplicar</button>
+        <button class="btn ghost sm" data-avajuste="1">✎ Lo veo distinto</button>
+      </div>
+      ${cierreAjuste?`<div class="cbar-set">
+        ${ETAPAS_CIERRE.map(([p,n])=>`<button class="btn ghost sm" data-avset="${l.id}:${p}">${p}% ${esc(n)}</button>`).join("")}
+        <input id="avnota" placeholder="Nota: por qué lo ves distinto (queda en la línea de tiempo)">
+      </div>`:""}
+    </div>`;
+  } else {
+    h+=`<div class="cbar-sug-a" style="margin-top:9px"><button class="btn ghost sm" data-avajuste="1">✎ Ajustar a mano</button></div>
+      ${cierreAjuste?`<div class="cbar-set">
+        ${ETAPAS_CIERRE.map(([p,n])=>`<button class="btn ghost sm" data-avset="${l.id}:${p}">${p}% ${esc(n)}</button>`).join("")}
+        <input id="avnota" placeholder="Nota (opcional, queda en la línea de tiempo)">
+      </div>`:""}`;
+  }
+  return h+`</div>`;
+}
+
 /* ---------- LEADS (embudo por franjas) ---------- */
 function leadRowHtml(l){
   const msg = l.message||"";
@@ -843,6 +895,7 @@ function leadModalHtml(){
       ${l.email?`<div><span>EMAIL</span>${esc(l.email)}</div>`:""}
       ${l.phone?`<div><span>TEL</span><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">📞 ${esc(l.phone)}</a></div>`:""}
     </div>
+    ${cierreBarHtml(l)}
     <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
     ${l.ultimaRespuesta?`<div class="lreplied"><div class="lreplied-h">↩ Respondió</div><div class="lreplied-b">${esc(l.ultimaRespuesta)}</div></div>`:""}
 
@@ -1010,11 +1063,38 @@ document.addEventListener("click", async e=>{
         const out=await callFn("sugerir",{ analizar:true, transcript:txt, name:l.name||"", service:l.service||"" });
         if(out && out.reply){
           try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:"🧠 Análisis de la llamada:\n"+out.reply}); }catch(e){}
+          // El agente OPINA el avance: queda como sugerencia pendiente (la barra solo se mueve cuando un humano la aprueba)
+          const mAv=out.reply.match(/AVANCE SUGERIDO:\s*(\d{1,3})\s*%\s*[—–-]*\s*([^\n(]*)/i);
+          if(mAv){
+            const mFr=out.reply.match(/FRENO:\s*([^\n]+)/i), mFa=out.reply.match(/FALTA:\s*([^\n]+)/i);
+            const sug={ pct:Math.max(0,Math.min(100,Number(mAv[1]))), etapa:(mAv[2]||"").trim()||null,
+                        freno:mFr?mFr[1].trim():null, falta:mFa?mFa[1].trim():null, fecha:new Date().toISOString() };
+            try{ await sb.from("leads").update({cierre_sug:sug}).eq("id",id); }catch(e){}
+          }
           note("🧠 Análisis guardado en la línea de tiempo del lead.");
         }
       }catch(err){ note("No pude analizar la llamada: "+err.message); }
     }
     await loadAll(); return;
+  }
+  if(t.dataset.avajuste){ cierreAjuste=!cierreAjuste; renderApp(); return; }
+  if(t.dataset.avaplicar){
+    const id=t.dataset.avaplicar; const l=leads.find(x=>x.id===id); if(!l||!l.cierreSug) return;
+    const s=l.cierreSug;
+    const {error}=await sb.from("leads").update({ cierre_pct:Number(s.pct), cierre_freno:s.freno||null, cierre_falta:s.falta||null, cierre_sug:null }).eq("id",id);
+    if(error){ note("No se pudo guardar: "+error.message); return; }
+    try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:`📊 Avance aprobado: ${Number(s.pct)}% — ${s.etapa||""} (sugerencia del agente)${s.freno?` · freno: ${s.freno}`:""}`}); }catch(e){}
+    cierreAjuste=false; await loadAll(); return;
+  }
+  if(t.dataset.avset){
+    const [id,pstr]=t.dataset.avset.split(":"); const l=leads.find(x=>x.id===id); if(!l) return;
+    const p=Number(pstr); const et=(ETAPAS_CIERRE.find(x=>x[0]===p)||[])[1]||"";
+    const notaEl=document.getElementById("avnota"); const nota=notaEl?notaEl.value.trim():"";
+    const {error}=await sb.from("leads").update({ cierre_pct:p, cierre_sug:null }).eq("id",id);
+    if(error){ note("No se pudo guardar: "+error.message); return; }
+    const sugTxt=(l.cierreSug&&l.cierreSug.pct!=null)?` (el agente sugería ${Number(l.cierreSug.pct)}%)`:"";
+    try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:`📊 Avance ajustado a mano: ${p}% — ${et}${sugTxt}${nota?`\nNota: ${nota}`:""}`}); }catch(e){}
+    cierreAjuste=false; await loadAll(); return;
   }
   if(t.dataset.ganado){ closeLeadId={id:t.dataset.ganado,outcome:"ganado"}; renderApp(); return; }
   if(t.dataset.perdido){ closeLeadId={id:t.dataset.perdido,outcome:"perdido"}; renderApp(); return; }
@@ -1040,12 +1120,12 @@ document.addEventListener("click", async e=>{
     return;
   }
   if(t.dataset.openlead){
-    openLeadId=t.dataset.openlead; confirmDel=null; tradActivo=false; tradOriginal=""; tradShown=""; renderApp();
+    openLeadId=t.dataset.openlead; confirmDel=null; tradActivo=false; tradOriginal=""; tradShown=""; cierreAjuste=false; renderApp();
     const ol = leads.find(x=>x.id===openLeadId);
     if(ol && !(ol.borrador && String(ol.borrador).trim())) runDraft(openLeadId, false);
     return;
   }
-  if(t.dataset.closelead || t.dataset.closeleadbg){ openLeadId=null; tradActivo=false; tradOriginal=""; tradShown=""; renderApp(); return; }
+  if(t.dataset.closelead || t.dataset.closeleadbg){ openLeadId=null; tradActivo=false; tradOriginal=""; tradShown=""; cierreAjuste=false; renderApp(); return; }
   if(t.dataset.new){ formOpen=t.dataset.new; editing=null; renderApp(); return; }
   if(t.dataset.cancel){ formOpen=null; editing=null; renderApp(); return; }
   if(t.dataset.edit){ const[col,id]=t.dataset.edit.split(":"); editing={col,id}; formOpen=col; confirmDel=null; renderApp(); return; }

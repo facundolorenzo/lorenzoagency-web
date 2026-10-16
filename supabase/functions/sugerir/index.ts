@@ -127,17 +127,21 @@ Reglas:
         headers: { "x-api-key": KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
         body: JSON.stringify({
           model: MDL,
-          max_tokens: 900,
+          max_tokens: 1200,
           system: `Analizás la transcripción de una llamada de ventas de LORENZO Agency.
 La transcripción puede venir ya separada por hablantes ("LORENZO: ..." / "CLIENTE: ...", a veces con nombres: "MARCOS (LORENZO): ...") o como flujo crudo con errores de dictado.
 Si no está separada, identificá por contexto quién es el vendedor (LORENZO, el que ofrece servicios) y quién el cliente.
-Devolvé en español, breve, EXACTAMENTE con este formato:
+Devolvé en español, breve, EXACTAMENTE con este formato y en este orden:
 FICHA DEL CLIENTE: nombre, empresa y cargo si los dijo; hombre/mujer y edad aproximada SOLO si se desprende claramente de la charla; lo que no se sepa, omitilo (nunca inventes)
+IDEA DEL CLIENTE: qué quiere hacer, resolver o lograr, en sus propias palabras (2 a 4 líneas; esto después alimenta la propuesta — si no contó ninguna idea, "no la contó")
 TEMPERATURA: caliente / tibio / frío — una línea de por qué
 PUNTOS CLAVE: 3 a 5 viñetas con lo importante que dijo el cliente (necesidad, contexto, números, fechas)
 OBJECIONES: las que salieron (o "ninguna")
 PRÓXIMOS PASOS: compromisos concretos que quedaron (o "no quedaron")
 RIESGO: si la venta podría no avanzar, el porqué más probable según la charla
+AVANCE SUGERIDO: NN% — Etapa  (elegí UNA: 10% — Contactado · 30% — Interesado · 55% — Evaluando · 80% — Casi cerrado · 100% — Ganado · 0% — Perdido; es tu opinión de dónde quedó la venta tras esta llamada)
+FRENO: una de estas categorías: precio / confianza / claridad / timing / decisión / ninguno — más un detalle corto de por qué
+FALTA: la ÚNICA acción concreta que más acerca el cierre (ej.: "mandar propuesta con plan por evento y llamar el lunes")
 Solo el análisis, sin comentarios extra.`,
           messages: [{ role: "user", content: `Llamada con ${body.name || "un lead"}${body.service ? ` (rubro: ${body.service})` : ""}:\n\n${String(body.transcript || "").slice(0, 12000)}` }],
         }),
