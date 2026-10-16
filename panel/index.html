@@ -372,7 +372,7 @@ const clientName = id => (clients.find(c=>c.id===id)||{}).name || "";
 /* ---------- mapeos DB (snake_case) <-> UI (camelCase) ---------- */
 const FROM = {
   proposals: r=>({id:r.id,number:r.number,clientId:r.client_id,clientFree:r.client_free,title:r.title,amount:r.amount,status:r.status,date:r.date,notes:r.notes,fileUrl:r.file_url,fileName:r.file_name,createdAt:r.created_at}),
-  invoices:  r=>({id:r.id,number:r.number,clientId:r.client_id,amount:r.amount,status:r.status,issued:r.issued,due:r.due,notes:r.notes,createdAt:r.created_at}),
+  invoices:  r=>({id:r.id,number:r.number,clientId:r.client_id,amount:r.amount,status:r.status,issued:r.issued,due:r.due,notes:r.notes,stripeLink:r.stripe_link||null,createdAt:r.created_at}),
   clients:   r=>({id:r.id,name:r.name,company:r.company,contact:r.contact,email:r.email,phone:r.phone,notes:r.notes,createdAt:r.created_at}),
   leads:     r=>({id:r.id,name:r.name,email:r.email,phone:r.phone,service:r.service,message:r.message,status:r.status,createdAt:r.created_at,
                   borrador:r.borrador, mailsEnviados:Number(r.mails_enviados)||0, respuestas:Number(r.respuestas_lead)||0,
@@ -386,7 +386,7 @@ const FROM = {
 };
 const TO = {
   proposals: d=>({number:d.number,client_id:d.clientId||null,client_free:d.clientFree||null,title:d.title,amount:Number(d.amount)||0,status:d.status,date:d.date||null,notes:d.notes||null,file_url:d.fileUrl||null,file_name:d.fileName||null,updated_at:new Date().toISOString()}),
-  invoices:  d=>({number:d.number,client_id:d.clientId||null,amount:Number(d.amount)||0,status:d.status,issued:d.issued||null,due:d.due||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
+  invoices:  d=>({number:d.number,client_id:d.clientId||null,amount:Number(d.amount)||0,status:d.status,issued:d.issued||null,due:d.due||null,notes:d.notes||null,stripe_link:d.stripeLink||null,updated_at:new Date().toISOString()}),
   clients:   d=>({name:d.name,company:d.company||null,contact:d.contact||null,email:d.email||null,phone:d.phone||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
 };
 
@@ -765,6 +765,7 @@ function invoiceForm(d){
     <label><span class="fl">Estado</span><select name="status">${I_STATES.map(s=>`<option ${d&&d.status===s?"selected":""}>${s}</option>`).join("")}</select></label>
     <label><span class="fl">Emitida</span><input name="issued" type="date" value="${esc(d?d.issued:today())}"></label>
     <label><span class="fl">Vence</span><input name="due" type="date" value="${esc(d?d.due:"")}"></label>
+    <label class="full"><span class="fl">Link de pago con tarjeta (Stripe) — opcional</span><input name="stripeLink" type="url" placeholder="https://buy.stripe.com/…  (creá el link en Stripe por el total CON recargo que te muestra la factura)" value="${esc(d&&d.stripeLink?d.stripeLink:"")}"></label>
     <label class="full"><span class="fl">Concepto / notas</span><textarea name="notes">${esc(d?d.notes:"")}</textarea></label>
     <div class="full" style="display:flex;gap:10px">
       <button class="btn" type="submit">${d?"Guardar cambios":"Crear factura"}</button>
@@ -1260,6 +1261,8 @@ document.addEventListener("click", async e=>{
     for(const ln of lines){ const m=ln.match(/^(.{2,100}?)\s*[|·—–-]+\s*\$?\s*([\d][\d.,]*)\s*$/); if(m) items.push([m[1],Number(m[2].replace(/,/g,""))]); else otras.push(ln); }
     if(!items.length) items.push([otras.join(" · ")||"Servicios profesionales", Number(i.amount)||0]);
     const pag=i.status==="pagada";
+    // Total con tarjeta: el monto neto + la tarifa estándar de Stripe (2.9% + $0.30), para no absorber ese costo
+    const tarjeta=(Number(i.amount)+0.30)/(1-0.029);
     const w=window.open("","_blank"); if(!w){ note("El navegador bloqueó la pestaña — permití pop-ups para el panel."); return; }
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(i.number)} — LORENZO Agency</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -1306,7 +1309,10 @@ document.addEventListener("click", async e=>{
   ${items.map(([d,m])=>`<tr><td>${esc(d)}</td><td class="r">${fmt(m)}</td></tr>`).join("")}
   <tr class="tot"><td>TOTAL</td><td class="r">${fmt(i.amount)}</td></tr>
 </table>
-<div class="cols" style="margin-top:46px"><div class="col"><div class="k">PAGO</div><div class="v">Zelle — Facundo Lorenzo<br>facundoluislorenzo@gmail.com</div></div></div>
+<div class="cols" style="margin-top:46px">
+  <div class="col"><div class="k">PAGO · ZELLE (SIN RECARGO)</div><div class="v">${fmt(i.amount)}<br>Facundo Lorenzo<br>facundoluislorenzo@gmail.com</div></div>
+  <div class="col"><div class="k">PAGO · TARJETA (VÍA STRIPE)</div><div class="v">${fmt(tarjeta)} <span style="color:#8a877c;font-size:12px">(incluye recargo por procesamiento)</span>${i.stripeLink?`<br><a href="${esc(i.stripeLink)}" style="color:#C65A2E;word-break:break-all">${esc(i.stripeLink)}</a>`:`<br><span style="color:#8a877c;font-size:12px">Link de pago a pedido</span>`}</div></div>
+</div>
 <footer><span>LORENZO AGENCY · MIAMI, FL</span><span>TALK@LORENZOAGENCY.TECH</span></footer>
 </body></html>`);
     w.document.close(); return;
