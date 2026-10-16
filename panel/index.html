@@ -277,10 +277,12 @@ function stopTranscripcion(){
   transcribiendo = false;
   if(recog){ try{ recog.stop(); }catch(_e){} recog = null; }
   clearInterval(transTimer); transTimer = null;
+  if(transStart){ transDur = Math.round((Date.now()-transStart)/1000); transStart = 0; } // guarda la duración para el registro
 }
-let transTimer = null, transStart = 0;
+let transTimer = null, transStart = 0, transDur = 0;
+const fmtDur = s => Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
 function startRelojTrans(){
-  transStart = Date.now();
+  transStart = Date.now(); transDur = 0;
   clearInterval(transTimer);
   transTimer = setInterval(()=>{
     const el = document.getElementById("translive");
@@ -288,7 +290,7 @@ function startRelojTrans(){
     const s = Math.floor((Date.now()-transStart)/1000);
     const ta = document.getElementById("callnote");
     const chars = ta ? ta.value.trim().length : 0;
-    el.textContent = "● CAPTURANDO "+Math.floor(s/60)+":"+String(s%60).padStart(2,"0")+(chars>250?" · listo para analizar":"");
+    el.textContent = "● CAPTURANDO "+fmtDur(s)+(chars>250?" · listo para analizar":"");
   }, 1000);
 }
 const CAD_DIAS = [0,1,3,5,7,10,14];
@@ -432,7 +434,7 @@ async function runDraft(id, isRehacer){
 
 /* ============================ RENDER ============================ */
 function tabsHtml(){
-  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"]]
+  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"]]
                     : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
   const nuevos = leads.filter(x=>x.status==='nuevo').length;
   const hoyN = isAdmin ? leadsHoy().length : 0;
@@ -440,6 +442,40 @@ function tabsHtml(){
     let b=''; if(k==='leads'&&nuevos) b=`<span class="nbadge">${nuevos}</span>`; if(k==='hoy'&&hoyN) b=`<span class="nbadge">${hoyN}</span>`;
     return `<button data-t="${k}" class="${tab===k?'on':''}">${l}${b}</button>`;
   }).join("")}</nav>`;
+}
+
+/* ---------- LLAMADAS (registro global: fecha, hora, lead, vendedor, resultado, duración) ---------- */
+function renderLlamadas(){
+  const calls = touches.filter(x=>x.tipo==="llamada");
+  const leadDe = id => leads.find(l=>l.id===id);
+  const durDe = t => { const m=String(t||"").match(/⏱ Duración:\s*(\d+:\d{2})/); return m?m[1]:"—"; };
+  const vendDe = t => { const m=String(t||"").match(/^\s*([A-ZÁÉÍÓÚÑÜ][A-Za-zÁÉÍÓÚÑÜáéíóúñü .'-]{1,28})\s*\(LORENZO\)\s*:/m); return m?m[1].trim():"—"; };
+  const hoy0=new Date(); hoy0.setHours(0,0,0,0);
+  const d7=new Date(hoy0); d7.setDate(d7.getDate()-6);
+  const nHoy=calls.filter(c=>new Date(c.createdAt)>=hoy0).length;
+  const n7=calls.filter(c=>new Date(c.createdAt)>=d7).length;
+  const tile=(lbl,val)=>`<div style="flex:1;min-width:120px;border:1px solid var(--hair2);border-radius:10px;padding:14px 16px">
+    <div style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase">${lbl}</div>
+    <div style="font-size:26px;margin-top:4px">${val}</div></div>`;
+  const body = calls.length ? `<div class="tablewrap"><table>
+    <tr><th>Fecha</th><th>Lead</th><th>Vendedor</th><th>Resultado</th><th>Duración</th><th class="r"></th></tr>
+    ${calls.map(c=>{ const l=leadDe(c.leadId); const d=new Date(c.createdAt);
+      const f=d.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"})+" · "+d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+      return `<tr>
+        <td style="font-family:var(--mono);font-size:11px;white-space:nowrap">${esc(f)}</td>
+        <td>${l?`<button class="linkbtn" data-openlead="${l.id}">${esc(l.name||l.email||"—")}</button>`:"—"}</td>
+        <td style="font-size:12px">${esc(vendDe(c.texto))}</td>
+        <td style="font-size:12px">${esc(CALL_RES[c.resultado]||c.resultado||"—")}</td>
+        <td style="font-family:var(--mono);font-size:11px">${esc(durDe(c.texto))}</td>
+        <td>${l?`<button class="btn sm ghost" data-openlead="${l.id}">Abrir</button>`:""}</td>
+      </tr>`; }).join("")}
+    </table></div>`
+    : `<div class="empty"><b>Sin llamadas registradas todavía.</b><br>Cada llamada que registres (con su transcripción y análisis) aparece acá.</div>`;
+  $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Llamadas</h2></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">
+      ${tile("Hoy",nHoy)}${tile("Últimos 7 días",n7)}${tile("Total",calls.length)}
+    </div>
+    ${body}`;
 }
 
 function renderApp(){
@@ -469,6 +505,7 @@ function renderBody(){
   if(tab==="hoy") renderHoy();
   else if(tab==="resumen") renderResumen();
   else if(tab==="analisis") renderAnalisis();
+  else if(tab==="llamadas") renderLlamadas();
   else if(tab==="propuestas") renderProposals();
   else if(tab==="facturas") renderInvoices();
   else if(tab==="clientes") renderClients();
@@ -882,13 +919,13 @@ function callModalHtml(){
     <div class="cpop-s">Poné la llamada en <b>altavoz</b> cerca de la compu y <b>avisale</b> que tomás notas ("te aviso que la llamada se transcribe"). Tocá 🎙 y hablá normal.</div>
     <div class="cpop-s">Arrancá presentándote: <b>"Mi nombre es ___, soy ___ de LORENZO Agency"</b> y preguntale el nombre — así el agente identifica a cada uno y arma la ficha del cliente.</div>
     <div style="display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap">
-      <button class="btn ghost sm" data-trans="1">🎙 Transcribir en vivo</button>
+      <button class="btn ghost sm" data-trans="1">${transcribiendo?'⏹ Detener':'🎙 Transcribir en vivo'}</button>
       <span style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted)" title="Se ajusta solo si detecta otro idioma; estos botones son para forzarlo a mano">IDIOMA (auto)</span>
       <button class="btn ghost sm" data-calllang="es" style="${(callLang||langOf(l))==='es'?'border-color:var(--accent);color:var(--accent)':''}">ES</button>
       <button class="btn ghost sm" data-calllang="en" style="${(callLang||langOf(l))==='en'?'border-color:var(--accent);color:var(--accent)':''}">EN</button>
-      <span id="translive" style="display:none;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:#e05c5c">● CAPTURANDO TEXTO</span>
+      <span id="translive" style="display:${transcribiendo?'inline':'none'};font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:#e05c5c">● CAPTURANDO TEXTO</span>
     </div>
-    <div style="margin-bottom:14px"><textarea id="callnote" placeholder="La transcripción aparece acá en vivo (o escribí tu nota a mano)…" style="min-height:100px"></textarea></div>
+    <div style="margin-bottom:14px"><textarea id="callnote" placeholder="La transcripción aparece acá en vivo (o escribí tu nota a mano)…" style="min-height:100px">${esc(transcribiendo?transcripcion:"")}</textarea></div>
     <button class="btn" style="width:100%" data-callres="auto">💾 Guardar llamada — el agente clasifica cómo salió</button>
     <div class="cpop-s" style="margin-top:10px">O marcá a mano (para notas cortas, no atendió, etc.):</div>
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -1116,7 +1153,9 @@ document.addEventListener("click", async e=>{
       else if(/temperatura:\s*fr/.test(a)) res="atendio_frio";
       else res="atendio_interesado";
     }
+    if(transDur>=5) txt = "⏱ Duración: "+fmtDur(transDur)+"\n"+txt; // queda arriba del diálogo, y el registro la lee de acá
     try{ await sb.from("touches").insert({lead_id:id,tipo:"llamada",resultado:res,texto:txt||null}); }catch(e){}
+    transDur=0;
     try{ await sb.from("leads").update(avanzarCadencia(l.cadenciaPaso)).eq("id",id); }catch(e){}
     note("📞 Llamada registrada"+(t.dataset.callres==="auto"?(" — el agente la clasificó: "+(CALL_RES[res]||res)):"")+".");
     // 4) Guardar el análisis y la sugerencia de avance (la barra solo se mueve cuando un humano aprueba)
