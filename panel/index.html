@@ -228,6 +228,7 @@ let leadFilter = "todos";
 let leadCollapsed = {};
 let touches = [];
 let callLeadId = null, closeLeadId = null;
+let callLang = null; // idioma del micrófono en la llamada (es/en); por defecto, el del lead
 let tradActivo = false, tradOriginal = "", tradShown = "";
 let transcribiendo = false, transcripcion = "", recog = null;
 
@@ -851,12 +852,16 @@ function callModalHtml(){
     <div class="cpop-t">📞 Llamada — ${esc(l.name||'')}</div>
     <div class="cpop-s">Poné la llamada en <b>altavoz</b> cerca de la compu y <b>avisale</b> que tomás notas ("te aviso que la llamada se transcribe"). Tocá 🎙 y hablá normal.</div>
     <div class="cpop-s">Arrancá presentándote: <b>"Mi nombre es ___, soy ___ de LORENZO Agency"</b> y preguntale el nombre — así el agente identifica a cada uno y arma la ficha del cliente.</div>
-    <div style="display:flex;gap:10px;align-items:center;margin:10px 0">
+    <div style="display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap">
       <button class="btn ghost sm" data-trans="1">🎙 Transcribir en vivo</button>
+      <span style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted)">IDIOMA</span>
+      <button class="btn ghost sm" data-calllang="es" style="${(callLang||langOf(l))==='es'?'border-color:var(--accent);color:var(--accent)':''}">ES</button>
+      <button class="btn ghost sm" data-calllang="en" style="${(callLang||langOf(l))==='en'?'border-color:var(--accent);color:var(--accent)':''}">EN</button>
       <span id="translive" style="display:none;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:#e05c5c">● CAPTURANDO TEXTO</span>
     </div>
     <div style="margin-bottom:14px"><textarea id="callnote" placeholder="La transcripción aparece acá en vivo (o escribí tu nota a mano)…" style="min-height:100px"></textarea></div>
-    <div class="cpop-s">¿Cómo salió? (al elegir, se guarda todo y el agente analiza la llamada)</div>
+    <button class="btn" style="width:100%" data-callres="auto">💾 Guardar llamada — el agente clasifica cómo salió</button>
+    <div class="cpop-s" style="margin-top:10px">O marcá a mano (para notas cortas, no atendió, etc.):</div>
     <div style="display:flex;flex-direction:column;gap:8px">
       ${Object.entries(CALL_RES).map(([k,v])=>`<button class="btn ghost" style="text-align:left" data-callres="${k}">${esc(v)}</button>`).join('')}
     </div>
@@ -1024,8 +1029,16 @@ document.addEventListener("click", async e=>{
     }catch(err){ note(err.message); t.disabled=false; t.textContent=prev; }
     return;
   }
-  if(t.dataset.calllead){ callLeadId=t.dataset.calllead; renderApp(); return; }
-  if(t.dataset.closecall){ stopTranscripcion(); callLeadId=null; renderApp(); return; }
+  if(t.dataset.calllead){ callLeadId=t.dataset.calllead; const cl=leads.find(x=>x.id===callLeadId); callLang=cl?langOf(cl):"es"; renderApp(); return; }
+  if(t.dataset.closecall){ stopTranscripcion(); callLeadId=null; callLang=null; renderApp(); return; }
+  if(t.dataset.calllang){
+    const estaba=transcribiendo; if(estaba) stopTranscripcion();
+    const ta=document.getElementById("callnote"); const v=ta?ta.value:"";
+    callLang=t.dataset.calllang; renderApp();
+    const ta2=document.getElementById("callnote"); if(ta2) ta2.value=v;
+    if(estaba) note("Idioma cambiado a "+callLang.toUpperCase()+" — tocá 🎙 de nuevo para seguir transcribiendo.");
+    return;
+  }
   if(t.dataset.trans){
     const l=leads.find(x=>x.id===callLeadId);
     const live=document.getElementById("translive");
@@ -1033,7 +1046,7 @@ document.addEventListener("click", async e=>{
       stopTranscripcion();
       t.textContent="🎙 Transcribir en vivo";
       if(live) live.style.display="none";
-    } else if(startTranscripcion(l ? langOf(l) : "es")){
+    } else if(startTranscripcion(callLang || (l ? langOf(l) : "es"))){
       t.textContent="⏹ Detener";
       if(live) live.style.display="inline";
     }
@@ -1041,11 +1054,14 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.callres){
     const id=callLeadId; const l=leads.find(x=>x.id===id); if(!l){ stopTranscripcion(); callLeadId=null; renderApp(); return; }
-    stopTranscripcion();
-    const res=t.dataset.callres; const noteEl=document.getElementById("callnote"); let txt=noteEl?noteEl.value.trim():"";
-    callLeadId=null; renderApp();
+    let res=t.dataset.callres; const noteEl=document.getElementById("callnote"); let txt=noteEl?noteEl.value.trim():"";
     const esTranscripcion = txt.length>250; // texto largo = transcripción real, no una notita
-    // 1) Separar hablantes: el agente reescribe la transcripción como diálogo LORENZO: / CLIENTE:
+    if(res==="auto" && !esTranscripcion){
+      note("Para que el agente clasifique, transcribí la llamada (al menos ~30 segundos) — o elegí una opción a mano.");
+      return; // el modal queda abierto, no se pierde nada
+    }
+    stopTranscripcion(); callLeadId=null; callLang=null; renderApp();
+    // 1) Separar hablantes: el agente reescribe la transcripción como diálogo con nombres
     if(esTranscripcion){
       note("🗣 Separando hablantes…");
       try{
@@ -1053,27 +1069,37 @@ document.addEventListener("click", async e=>{
         if(d && d.reply) txt=d.reply;
       }catch(e){ /* si falla, se guarda la transcripción cruda igual */ }
     }
-    try{ await sb.from("touches").insert({lead_id:id,tipo:"llamada",resultado:res,texto:txt||null}); }catch(e){}
-    try{ await sb.from("leads").update(avanzarCadencia(l.cadenciaPaso)).eq("id",id); }catch(e){}
-    note("📞 Llamada registrada.");
-    // 2) Análisis de la llamada sobre el diálogo ya separado
+    // 2) Análisis (antes de guardar, así el agente puede clasificar cómo salió)
+    let analisis=null;
     if(esTranscripcion){
       note("🧠 Analizando la llamada…");
       try{
         const out=await callFn("sugerir",{ analizar:true, transcript:txt, name:l.name||"", service:l.service||"" });
-        if(out && out.reply){
-          try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:"🧠 Análisis de la llamada:\n"+out.reply}); }catch(e){}
-          // El agente OPINA el avance: queda como sugerencia pendiente (la barra solo se mueve cuando un humano la aprueba)
-          const mAv=out.reply.match(/AVANCE SUGERIDO:\s*(\d{1,3})\s*%\s*[—–-]*\s*([^\n(]*)/i);
-          if(mAv){
-            const mFr=out.reply.match(/FRENO:\s*([^\n]+)/i), mFa=out.reply.match(/FALTA:\s*([^\n]+)/i);
-            const sug={ pct:Math.max(0,Math.min(100,Number(mAv[1]))), etapa:(mAv[2]||"").trim()||null,
-                        freno:mFr?mFr[1].trim():null, falta:mFa?mFa[1].trim():null, fecha:new Date().toISOString() };
-            try{ await sb.from("leads").update({cierre_sug:sug}).eq("id",id); }catch(e){}
-          }
-          note("🧠 Análisis guardado en la línea de tiempo del lead.");
-        }
+        if(out && out.reply) analisis=out.reply;
       }catch(err){ note("No pude analizar la llamada: "+err.message); }
+    }
+    // 3) Si eligió "auto", el AGENTE clasifica el resultado desde el análisis
+    if(res==="auto"){
+      const a=(analisis||"").toLowerCase();
+      if(!analisis) res="atendio_interesado";
+      else if(/agend/.test(a)) res="agendo";
+      else if(/temperatura:\s*fr/.test(a)) res="atendio_frio";
+      else res="atendio_interesado";
+    }
+    try{ await sb.from("touches").insert({lead_id:id,tipo:"llamada",resultado:res,texto:txt||null}); }catch(e){}
+    try{ await sb.from("leads").update(avanzarCadencia(l.cadenciaPaso)).eq("id",id); }catch(e){}
+    note("📞 Llamada registrada"+(t.dataset.callres==="auto"?(" — el agente la clasificó: "+(CALL_RES[res]||res)):"")+".");
+    // 4) Guardar el análisis y la sugerencia de avance (la barra solo se mueve cuando un humano aprueba)
+    if(analisis){
+      try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:"🧠 Análisis de la llamada:\n"+analisis}); }catch(e){}
+      const mAv=analisis.match(/AVANCE SUGERIDO:\s*(\d{1,3})\s*%\s*[—–-]*\s*([^\n(]*)/i);
+      if(mAv){
+        const mFr=analisis.match(/FRENO:\s*([^\n]+)/i), mFa=analisis.match(/FALTA:\s*([^\n]+)/i);
+        const sug={ pct:Math.max(0,Math.min(100,Number(mAv[1]))), etapa:(mAv[2]||"").trim()||null,
+                    freno:mFr?mFr[1].trim():null, falta:mFa?mFa[1].trim():null, fecha:new Date().toISOString() };
+        try{ await sb.from("leads").update({cierre_sug:sug}).eq("id",id); }catch(e){}
+      }
+      note("🧠 Análisis guardado en la línea de tiempo del lead.");
     }
     await loadAll(); return;
   }
