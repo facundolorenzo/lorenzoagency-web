@@ -87,6 +87,34 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { message = "", name = "", service = "", previous = "", translate = false, classify = false } = body;
 
+    // ===== Rama DIALOGAR: transcripción cruda -> diálogo con hablantes separados =====
+    // El micrófono entrega un solo flujo de texto; acá se identifica por contexto quién habló.
+    if (body.dialogar) {
+      const KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
+      const MDL = Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-5-5";
+      const rd = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        body: JSON.stringify({
+          model: MDL,
+          max_tokens: 4000,
+          system: `Reformateás la transcripción cruda de una llamada de ventas de LORENZO Agency en formato diálogo.
+La transcripción viene de dictado en vivo con micrófono: un solo flujo de texto, sin separar hablantes, con posibles errores.
+Identificá por contexto quién es LORENZO (el que ofrece los servicios de la agencia, hace las preguntas comerciales, generalmente quien llama) y quién es el CLIENTE (el que consulta o responde del otro lado).
+Reglas:
+- Devolvé SOLO el diálogo, una intervención por línea, con el formato exacto "LORENZO: ..." y "CLIENTE: ...".
+- Mantené el idioma original de la llamada (NO traduzcas).
+- Corregí solo errores obvios de dictado; NO inventes ni agregues contenido.
+- Si un tramo no se puede atribuir con confianza, poné "¿?: ..." en esa línea.`,
+          messages: [{ role: "user", content: `Llamada con ${body.name || "un lead"}${body.service ? ` (rubro: ${body.service})` : ""}:\n\n${String(body.transcript || "").slice(0, 12000)}` }],
+        }),
+      });
+      if (!rd.ok) { const tx = await rd.text(); return json({ error: "Claude " + rd.status + ": " + tx.slice(0, 200) }, 502); }
+      const od = await rd.json();
+      const dg = (od.content || []).map((c: { text?: string }) => c.text || "").join("").trim();
+      return json({ reply: dg });
+    }
+
     // ===== Rama ANALIZAR LLAMADA: transcripción en texto -> puntos clave =====
     // La usa el panel al guardar una llamada transcripta en vivo.
     if (body.analizar) {
@@ -99,8 +127,8 @@ Deno.serve(async (req) => {
           model: MDL,
           max_tokens: 700,
           system: `Analizás la transcripción de una llamada de ventas de LORENZO Agency.
-La transcripción viene de dictado en vivo: puede tener errores y los hablantes NO están separados.
-Identificá por contexto quién es el vendedor (LORENZO, el que ofrece servicios) y quién el cliente.
+La transcripción puede venir ya separada por hablantes ("LORENZO: ..." / "CLIENTE: ...") o como flujo crudo con errores de dictado.
+Si no está separada, identificá por contexto quién es el vendedor (LORENZO, el que ofrece servicios) y quién el cliente.
 Devolvé en español, breve, EXACTAMENTE con este formato:
 TEMPERATURA: caliente / tibio / frío — una línea de por qué
 PUNTOS CLAVE: 3 a 5 viñetas con lo importante que dijo el cliente (necesidad, contexto, números, fechas)

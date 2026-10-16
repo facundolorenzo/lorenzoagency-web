@@ -234,7 +234,7 @@ function startTranscripcion(lang){
     let interim = "";
     for(let i = e.resultIndex; i < e.results.length; i++){
       const r = e.results[i];
-      if(r.isFinal) transcripcion += r[0].transcript.trim()+" ";
+      if(r.isFinal) transcripcion += r[0].transcript.trim()+"\n"; // cada frase en su línea (ayuda a separar turnos)
       else interim += r[0].transcript;
     }
     const t = document.getElementById("callnote");
@@ -988,12 +988,22 @@ document.addEventListener("click", async e=>{
   if(t.dataset.callres){
     const id=callLeadId; const l=leads.find(x=>x.id===id); if(!l){ stopTranscripcion(); callLeadId=null; renderApp(); return; }
     stopTranscripcion();
-    const res=t.dataset.callres; const noteEl=document.getElementById("callnote"); const txt=noteEl?noteEl.value.trim():"";
+    const res=t.dataset.callres; const noteEl=document.getElementById("callnote"); let txt=noteEl?noteEl.value.trim():"";
+    callLeadId=null; renderApp();
+    const esTranscripcion = txt.length>250; // texto largo = transcripción real, no una notita
+    // 1) Separar hablantes: el agente reescribe la transcripción como diálogo LORENZO: / CLIENTE:
+    if(esTranscripcion){
+      note("🗣 Separando hablantes…");
+      try{
+        const d=await callFn("sugerir",{ dialogar:true, transcript:txt, name:l.name||"", service:l.service||"" });
+        if(d && d.reply) txt=d.reply;
+      }catch(e){ /* si falla, se guarda la transcripción cruda igual */ }
+    }
     try{ await sb.from("touches").insert({lead_id:id,tipo:"llamada",resultado:res,texto:txt||null}); }catch(e){}
     try{ await sb.from("leads").update(avanzarCadencia(l.cadenciaPaso)).eq("id",id); }catch(e){}
-    callLeadId=null; note("📞 Llamada registrada."); renderApp();
-    // Si hay transcripción real (texto largo), el agente la analiza y guarda los puntos clave
-    if(txt.length>250){
+    note("📞 Llamada registrada.");
+    // 2) Análisis de la llamada sobre el diálogo ya separado
+    if(esTranscripcion){
       note("🧠 Analizando la llamada…");
       try{
         const out=await callFn("sugerir",{ analizar:true, transcript:txt, name:l.name||"", service:l.service||"" });
