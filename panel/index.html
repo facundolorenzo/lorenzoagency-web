@@ -1015,7 +1015,11 @@ function leadModalHtml(){
       </div></div>`).join("")}</div>`:""}
 
     ${analisis.length?`<div class="sect">🧠 Análisis del agente</div>
-      <div class="tline" style="margin-top:0">${analisis.map(x=>item(x,"")).join("")}</div>`:""}
+      <div class="tline" style="margin-top:0">${analisis.map(x=>`<div class="tl"><div class="tl-dot"></div><div class="tl-b">
+        <span class="w">${esc(fmtT(x))}</span>
+        ${x.texto?`<div style="margin-top:3px;color:var(--muted);white-space:pre-wrap">${esc(String(x.texto).slice(0,250))}${String(x.texto).length>250?"…":""}</div>
+        ${String(x.texto).length>250?`<div style="margin-top:8px"><button class="btn ghost sm" data-verllamada="${x.id}">⛶ Ver completo</button></div>`:""}`:""}
+      </div></div>`).join("")}</div>`:""}
 
     ${resto.length?`<div class="sect">Historial</div>
       <div class="tline" style="margin-top:0">${resto.map(x=>item(x," · "+esc(LT[x.tipo]||x.tipo))).join("")}</div>`:""}
