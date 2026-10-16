@@ -89,6 +89,14 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125
 /* títulos de sección dentro de la ficha del lead */
 .sect{margin:22px 0 10px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;display:flex;align-items:center;gap:10px}
 .sect::after{content:"";flex:1;height:1px;background:var(--hair2)}
+/* pestañas internas de la ficha (zona de actividad, estilo CRM) */
+.ftabs{display:flex;gap:4px;flex-wrap:wrap;margin:26px 0 0;border-bottom:1px solid var(--hair2)}
+.ftab{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;
+  font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:10px 14px;margin-bottom:-1px}
+.ftab:hover{color:var(--fg)}
+.ftab.on{color:var(--fg);border-bottom-color:var(--accent)}
+.ftabc{padding-top:20px}
+.fempty{color:var(--faint);font-size:13px;padding:18px 0 6px}
 .lmodal{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;
   padding:20px;z-index:50}
 .lcard{background:linear-gradient(180deg,rgba(32,33,38,.78),rgba(16,17,20,.82));
@@ -237,6 +245,7 @@ let touches = [];
 let callLeadId = null, closeLeadId = null;
 let callLang = null; // idioma del micrófono en la llamada (es/en); por defecto, el del lead
 let verLlamadaId = null; // visor de transcripción abierto
+let fichaTab = "email";  // pestaña activa dentro de la ficha del lead
 let tradActivo = false, tradOriginal = "", tradShown = "";
 let transcribiendo = false, transcripcion = "", recog = null;
 
@@ -999,46 +1008,57 @@ function leadModalHtml(){
     </div>
     ${cierreBarHtml(l)}
 
-    <div class="sect">📧 Email · lo que escribió</div>
-    <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
-    ${l.ultimaRespuesta?`<div class="lreplied"><div class="lreplied-h">↩ Su última respuesta</div><div class="lreplied-b">${esc(l.ultimaRespuesta)}</div></div>`:""}
+    <div class="ftabs">
+      <button class="ftab ${fichaTab==="email"?"on":""}" data-ftab="email">Email</button>
+      <button class="ftab ${fichaTab==="llamadas"?"on":""}" data-ftab="llamadas">Llamadas${llamadas.length?` (${llamadas.length})`:""}</button>
+      <button class="ftab ${fichaTab==="analisis"?"on":""}" data-ftab="analisis">Análisis${analisis.length?` (${analisis.length})`:""}</button>
+      <button class="ftab ${fichaTab==="hist"?"on":""}" data-ftab="hist">Historial</button>
+    </div>
 
-    <div class="sect">✍️ Email · tu respuesta</div>
-    <div class="lreplywrap">
-      <div class="lreplyhead"><span>Respuesta sugerida ${cnt}</span>
-        <span style="display:flex;gap:10px;align-items:center">
-          <span class="c" style="color:var(--faint)">editá lo que quieras · el agente aprende</span>
-          <button class="btn ghost sm" data-replyfull="1" style="padding:3px 10px;font-size:10px;letter-spacing:.08em">⛶ Agrandar</button>
-        </span></div>
-      <div id="tradhint" class="tradhint" style="display:none">⇄ En español · podés editar · se envía en el idioma del lead</div>
-      <textarea class="lreply" id="lreply" placeholder="Tocá ↻ Rehacer para que el agente redacte una respuesta, o escribí vos directamente.">${esc(l.borrador||"")}</textarea>
-      <div class="lreplyactions">
-        <button class="btn ghost sm" data-rehacer="${l.id}">↻ Rehacer</button>
-        <button class="btn ghost sm btn-trad" data-traducir="1" title="Traducir al español (podés editar)">⇄ Traducir</button>
-        ${l.email?`<button class="btn" data-enviarmail="${l.id}">Enviar</button>`:`<span style="color:var(--muted);font-size:12px">Sin email para enviar</span>`}
-        <span class="lsent">${sent}</span>
+    <div class="ftabc" data-ftabc="email" style="display:${fichaTab==="email"?"block":"none"}">
+      <div class="sect" style="margin-top:0">Lo que escribió</div>
+      <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
+      ${l.ultimaRespuesta?`<div class="lreplied"><div class="lreplied-h">↩ Su última respuesta</div><div class="lreplied-b">${esc(l.ultimaRespuesta)}</div></div>`:""}
+      <div class="sect">Tu respuesta</div>
+      <div class="lreplywrap" style="margin-top:0;border-top:none;padding-top:0">
+        <div class="lreplyhead"><span>Respuesta sugerida ${cnt}</span>
+          <span style="display:flex;gap:10px;align-items:center">
+            <span class="c" style="color:var(--faint)">editá lo que quieras · el agente aprende</span>
+            <button class="btn ghost sm" data-replyfull="1" style="padding:3px 10px;font-size:10px;letter-spacing:.08em">⛶ Agrandar</button>
+          </span></div>
+        <div id="tradhint" class="tradhint" style="display:none">⇄ En español · podés editar · se envía en el idioma del lead</div>
+        <textarea class="lreply" id="lreply" placeholder="Tocá ↻ Rehacer para que el agente redacte una respuesta, o escribí vos directamente.">${esc(l.borrador||"")}</textarea>
+        <div class="lreplyactions">
+          <button class="btn ghost sm" data-rehacer="${l.id}">↻ Rehacer</button>
+          <button class="btn ghost sm btn-trad" data-traducir="1" title="Traducir al español (podés editar)">⇄ Traducir</button>
+          ${l.email?`<button class="btn" data-enviarmail="${l.id}">Enviar</button>`:`<span style="color:var(--muted);font-size:12px">Sin email para enviar</span>`}
+          <span class="lsent">${sent}</span>
+        </div>
       </div>
     </div>
 
-    ${llamadas.length?`<div class="sect"><span style="color:var(--ok)">${ICON_PHONE}</span> Llamadas (${llamadas.length})</div>
-      <div class="tline" style="margin-top:0">${llamadas.map(x=>`<div class="tl"><div class="tl-dot"></div><div class="tl-b">
+    <div class="ftabc" data-ftabc="llamadas" style="display:${fichaTab==="llamadas"?"block":"none"}">
+      ${llamadas.length?`<div class="tline" style="margin-top:0;border-top:none;padding-top:0">${llamadas.map(x=>`<div class="tl"><div class="tl-dot"></div><div class="tl-b">
         <span class="w">${esc(fmtT(x))} · ${esc(CALL_RES[x.resultado]||x.resultado||"")}</span>
         ${x.texto?`<div style="margin-top:3px;color:var(--muted);white-space:pre-wrap">${esc(String(x.texto).slice(0,250))}${String(x.texto).length>250?"…":""}</div>
         <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn ghost sm" data-verllamada="${x.id}">⛶ Ver completa</button>
           <button class="btn ghost sm" data-bajllamada="${x.id}">⤓ Descargar .txt</button>
         </div>`:""}
-      </div></div>`).join("")}</div>`:""}
+      </div></div>`).join("")}</div>`:`<div class="fempty">Sin llamadas registradas con este lead. El botón verde "Llamar" de arriba abre el registro con transcripción en vivo.</div>`}
+    </div>
 
-    ${analisis.length?`<div class="sect">🧠 Análisis del agente</div>
-      <div class="tline" style="margin-top:0">${analisis.map(x=>`<div class="tl"><div class="tl-dot"></div><div class="tl-b">
+    <div class="ftabc" data-ftabc="analisis" style="display:${fichaTab==="analisis"?"block":"none"}">
+      ${analisis.length?`<div class="tline" style="margin-top:0;border-top:none;padding-top:0">${analisis.map(x=>`<div class="tl"><div class="tl-dot"></div><div class="tl-b">
         <span class="w">${esc(fmtT(x))}</span>
         ${x.texto?`<div style="margin-top:3px;color:var(--muted);white-space:pre-wrap">${esc(String(x.texto).slice(0,250))}${String(x.texto).length>250?"…":""}</div>
         ${String(x.texto).length>250?`<div style="margin-top:8px"><button class="btn ghost sm" data-verllamada="${x.id}">⛶ Ver completo</button></div>`:""}`:""}
-      </div></div>`).join("")}</div>`:""}
+      </div></div>`).join("")}</div>`:`<div class="fempty">Todavía no hay análisis del agente. Se generan solos al guardar una llamada transcripta.</div>`}
+    </div>
 
-    ${resto.length?`<div class="sect">Historial</div>
-      <div class="tline" style="margin-top:0">${resto.map(x=>item(x," · "+esc(LT[x.tipo]||x.tipo))).join("")}</div>`:""}
+    <div class="ftabc" data-ftabc="hist" style="display:${fichaTab==="hist"?"block":"none"}">
+      ${resto.length?`<div class="tline" style="margin-top:0;border-top:none;padding-top:0">${resto.map(x=>item(x," · "+esc(LT[x.tipo]||x.tipo))).join("")}</div>`:`<div class="fempty">Sin movimientos todavía.</div>`}
+    </div>
   </div></div>`;
 }
 
@@ -1230,6 +1250,13 @@ document.addEventListener("click", async e=>{
     }
     await loadAll(); return;
   }
+  if(t.dataset.ftab){
+    // cambia de pestaña SIN re-render: así no se pierde lo que estés escribiendo en la respuesta
+    fichaTab=t.dataset.ftab;
+    document.querySelectorAll(".ftab").forEach(b=>b.classList.toggle("on", b.dataset.ftab===fichaTab));
+    document.querySelectorAll(".ftabc").forEach(d=>{ d.style.display = d.dataset.ftabc===fichaTab ? "block" : "none"; });
+    return;
+  }
   if(t.dataset.replyfull){
     const ta=document.getElementById("lreply"); if(!ta) return;
     ta.classList.toggle("full");
@@ -1305,7 +1332,7 @@ document.addEventListener("click", async e=>{
     return;
   }
   if(t.dataset.openlead){
-    openLeadId=t.dataset.openlead; confirmDel=null; tradActivo=false; tradOriginal=""; tradShown=""; cierreAjuste=false; renderApp();
+    openLeadId=t.dataset.openlead; confirmDel=null; tradActivo=false; tradOriginal=""; tradShown=""; cierreAjuste=false; fichaTab="email"; renderApp();
     const ol = leads.find(x=>x.id===openLeadId);
     if(ol && !(ol.borrador && String(ol.borrador).trim())) runDraft(openLeadId, false);
     return;
