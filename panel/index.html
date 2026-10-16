@@ -74,7 +74,10 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125
 /* barra de cierre (avance hacia la venta) */
 .cbar-wrap{margin:14px 0;padding:12px 14px;border:1px solid var(--hair2);border-radius:10px}
 .cbar-h{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
-.cbar{height:9px;background:var(--hair2);border-radius:99px;overflow:hidden}
+.cbar{height:6px;background:var(--hair2);border-radius:99px;overflow:hidden;margin-top:8px}
+.cbar-row{display:flex;gap:14px;margin-top:9px;font-size:13.5px;line-height:1.6}
+.cbar-row .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;min-width:52px;padding-top:4px}
+.cbar-row .v{color:var(--fg);flex:1}
 .cbar-f{height:100%;border-radius:99px;background:var(--accent);transition:width .3s}
 .cbar-f.ok{background:var(--ok)} .cbar-f.bad{background:var(--bad)}
 .cbar-l{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--fg);margin-top:7px}
@@ -812,16 +815,24 @@ let cierreAjuste=false; // panel de ajuste manual abierto/cerrado
 function cierreBarHtml(l){
   if(l.status==="ganado"||l.status==="perdido"){
     const g=l.status==="ganado";
-    return `<div class="cbar-wrap"><div class="cbar-h">Cierre</div>
+    return `<div class="cbar-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <div class="cbar-h" style="margin-bottom:0">Cierre</div>
+        <div class="cbar-l" style="margin-top:0">${g?"100% — Ganado ✓":"0% — Perdido"}</div>
+      </div>
       <div class="cbar"><div class="cbar-f ${g?"ok":"bad"}" style="width:${g?100:4}%"></div></div>
-      <div class="cbar-l">${g?"100% — Ganado ✓":"0% — Perdido"}${l.cierreMotivo&&!g?` · motivo: ${esc(l.cierreMotivo)}`:""}</div></div>`;
+      ${l.cierreMotivo&&!g?`<div class="cbar-row"><span class="k">Motivo</span><span class="v">${esc(l.cierreMotivo)}</span></div>`:""}</div>`;
   }
   const pct=l.cierrePct, sug=l.cierreSug;
   const etiq=p=>{const e=ETAPAS_CIERRE.find(x=>x[0]===Number(p));return e?e[1]:"";};
-  let h=`<div class="cbar-wrap"><div class="cbar-h">Cierre${l.cierreFreno?` · freno: ${esc(l.cierreFreno)}`:""}</div>
+  let h=`<div class="cbar-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <div class="cbar-h" style="margin-bottom:0">Cierre</div>
+      <div class="cbar-l" style="margin-top:0">${pct==null?"— sin avance registrado":pct+"% — "+esc(etiq(pct))}</div>
+    </div>
     <div class="cbar"><div class="cbar-f" style="width:${pct==null?0:pct}%"></div></div>
-    <div class="cbar-l">${pct==null?"— sin avance registrado":pct+"% — "+esc(etiq(pct))}</div>
-    ${l.cierreFalta?`<div class="cbar-falta">Falta: ${esc(l.cierreFalta)}</div>`:""}`;
+    ${l.cierreFreno?`<div class="cbar-row"><span class="k">Freno</span><span class="v">${esc(l.cierreFreno)}</span></div>`:""}
+    ${l.cierreFalta?`<div class="cbar-row"><span class="k">Falta</span><span class="v">${esc(l.cierreFalta)}</span></div>`:""}`;
   if(sug&&sug.pct!=null&&Number(sug.pct)!==pct){
     h+=`<div class="cbar-sug">🤖 El agente lo ve en <b>${Number(sug.pct)}% — ${esc(sug.etapa||etiq(sug.pct))}</b>
       ${sug.freno?`<br>Freno: ${esc(sug.freno)}`:""}${sug.falta?`<br>Falta: ${esc(sug.falta)}`:""}
