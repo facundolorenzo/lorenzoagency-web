@@ -16,6 +16,17 @@ const cors = {
 const json = (o: unknown, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { ...cors, "content-type": "application/json" } });
 
+// Decodifica el payload del JWT (ya verificado por el gateway) y devuelve el claim `role`.
+function jwtRole(t: string): string | null {
+  try {
+    let p = (t || "").split(".")[1];
+    if (!p) return null;
+    p = p.replace(/-/g, "+").replace(/_/g, "/");
+    p += "=".repeat((4 - (p.length % 4)) % 4);
+    return JSON.parse(atob(p)).role || null;
+  } catch { return null; }
+}
+
 function detectLang(txt: string): "es" | "en" {
   const t = " " + String(txt || "").toLowerCase() + " ";
   if (!t.trim()) return "es";
@@ -38,7 +49,8 @@ Deno.serve(async (req) => {
 
     const token = (auth || "").replace(/^Bearer\s+/i, "");
     const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    let allowed = !!SERVICE && token === SERVICE;
+    const esServicio = (!!SERVICE && token === SERVICE) || jwtRole(token) === "service_role";
+    let allowed = esServicio;
     if (!allowed) { const { data: isAdmin } = await supa.rpc("is_admin"); allowed = !!isAdmin; }
     if (!allowed) return json({ error: "No autorizado" }, 403);
 
