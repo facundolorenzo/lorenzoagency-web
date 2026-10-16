@@ -87,6 +87,36 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { message = "", name = "", service = "", previous = "", translate = false, classify = false } = body;
 
+    // ===== Rama ANALIZAR LLAMADA: transcripción en texto -> puntos clave =====
+    // La usa el panel al guardar una llamada transcripta en vivo.
+    if (body.analizar) {
+      const KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
+      const MDL = Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-5-5";
+      const ra = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        body: JSON.stringify({
+          model: MDL,
+          max_tokens: 700,
+          system: `Analizás la transcripción de una llamada de ventas de LORENZO Agency.
+La transcripción viene de dictado en vivo: puede tener errores y los hablantes NO están separados.
+Identificá por contexto quién es el vendedor (LORENZO, el que ofrece servicios) y quién el cliente.
+Devolvé en español, breve, EXACTAMENTE con este formato:
+TEMPERATURA: caliente / tibio / frío — una línea de por qué
+PUNTOS CLAVE: 3 a 5 viñetas con lo importante que dijo el cliente (necesidad, contexto, números, fechas)
+OBJECIONES: las que salieron (o "ninguna")
+PRÓXIMOS PASOS: compromisos concretos que quedaron (o "no quedaron")
+RIESGO: si la venta podría no avanzar, el porqué más probable según la charla
+Solo el análisis, sin comentarios extra.`,
+          messages: [{ role: "user", content: `Llamada con ${body.name || "un lead"}${body.service ? ` (rubro: ${body.service})` : ""}:\n\n${String(body.transcript || "").slice(0, 12000)}` }],
+        }),
+      });
+      if (!ra.ok) { const tx = await ra.text(); return json({ error: "Claude " + ra.status + ": " + tx.slice(0, 200) }, 502); }
+      const oa = await ra.json();
+      const an = (oa.content || []).map((c: { text?: string }) => c.text || "").join("").trim();
+      return json({ reply: an });
+    }
+
     // ===== Rama CLASIFICAR: ¿es una consulta real de una persona, o promo/automático? =====
     // Devuelve { consulta: true|false }. La usa el checker antes de crear un lead desde un email.
     if (classify) {

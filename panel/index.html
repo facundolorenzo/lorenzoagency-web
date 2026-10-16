@@ -217,6 +217,39 @@ let leadCollapsed = {};
 let touches = [];
 let callLeadId = null, closeLeadId = null;
 let tradActivo = false, tradOriginal = "", tradShown = "";
+let transcribiendo = false, transcripcion = "", recog = null;
+
+/* ---------- Transcripción en vivo de llamadas (Web Speech API) ----------
+   Convierte lo que capta el micrófono a TEXTO en tiempo real. No guarda audio.
+   La llamada va en altavoz cerca de la compu, y hay que avisar al cliente (ley de FL). */
+function startTranscripcion(lang){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ note("Este navegador no soporta transcripción en vivo — usá Chrome o Edge."); return false; }
+  const ta = document.getElementById("callnote");
+  transcripcion = (ta && ta.value) ? ta.value.trim()+" " : "";
+  recog = new SR();
+  recog.lang = lang === "en" ? "en-US" : "es-US";
+  recog.continuous = true; recog.interimResults = true;
+  recog.onresult = (e)=>{
+    let interim = "";
+    for(let i = e.resultIndex; i < e.results.length; i++){
+      const r = e.results[i];
+      if(r.isFinal) transcripcion += r[0].transcript.trim()+" ";
+      else interim += r[0].transcript;
+    }
+    const t = document.getElementById("callnote");
+    if(t){ t.value = transcripcion + interim; t.scrollTop = t.scrollHeight; }
+  };
+  recog.onerror = (e)=>{ if(e.error !== "no-speech" && e.error !== "aborted") note("Transcripción: "+e.error); };
+  recog.onend = ()=>{ if(transcribiendo && recog){ try{ recog.start(); }catch(_e){} } }; // el navegador corta solo; relanzar
+  try{ recog.start(); }catch(_e){}
+  transcribiendo = true;
+  return true;
+}
+function stopTranscripcion(){
+  transcribiendo = false;
+  if(recog){ try{ recog.stop(); }catch(_e){} recog = null; }
+}
 const CAD_DIAS = [0,1,3,5,7,10,14];
 const CAD_TIPO = ["mail","llamada","mail","llamada","mail","llamada","mail"];
 const CALL_RES = {atendio_interesado:"Atendió interesado",atendio_frio:"Atendió frío",no_atendio:"No atendió",mensaje:"Dejé mensaje",agendo:"Agendó reunión"};
@@ -762,13 +795,18 @@ function renderHoy(){
 function callModalHtml(){
   if(!callLeadId) return "";
   const l=leads.find(x=>x.id===callLeadId); if(!l) return "";
-  return `<div class="cpop-bg" data-closecall="1"><div class="cpop" style="max-width:400px">
-    <div class="cpop-t">📞 Registrar llamada — ${esc(l.name||'')}</div>
-    <div class="cpop-s">¿Cómo salió?</div>
+  return `<div class="cpop-bg" data-closecall="1"><div class="cpop" style="max-width:470px">
+    <div class="cpop-t">📞 Llamada — ${esc(l.name||'')}</div>
+    <div class="cpop-s">Poné la llamada en <b>altavoz</b> cerca de la compu y <b>avisale</b> que tomás notas ("te aviso que la llamada se transcribe"). Tocá 🎙 y hablá normal.</div>
+    <div style="display:flex;gap:10px;align-items:center;margin:10px 0">
+      <button class="btn ghost sm" data-trans="1">🎙 Transcribir en vivo</button>
+      <span id="translive" style="display:none;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:#e05c5c">● CAPTURANDO TEXTO</span>
+    </div>
+    <div style="margin-bottom:14px"><textarea id="callnote" placeholder="La transcripción aparece acá en vivo (o escribí tu nota a mano)…" style="min-height:100px"></textarea></div>
+    <div class="cpop-s">¿Cómo salió? (al elegir, se guarda todo y el agente analiza la llamada)</div>
     <div style="display:flex;flex-direction:column;gap:8px">
       ${Object.entries(CALL_RES).map(([k,v])=>`<button class="btn ghost" style="text-align:left" data-callres="${k}">${esc(v)}</button>`).join('')}
     </div>
-    <div style="margin-top:12px"><textarea id="callnote" placeholder="Nota de la llamada (opcional)…" style="min-height:60px"></textarea></div>
     <div class="cpop-a" style="margin-top:12px"><button class="btn ghost sm" data-closecall="1">Cancelar</button></div>
   </div></div>`;
 }
@@ -933,13 +971,39 @@ document.addEventListener("click", async e=>{
     return;
   }
   if(t.dataset.calllead){ callLeadId=t.dataset.calllead; renderApp(); return; }
-  if(t.dataset.closecall){ callLeadId=null; renderApp(); return; }
+  if(t.dataset.closecall){ stopTranscripcion(); callLeadId=null; renderApp(); return; }
+  if(t.dataset.trans){
+    const l=leads.find(x=>x.id===callLeadId);
+    const live=document.getElementById("translive");
+    if(transcribiendo){
+      stopTranscripcion();
+      t.textContent="🎙 Transcribir en vivo";
+      if(live) live.style.display="none";
+    } else if(startTranscripcion(l ? langOf(l) : "es")){
+      t.textContent="⏹ Detener";
+      if(live) live.style.display="inline";
+    }
+    return;
+  }
   if(t.dataset.callres){
-    const id=callLeadId; const l=leads.find(x=>x.id===id); if(!l){ callLeadId=null; renderApp(); return; }
+    const id=callLeadId; const l=leads.find(x=>x.id===id); if(!l){ stopTranscripcion(); callLeadId=null; renderApp(); return; }
+    stopTranscripcion();
     const res=t.dataset.callres; const noteEl=document.getElementById("callnote"); const txt=noteEl?noteEl.value.trim():"";
     try{ await sb.from("touches").insert({lead_id:id,tipo:"llamada",resultado:res,texto:txt||null}); }catch(e){}
     try{ await sb.from("leads").update(avanzarCadencia(l.cadenciaPaso)).eq("id",id); }catch(e){}
-    callLeadId=null; note("📞 Llamada registrada."); await loadAll(); return;
+    callLeadId=null; note("📞 Llamada registrada."); renderApp();
+    // Si hay transcripción real (texto largo), el agente la analiza y guarda los puntos clave
+    if(txt.length>250){
+      note("🧠 Analizando la llamada…");
+      try{
+        const out=await callFn("sugerir",{ analizar:true, transcript:txt, name:l.name||"", service:l.service||"" });
+        if(out && out.reply){
+          try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:"🧠 Análisis de la llamada:\n"+out.reply}); }catch(e){}
+          note("🧠 Análisis guardado en la línea de tiempo del lead.");
+        }
+      }catch(err){ note("No pude analizar la llamada: "+err.message); }
+    }
+    await loadAll(); return;
   }
   if(t.dataset.ganado){ closeLeadId={id:t.dataset.ganado,outcome:"ganado"}; renderApp(); return; }
   if(t.dataset.perdido){ closeLeadId={id:t.dataset.perdido,outcome:"perdido"}; renderApp(); return; }
