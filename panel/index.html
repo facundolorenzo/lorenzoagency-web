@@ -1004,7 +1004,14 @@ function leadModalHtml(){
     </div>
 
     ${llamadas.length?`<div class="sect"><span style="color:var(--ok)">${ICON_PHONE}</span> Llamadas (${llamadas.length})</div>
-      <div class="tline" style="margin-top:0">${llamadas.map(x=>item(x," · "+esc(CALL_RES[x.resultado]||x.resultado||""))).join("")}</div>`:""}
+      <div class="tline" style="margin-top:0">${llamadas.map(x=>`<div class="tl"><div class="tl-dot"></div><div class="tl-b">
+        <span class="w">${esc(fmtT(x))} · ${esc(CALL_RES[x.resultado]||x.resultado||"")}</span>
+        ${x.texto?`<div style="margin-top:3px;color:var(--muted);white-space:pre-wrap">${esc(String(x.texto).slice(0,250))}${String(x.texto).length>250?"…":""}</div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn ghost sm" data-verllamada="${x.id}">⛶ Ver completa</button>
+          <button class="btn ghost sm" data-bajllamada="${x.id}">⤓ Descargar .txt</button>
+        </div>`:""}
+      </div></div>`).join("")}</div>`:""}
 
     ${analisis.length?`<div class="sect">🧠 Análisis del agente</div>
       <div class="tline" style="margin-top:0">${analisis.map(x=>item(x,"")).join("")}</div>`:""}
@@ -1183,6 +1190,32 @@ document.addEventListener("click", async e=>{
       note("🧠 Análisis guardado en la línea de tiempo del lead.");
     }
     await loadAll(); return;
+  }
+  if(t.dataset.verllamada){
+    const x=touches.find(k=>k.id===t.dataset.verllamada); if(!x) return;
+    const l=leads.find(z=>z.id===x.leadId)||{};
+    const f=String(x.createdAt||"").slice(0,16).replace("T"," ");
+    const w=window.open("","_blank"); if(!w){ note("El navegador bloqueó la pestaña — permití pop-ups para el panel."); return; }
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Llamada — ${esc(l.name||"")}</title>
+      <style>body{font-family:Georgia,'Times New Roman',serif;max-width:720px;margin:40px auto;padding:0 22px;line-height:1.75;font-size:17px;color:#111;background:#fff}
+      h1{font-family:ui-monospace,monospace;font-size:13px;letter-spacing:.14em;color:#777;text-transform:uppercase;font-weight:600}
+      .meta{color:#777;font-size:13px;font-family:ui-monospace,monospace;margin-bottom:30px}
+      pre{white-space:pre-wrap;font-family:inherit}
+      .noprint{font-family:ui-monospace,monospace;font-size:12px;color:#aaa}
+      @media print{.noprint{display:none}}</style></head><body>
+      <h1>LORENZO AGENCY · Transcripción de llamada</h1>
+      <div class="meta">${esc(l.name||"—")}${l.phone?" · "+esc(l.phone):""} · ${esc(f)}${x.resultado?" · "+esc(CALL_RES[x.resultado]||x.resultado):""}</div>
+      <p class="noprint">Para guardarla como PDF: Ctrl+P → "Guardar como PDF".</p>
+      <pre>${esc(x.texto||"")}</pre></body></html>`);
+    w.document.close(); return;
+  }
+  if(t.dataset.bajllamada){
+    const x=touches.find(k=>k.id===t.dataset.bajllamada); if(!x) return;
+    const l=leads.find(z=>z.id===x.leadId)||{};
+    const blob=new Blob([x.texto||""],{type:"text/plain;charset=utf-8"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download=("llamada-"+(l.name||"lead")+"-"+String(x.createdAt||"").slice(0,10)+".txt").replace(/\s+/g,"-").toLowerCase();
+    a.click(); URL.revokeObjectURL(a.href); return;
   }
   if(t.dataset.avajuste){ cierreAjuste=!cierreAjuste; renderApp(); return; }
   if(t.dataset.avaplicar){
