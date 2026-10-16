@@ -1306,6 +1306,7 @@ document.addEventListener("click", async e=>{
   ${items.map(([d,m])=>`<tr><td>${esc(d)}</td><td class="r">${fmt(m)}</td></tr>`).join("")}
   <tr class="tot"><td>TOTAL</td><td class="r">${fmt(i.amount)}</td></tr>
 </table>
+<div class="cols" style="margin-top:46px"><div class="col"><div class="k">PAGO</div><div class="v">Zelle — Facundo Lorenzo<br>facundoluislorenzo@gmail.com</div></div></div>
 <footer><span>LORENZO AGENCY · MIAMI, FL</span><span>TALK@LORENZOAGENCY.TECH</span></footer>
 </body></html>`);
     w.document.close(); return;
@@ -1422,10 +1423,34 @@ document.addEventListener("click", async e=>{
     const d=list.find(x=>x.id===id); if(!d) return;
     const next=states[(states.indexOf(d.status)+1)%states.length];
     const {error}=await sb.from(col).update({status:next}).eq("id",id);
-    if(error) note("No se pudo cambiar el estado: "+error.message); else await loadAll();
+    if(error){ note("No se pudo cambiar el estado: "+error.message); return; }
+    if(col==="proposals" && next==="aprobada" && d.status!=="aprobada") await autoFactura(d);
+    await loadAll();
     return;
   }
 });
+
+// Propuesta aprobada -> la factura se crea sola (número siguiente, cliente y monto de la propuesta, pendiente)
+async function autoFactura(p){
+  if(!p) return;
+  const marca = "Propuesta "+(p.number||"");
+  if(p.number && invoices.some(i=>String(i.notes||"").includes(marca))) return; // ya tiene factura
+  const hoy=new Date(); const vence=new Date(); vence.setDate(vence.getDate()+15);
+  const iso=d=>d.toISOString().slice(0,10);
+  const row={
+    number: nextNumber(invoices,"INV"),
+    client_id: p.clientId||null,
+    amount: Number(p.amount)||0,
+    status: "pendiente",
+    issued: iso(hoy),
+    due: iso(vence),
+    notes: `${p.title||"Servicios profesionales"} — ${Number(p.amount)||0}\n${marca}`.trim(),
+    created_at: new Date().toISOString(),
+  };
+  const {error}=await sb.from("invoices").insert(row);
+  if(error){ note("La propuesta quedó aprobada, pero no pude crear la factura: "+error.message); return; }
+  note("🧾 Factura "+row.number+" creada sola desde la propuesta aprobada — está en FACTURAS, lista para el PDF.");
+}
 
 document.addEventListener("submit", async e=>{
   const f=e.target; if(!f.id||!f.id.startsWith("f-")) return;
@@ -1451,6 +1476,10 @@ document.addEventListener("submit", async e=>{
     if(editing && editing.col===col){ ({error}=await sb.from(col).update(row).eq("id",editing.id)); }
     else { row.created_at=new Date().toISOString(); ({error}=await sb.from(col).insert(row)); }
     if(error){ note("No se pudo guardar: "+error.message); return; }
+    if(col==="proposals" && data.status==="aprobada"){
+      const prev = editing ? proposals.find(x=>x.id===editing.id) : null;
+      if(!prev || prev.status!=="aprobada") await autoFactura({ number:data.number, clientId:data.clientId||null, title:data.title, amount:data.amount });
+    }
     formOpen=null; editing=null; await loadAll();
   }catch(err){ note("No se pudo guardar: "+err.message); }
 });
