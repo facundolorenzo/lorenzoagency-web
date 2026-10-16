@@ -101,8 +101,10 @@ Deno.serve(async (req) => {
           system: `Reformateás la transcripción cruda de una llamada de ventas de LORENZO Agency en formato diálogo.
 La transcripción viene de dictado en vivo con micrófono: un solo flujo de texto, sin separar hablantes, con posibles errores.
 Identificá por contexto quién es LORENZO (el que ofrece los servicios de la agencia, hace las preguntas comerciales, generalmente quien llama) y quién es el CLIENTE (el que consulta o responde del otro lado).
+Las llamadas suelen arrancar con una presentación ("Mi nombre es Marcos, soy gerente de ventas de LORENZO Agency") y el vendedor suele preguntar el nombre del otro: usá esas presentaciones como ancla principal para identificar a cada uno.
 Reglas:
 - Devolvé SOLO el diálogo, una intervención por línea, con el formato exacto "LORENZO: ..." y "CLIENTE: ...".
+- Si un hablante dijo su nombre en la llamada, usalo en la etiqueta: el vendedor como "MARCOS (LORENZO): ..." y el cliente con su nombre, "LAURA (CLIENTE): ...". Si no dijo su nombre, dejá la etiqueta genérica.
 - Mantené el idioma original de la llamada (NO traduzcas).
 - Corregí solo errores obvios de dictado; NO inventes ni agregues contenido.
 - Si un tramo no se puede atribuir con confianza, poné "¿?: ..." en esa línea.`,
@@ -125,11 +127,12 @@ Reglas:
         headers: { "x-api-key": KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
         body: JSON.stringify({
           model: MDL,
-          max_tokens: 700,
+          max_tokens: 900,
           system: `Analizás la transcripción de una llamada de ventas de LORENZO Agency.
-La transcripción puede venir ya separada por hablantes ("LORENZO: ..." / "CLIENTE: ...") o como flujo crudo con errores de dictado.
+La transcripción puede venir ya separada por hablantes ("LORENZO: ..." / "CLIENTE: ...", a veces con nombres: "MARCOS (LORENZO): ...") o como flujo crudo con errores de dictado.
 Si no está separada, identificá por contexto quién es el vendedor (LORENZO, el que ofrece servicios) y quién el cliente.
 Devolvé en español, breve, EXACTAMENTE con este formato:
+FICHA DEL CLIENTE: nombre, empresa y cargo si los dijo; hombre/mujer y edad aproximada SOLO si se desprende claramente de la charla; lo que no se sepa, omitilo (nunca inventes)
 TEMPERATURA: caliente / tibio / frío — una línea de por qué
 PUNTOS CLAVE: 3 a 5 viñetas con lo importante que dijo el cliente (necesidad, contexto, números, fechas)
 OBJECIONES: las que salieron (o "ninguna")
