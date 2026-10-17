@@ -55,7 +55,8 @@ nav button.on{color:var(--fg);border-color:var(--accent);background:rgba(221,125
 .fchip.hot{border-color:rgba(221,125,71,.5)}
 .fchip.hot.on{background:rgba(221,125,71,.14)}
 /* franjas (secciones por estado) */
-.franja{margin-bottom:12px}
+.franja{background:var(--card);border:1px solid var(--hair2);border-radius:16px;padding:2px 18px 8px;margin-bottom:14px}
+.franja .tablewrap{background:none;border:none;border-radius:0;padding:0}
 .franja-h{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;border-bottom:1px solid var(--hair);
   color:var(--fg);font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
   padding:11px 4px;cursor:pointer;text-align:left}
@@ -146,7 +147,42 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
   outline:2px solid var(--accent);outline-offset:2px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-.stat{background:var(--card);border:1px solid var(--hair2);border-radius:10px;padding:18px}
+.stat{background:var(--card);border:1px solid var(--hair2);border-radius:16px;padding:20px}
+/* ===== RESUMEN bento ===== */
+.hello{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin:8px 0 18px;flex-wrap:wrap}
+.hello h1{font-size:32px;font-weight:700;letter-spacing:-.01em}
+.hello .hd{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--muted);margin-top:6px}
+.kpis{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.kpi{border:1px solid var(--hair2);background:var(--card);border-radius:999px;padding:8px 14px;font-size:12.5px;color:var(--muted)}
+.kpi b{color:var(--fg);font-variant-numeric:tabular-nums;margin-right:2px}
+.kpi.hl{border-color:rgba(221,125,71,.45);background:rgba(221,125,71,.1);color:var(--fg)}
+.bento{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+.bcard{background:var(--card);border:1px solid var(--hair2);border-radius:16px;padding:20px;grid-column:span 4;min-width:0}
+.bcard.sp3{grid-column:span 3}.bcard.sp4{grid-column:span 4}.bcard.sp5{grid-column:span 5}.bcard.sp6{grid-column:span 6}
+@media(max-width:980px){.bcard,.bcard.sp3,.bcard.sp4,.bcard.sp5,.bcard.sp6{grid-column:span 12}}
+.bcard.hl{background:linear-gradient(180deg,rgba(221,125,71,.13),rgba(221,125,71,.04));border-color:rgba(221,125,71,.3)}
+.bhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.bt{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+.bn{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.bs{font-size:12.5px;color:var(--faint)}
+.big{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;margin:6px 0 2px}
+.pbar{height:7px;background:var(--hair2);border-radius:99px;overflow:hidden;margin-top:12px}
+.pbar span{display:block;height:100%}
+.brow{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-top:10px}
+.brow b{color:var(--fg);font-variant-numeric:tabular-nums}
+.step{display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;border-bottom:1px solid var(--hair2);padding:11px 2px;cursor:pointer;color:var(--fg);text-align:left;font-family:var(--disp);font-size:13.5px}
+.step:last-of-type{border-bottom:none}
+.step *{pointer-events:none}
+.step:hover{background:rgba(255,255,255,.03)}
+.step .n{flex:0 0 auto;width:22px;height:22px;border-radius:99px;border:1px solid var(--hair);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.step .st-a{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);flex:0 0 auto;min-width:86px}
+.step .st-a.hot{color:var(--accent)}
+.step .st-n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow{display:flex;align-items:center;gap:10px;margin-top:10px}
+.mrow .mk{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;min-width:92px}
+.mrow .mbar{flex:1;height:7px;background:var(--hair2);border-radius:99px;overflow:hidden}
+.mrow .mbar span{display:block;height:100%;background:var(--accent)}
+.mrow .mv{font-family:var(--mono);font-size:11px;min-width:20px;text-align:right}
 .stat .l{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
 .stat .v{font-size:26px;font-weight:800;margin-top:8px;font-variant-numeric:tabular-nums}
 .stat .s{font-size:12px;color:var(--faint);margin-top:4px}
@@ -175,7 +211,7 @@ th.r{text-align:right}
 .p-aprobada,.p-pagada,.p-cerrado{color:var(--ok);border-color:rgba(76,195,138,.45)}
 .p-rechazada,.p-vencida{color:var(--bad);border-color:rgba(229,96,76,.45)}
 .p-pendiente{color:var(--warn);border-color:rgba(229,180,84,.45)}
-.panel{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:20px;margin-bottom:20px}
+.panel{background:var(--card);border:1px solid var(--hair2);border-radius:16px;padding:20px;margin-bottom:20px}
 .form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
 .form .full{grid-column:1/-1}
 .form label{display:block}
@@ -184,7 +220,7 @@ th.r{text-align:right}
 .empty{border:1px dashed var(--hair);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
 .empty b{color:var(--fg)}
 .rowactions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
-.tablewrap{overflow-x:auto}
+.tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--hair2);border-radius:16px;padding:6px 18px}
 .clientcard{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:18px}
 .clients{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 .clientcard h3{font-size:15px;font-weight:700}
@@ -534,65 +570,111 @@ function renderResumen(){
   const sum = a=>a.reduce((s,x)=>s+(Number(x.amount)||0),0);
   const sent = proposals.filter(p=>p.status==="enviada");
   const appr = proposals.filter(p=>p.status==="aprobada");
-  const pend = invoices.filter(i=>i.status!=="pagada");
   const paid = invoices.filter(i=>i.status==="pagada");
   const mkey = new Date().toISOString().slice(0,7);
   const cobradoMes = sum(paid.filter(i=>String(i.issued||"").slice(0,7)===mkey));
-  const hot = leads.filter(x=>x.status==='respondio').length;
-  let goalHtml="";
-  if(isAdmin){
-    const pct = goal>0 ? Math.min(100, cobradoMes/goal*100) : 0;
-    const avg = proposals.length ? sum(proposals)/proposals.length : 0;
-    let msg;
-    if(!goal) msg="Definí el objetivo del mes para ver el avance.";
-    else if(cobradoMes>=goal) msg="🏆 Objetivo superado por "+money(cobradoMes-goal)+" — subí la vara el mes que viene.";
-    else { const gap=goal-cobradoMes;
-      msg="Faltan "+money(gap)+(avg>0?" · ≈ "+Math.ceil(gap/avg)+" propuesta(s) más como las tuyas":"")+". ¿Qué podés cerrar esta semana?"; }
-    goalHtml=`<div class="panel">
-      <div class="bar"><h2><span class="tick"></span>Objetivo del mes</h2>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="goalinput" type="number" min="0" step="100" value="${goal||""}" placeholder="5000" style="width:130px">
-          <button class="btn sm" data-goalsave="1">Guardar</button>
-        </div></div>
-      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-        <div><span style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums">${money(cobradoMes)}</span>
-        <span style="color:var(--muted)"> cobrado este mes${goal?" de "+money(goal):""}</span></div>
-        ${goal?`<div style="font-family:var(--mono);font-size:12px;color:var(--muted)">${pct.toFixed(0)}%</div>`:""}
-      </div>
-      <div style="height:8px;background:var(--hair2);border-radius:99px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:${(goal&&cobradoMes>=goal)?'var(--ok)':'var(--accent)'}"></div>
-      </div>
-      <div style="margin-top:10px;font-size:13px;color:#C9CBD1">${msg}</div>
-    </div>`;
+
+  if(!isAdmin){
+    $app().innerHTML = `<div class="grid">
+      <div class="stat"><span class="l">Pipeline (enviadas)</span><div class="v">${money(sum(sent))}</div><div class="s">${sent.length} propuesta(s) esperando respuesta</div></div>
+      <div class="stat"><span class="l">Aprobado</span><div class="v">${money(sum(appr))}</div><div class="s">${appr.length} propuesta(s) ganada(s)</div></div>
+    </div>
+    <div class="bar"><h2><span class="tick"></span>Últimas propuestas</h2></div>
+    ${proposals.length? proposalTable(proposals.slice(0,5), false) : '<div class="empty"><b>Sin propuestas todavía.</b></div>'}`;
+    return;
   }
-  // ----- Hoy en ventas (resumen de leads · lo que lee Jai para el reporte) -----
-  let ventasHtml="";
-  if(isAdmin){
-    const cnt=s=>leads.filter(x=>x.status===s).length;
-    const nuevos=cnt("nuevo"), enviados=cnt("enviado"), resp=cnt("respondio"), sinr=cnt("sin_respuesta"), gan=cnt("ganado"), perd=cnt("perdido");
-    const contactados=enviados+resp+sinr+gan+perd;
-    const tasaResp = contactados ? Math.round(resp/contactados*100) : 0;
-    const tasaCierre = (gan+perd) ? Math.round(gan/(gan+perd)*100) : 0;
-    const es=leads.filter(l=>langOf(l)==="es").length, en=leads.filter(l=>langOf(l)==="en").length;
-    const hoyN=leadsHoy().length;
-    ventasHtml=`<div class="bar"><h2><span class="tick"></span>Hoy en ventas</h2></div>
-    <div class="grid">
-      <div class="stat"><span class="l">Para hoy</span><div class="v">${hoyN}</div><div class="s">acciones pendientes</div></div>
-      <div class="stat"><span class="l">Nuevos</span><div class="v">${nuevos}</div><div class="s">sin contestar</div></div>
-      <div class="stat"><span class="l">Respondieron</span><div class="v">${resp}</div><div class="s">calientes — seguir</div></div>
-      <div class="stat"><span class="l">Tasa de respuesta</span><div class="v">${tasaResp}%</div><div class="s">de los contactados</div></div>
-      <div class="stat"><span class="l">Ganados / Perdidos</span><div class="v">${gan} / ${perd}</div><div class="s">cierre ${tasaCierre}%</div></div>
-      <div class="stat"><span class="l">Idioma</span><div class="v">${es} ES · ${en} EN</div><div class="s">ES vos · EN closer</div></div>
-    </div>`;
-  }
-  $app().innerHTML = ventasHtml + goalHtml + `
-  <div class="grid">
-    <div class="stat"><span class="l">Pipeline (enviadas)</span><div class="v">${money(sum(sent))}</div><div class="s">${sent.length} propuesta(s) esperando respuesta</div></div>
-    <div class="stat"><span class="l">Aprobado</span><div class="v">${money(sum(appr))}</div><div class="s">${appr.length} propuesta(s) ganada(s)</div></div>
-    ${isAdmin?`<div class="stat"><span class="l">Leads calientes</span><div class="v">${hot}</div><div class="s">respondieron — hay que seguirlos</div></div>
-    <div class="stat"><span class="l">Cobrado</span><div class="v">${money(sum(paid))}</div><div class="s">${paid.length} factura(s) pagadas</div></div>`:""}
+
+  const cnt=s=>leads.filter(x=>x.status===s).length;
+  const nuevos=cnt("nuevo"), enviados=cnt("enviado"), resp=cnt("respondio"), sinr=cnt("sin_respuesta"), gan=cnt("ganado"), perd=cnt("perdido");
+  const contactados=enviados+resp+sinr+gan+perd;
+  const tasaResp = contactados ? Math.round(resp/contactados*100) : 0;
+  const tasaCierre = (gan+perd) ? Math.round(gan/(gan+perd)*100) : 0;
+  const es=leads.filter(l=>langOf(l)==="es").length, en=leads.filter(l=>langOf(l)==="en").length;
+  const items=leadsHoy();
+
+  const h=new Date().getHours();
+  const saludo = h<12?"Buen día":h<19?"Buenas tardes":"Buenas noches";
+  const fecha = new Date().toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
+
+  const calls=touches.filter(x=>x.tipo==="llamada");
+  const hoy0=new Date(); hoy0.setHours(0,0,0,0);
+  const d7=new Date(hoy0); d7.setDate(d7.getDate()-6);
+  const cHoy=calls.filter(c=>new Date(c.createdAt)>=hoy0).length;
+  const c7=calls.filter(c=>new Date(c.createdAt)>=d7).length;
+
+  const pct = goal>0 ? Math.min(100, cobradoMes/goal*100) : 0;
+  const avg = proposals.length ? sum(proposals)/proposals.length : 0;
+  let msg;
+  if(!goal) msg="Definí el objetivo del mes para ver el avance.";
+  else if(cobradoMes>=goal) msg="🏆 Objetivo superado por "+money(cobradoMes-goal)+".";
+  else { const gap=goal-cobradoMes; msg="Faltan "+money(gap)+(avg>0?" · ≈ "+Math.ceil(gap/avg)+" propuesta(s) más":"")+"."; }
+
+  // Para hoy: paso a paso (lo más importante del día, estilo checklist)
+  const pasos = items.slice(0,6).map(({l,a},ix)=>`
+    <button class="step" data-openlead="${l.id}">
+      <span class="n">${ix+1}</span>
+      <span class="st-a ${a.hot?'hot':''}">${a.tipo==='llamada'?ICON_PHONE+' ':''}${esc(a.label)}</span>
+      <span class="st-n">${esc(l.name||l.email||'—')}</span>
+      ${langChip(l)}
+    </button>`).join("");
+
+  const mx=Math.max(1,nuevos,enviados+sinr,resp,gan);
+  const fun=(lbl,v)=>`<div class="mrow"><span class="mk">${lbl}</span><span class="mbar"><span style="width:${Math.round(v/mx*100)}%"></span></span><span class="mv">${v}</span></div>`;
+
+  $app().innerHTML = `
+  <div class="hello"><div><h1>${saludo}, Facu</h1><div class="hd">${esc(fecha)}</div></div></div>
+  <div class="kpis">
+    <span class="kpi hl"><b>${items.length}</b> para hoy</span>
+    <span class="kpi"><b>${nuevos}</b> nuevos</span>
+    <span class="kpi"><b>${resp}</b> respondieron</span>
+    <span class="kpi"><b>${tasaResp}%</b> respuesta</span>
+    <span class="kpi"><b>${tasaCierre}%</b> cierre</span>
+    <span class="kpi"><b>${es}</b> ES · <b>${en}</b> EN</span>
   </div>
-  <div class="bar"><h2><span class="tick"></span>Últimas propuestas</h2></div>
+  <div class="bento">
+    <div class="bcard hl sp5">
+      <div class="bhead"><span class="bt">Para hoy</span><span class="bn">${items.length}</span></div>
+      <div class="bs">Paso a paso — resolvés y desaparece.</div>
+      <div style="margin-top:6px">${items.length? pasos : `<div class="fempty">Nada pendiente ✦</div>`}</div>
+      ${items.length?`<button class="linkbtn" style="margin-top:12px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
+    </div>
+    <div class="bcard sp4">
+      <div class="bhead"><span class="bt">Objetivo del mes</span><span class="bn">${goal?pct.toFixed(0)+"%":""}</span></div>
+      <div class="big">${money(cobradoMes)}</div>
+      <div class="bs">${goal?"de "+money(goal)+" · ":""}cobrado este mes</div>
+      <div class="pbar"><span style="width:${pct}%;background:${(goal&&cobradoMes>=goal)?'var(--ok)':'var(--accent)'}"></span></div>
+      <div class="bs" style="margin-top:10px">${msg}</div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <input id="goalinput" type="number" min="0" step="100" value="${goal||""}" placeholder="5000" style="width:110px">
+        <button class="btn sm ghost" data-goalsave="1">Guardar</button>
+      </div>
+    </div>
+    <div class="bcard sp3">
+      <div class="bhead"><span class="bt">Embudo</span></div>
+      ${fun("Nuevos",nuevos)}${fun("Contactados",enviados+sinr)}${fun("Respondieron",resp)}${fun("Ganados",gan)}
+      <div class="bs" style="margin-top:12px">${perd} perdido(s) · cierre ${tasaCierre}%</div>
+    </div>
+    <div class="bcard sp4">
+      <div class="bhead"><span class="bt">Pipeline</span></div>
+      <div class="big">${money(sum(sent))}</div>
+      <div class="bs">${sent.length} propuesta(s) enviadas esperando</div>
+      <div class="brow"><span>Aprobado</span><b>${money(sum(appr))}</b></div>
+      <div class="brow"><span>Cobrado total</span><b>${money(sum(paid))}</b></div>
+    </div>
+    <div class="bcard sp4">
+      <div class="bhead"><span class="bt">Llamadas</span><span class="bn">${cHoy} hoy</span></div>
+      <div class="big">${c7}</div>
+      <div class="bs">últimos 7 días · ${calls.length} en total</div>
+      <button class="linkbtn" style="margin-top:12px" data-gotab="llamadas">Ver el registro →</button>
+    </div>
+    <div class="bcard sp4">
+      <div class="bhead"><span class="bt">Calientes</span></div>
+      <div class="big">${resp}</div>
+      <div class="bs">respondieron — hay que seguirlos ya</div>
+      <button class="linkbtn" style="margin-top:12px" data-gotab="hoy">Ir a contestar →</button>
+    </div>
+  </div>
+  <div class="bar" style="margin-top:28px"><h2><span class="tick"></span>Últimas propuestas</h2></div>
   ${proposals.length? proposalTable(proposals.slice(0,5), false) :
     '<div class="empty"><b>Sin propuestas todavía.</b><br>Creá la primera desde la pestaña Propuestas — el número se asigna solo.</div>'}`;
 }
@@ -1251,6 +1333,7 @@ document.addEventListener("click", async e=>{
     }
     await loadAll(); return;
   }
+  if(t.dataset.gotab){ tab=t.dataset.gotab; formOpen=null; editing=null; renderApp(); return; }
   if(t.dataset.invpdf){
     const i=invoices.find(k=>k.id===t.dataset.invpdf); if(!i) return;
     const c=clients.find(z=>z.id===i.clientId)||{};
