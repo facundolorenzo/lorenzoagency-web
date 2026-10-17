@@ -461,15 +461,16 @@ const FROM = {
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
                   cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
-  prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,phone:r.phone,web:r.web,instagram:r.instagram,
+  prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
+                  busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
 };
 const TO = {
   proposals: d=>({number:d.number,client_id:d.clientId||null,client_free:d.clientFree||null,title:d.title,amount:Number(d.amount)||0,status:d.status,date:d.date||null,notes:d.notes||null,file_url:d.fileUrl||null,file_name:d.fileName||null,updated_at:new Date().toISOString()}),
   invoices:  d=>({number:d.number,client_id:d.clientId||null,amount:Number(d.amount)||0,status:d.status,issued:d.issued||null,due:d.due||null,notes:d.notes||null,stripe_link:d.stripeLink||null,updated_at:new Date().toISOString()}),
   clients:   d=>({name:d.name,company:d.company||null,contact:d.contact||null,email:d.email||null,phone:d.phone||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
-  prospectos:d=>({empresa:d.empresa,contacto:d.contacto||null,email:d.email||null,phone:d.phone||null,web:d.web||null,
+  prospectos:d=>({empresa:d.empresa,contacto:d.contacto||null,email:d.email||null,email_directo:d.emailDirecto||null,phone:d.phone||null,web:d.web||null,
                   instagram:d.instagram||null,nicho:d.nicho||null,ciudad:d.ciudad||null,fuente:d.fuente||null,
                   notas:d.notas||null,status:d.status||"encontrado",updated_at:new Date().toISOString()}),
 };
@@ -1004,7 +1005,7 @@ function invoiceForm(d){
 /* ---------- PROSPECCIÓN (Agente 4 — outbound) ---------- */
 function renderProspeccion(){
   const d = editing && editing.col==="prospectos" ? prospectos.find(p=>p.id===editing.id) : null;
-  const conEmail=prospectos.filter(p=>p.email).length;
+  const conEmail=prospectos.filter(p=>p.email||p.emailDirecto).length;
   const env=prospectos.filter(p=>p.status==="enviado").length;
   const resp=prospectos.filter(p=>p.status==="respondio"||p.leadId).length;
   const tile=(lbl,val)=>`<div style="flex:1;min-width:120px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px">
@@ -1014,7 +1015,7 @@ function renderProspeccion(){
     const url = p.web ? (String(p.web).startsWith("http")?p.web:"https://"+p.web) : "";
     return `<tr>
       <td><b>${esc(p.empresa||"—")}</b>${p.ciudad?`<div class="bs">${esc(p.ciudad)}</div>`:""}</td>
-      <td style="font-size:12px">${p.contacto?esc(p.contacto)+"<br>":""}${p.email?`<span style="font-family:var(--mono);font-size:11px">${esc(p.email)}</span>`:`<span style="color:var(--faint)">sin email</span>`}</td>
+      <td style="font-size:12px">${p.contacto?esc(p.contacto)+"<br>":""}${p.emailDirecto?`<span style="font-family:var(--mono);font-size:11px;color:var(--accent)">⭐ ${esc(p.emailDirecto)}</span><br>`:""}${p.email?`<span style="font-family:var(--mono);font-size:11px;color:${p.emailDirecto?"var(--faint)":"var(--fg)"}">${esc(p.email)}</span>`:(p.emailDirecto?"":`<span style="color:var(--faint)">sin email</span>`)}</td>
       <td style="font-size:12px">${esc(p.nicho||"—")}</td>
       <td style="font-size:12px;color:var(--muted)">${esc(p.fuente||"—")}</td>
       <td><select class="lsel" data-prstatus="${p.id}">${PR_STATES.map(st=>`<option value="${st}" ${p.status===st?"selected":""}>${esc(PR_LABELS[st])}</option>`).join("")}</select></td>
@@ -1024,7 +1025,7 @@ function renderProspeccion(){
     </tr>`;}).join("");
   $app().innerHTML = `
   <div class="bar"><h2><span class="tick"></span>Captación de clientes — salir a buscarlos</h2>
-    ${canWrite?`<div style="display:flex;gap:8px"><button class="btn ghost" data-new="prospimport">📋 Importar lista</button><button class="btn" data-new="prospectos">+ Prospecto</button></div>`:""}</div>
+    ${canWrite?`<div style="display:flex;gap:12px;align-items:center"><button class="linkbtn" data-new="prospectos" style="color:var(--faint)">+ cargar a mano</button><button class="btn" data-new="prospimport">📋 Importar lista</button></div>`:""}</div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">${tile("Prospectos",prospectos.length)}${tile("Con email",conEmail)}${tile("Enviados",env)}${tile("Respondieron",resp)}${(function(){
     const pr = env>0 ? Math.round(resp/env*100) : null;
     const col = pr==null?"var(--fg)":(pr>=5?"var(--ok)":(pr>=3?"var(--warn)":"var(--bad)"));
@@ -1042,7 +1043,8 @@ function prospForm(d){
   return `<div class="panel"><form id="f-prospectos" class="form">
     <label><span class="fl">Empresa / negocio</span><input name="empresa" value="${esc(d?d.empresa:"")}" required placeholder="Nombre del venue"></label>
     <label><span class="fl">Contacto</span><input name="contacto" value="${esc(d?d.contacto:"")}" placeholder="Nombre y rol (si se sabe)"></label>
-    <label><span class="fl">Email</span><input name="email" type="email" value="${esc(d?d.email:"")}"></label>
+    <label><span class="fl">Email genérico</span><input name="email" type="email" value="${esc(d?d.email:"")}" placeholder="info@lugar.com"></label>
+    <label><span class="fl">⭐ Email directo (persona)</span><input name="emailDirecto" type="email" value="${esc(d?d.emailDirecto:"")}" placeholder="gerente@lugar.com — a este se le escribe"></label>
     <label><span class="fl">Teléfono</span><input name="phone" value="${esc(d?d.phone:"")}"></label>
     <label><span class="fl">Web</span><input name="web" value="${esc(d?d.web:"")}" placeholder="sitio.com"></label>
     <label><span class="fl">Instagram</span><input name="instagram" value="${esc(d?d.instagram:"")}" placeholder="@cuenta"></label>
@@ -1741,7 +1743,7 @@ document.addEventListener("click", async e=>{
   if(t.dataset.prosplead){
     const p=prospectos.find(x=>x.id===t.dataset.prosplead); if(!p) return;
     const msg=["Prospecto ("+(p.fuente||"prospección")+")",p.web?("Web: "+p.web):"",p.instagram?("IG: "+p.instagram):"",p.notas||""].filter(Boolean).join("\n");
-    const {data:nl,error}=await sb.from("leads").insert({name:p.contacto||p.empresa,email:p.email||null,phone:p.phone||null,service:p.nicho||"prospección",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
+    const {data:nl,error}=await sb.from("leads").insert({name:p.contacto||p.empresa,email:p.emailDirecto||p.email||null,phone:p.phone||null,service:p.nicho||"prospección",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
     if(error){ note("No se pudo pasar a Leads: "+error.message); return; }
     try{ await sb.from("prospectos").update({lead_id:nl.id,updated_at:new Date().toISOString()}).eq("id",p.id); }catch(err){}
     note("→ Pasó a Leads: "+(p.empresa||p.email||""));
