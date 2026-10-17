@@ -197,6 +197,11 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .step .st-a{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);flex:0 0 auto;min-width:86px}
 .step .st-a.hot{color:var(--accent)}
 .step .st-n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.step .act{flex:0 0 auto;display:flex;gap:6px;margin-left:auto}
+.step .act, .step .act *{pointer-events:auto}
+.abtn{width:26px;height:26px;border-radius:8px;border:1px solid var(--hair2);display:inline-flex;align-items:center;justify-content:center;
+  color:var(--muted);text-decoration:none;font-size:12px;flex:none;background:transparent}
+.abtn:hover{color:var(--accent);border-color:var(--accent)}
 .mrow{display:flex;align-items:center;gap:10px;margin-top:10px}
 .mrow .mk{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;min-width:92px}
 .mrow .mbar{flex:1;height:7px;background:var(--hair2);border-radius:99px;overflow:hidden}
@@ -474,7 +479,7 @@ const FROM = {
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
                   cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
-  prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,web:r.web,instagram:r.instagram,
+  prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
@@ -687,7 +692,15 @@ function renderResumen(){
   const dia=[...items.map(({l,a})=>({l,a,done:hechoIds.has(l.id)})), ...doneExtra.map(l=>({l,a:null,done:true}))]
     .sort((x,y)=> new Date(x.l.createdAt)-new Date(y.l.createdAt));
   const nH=dia.filter(e=>e.done).length;
-  const eff = dia.length ? Math.round(nH/dia.length*100) : 0;
+  // Captación: las llamadas para deals nuevos entran a la MISMA lista del día
+  const ordP2={A:0,B:1,C:2};
+  const hoyISO=new Date().toISOString().slice(0,10);
+  const capItems=prospectos.filter(p=>!p.leadId && !["enviado","respondio","descartado"].includes(p.status) && (p.email||p.emailDirecto||p.phone||p.phoneDirecto))
+    .sort((a,b)=>(((a.prioridad in ordP2)?ordP2[a.prioridad]:3)-((b.prioridad in ordP2)?ordP2[b.prioridad]:3)) || (new Date(b.createdAt)-new Date(a.createdAt)))
+    .slice(0,5).map(p=>({p,done:p.hoyHecho===hoyISO}));
+  const capDone=capItems.filter(e=>e.done).length;
+  const totHoy=dia.length+capItems.length, hechoHoy=nH+capDone;
+  const eff = totHoy ? Math.round(hechoHoy/totHoy*100) : 0;
   const pasos = dia.slice(0,6).map((e,ix)=>`
     <div class="step" data-openlead="${e.l.id}" role="button" tabindex="0">
       ${e.done?(manuales.has(e.l.id)?`<span class="chk on undo" data-stepundo="${e.l.id}" title="Sacar el tilde">✓</span>`:`<span class="chk on" title="Se completó con un mail o llamada real">✓</span>`):`<span class="chk" data-stepdone="${e.l.id}" title="Marcar como completada">✓</span>`}
@@ -695,6 +708,20 @@ function renderResumen(){
       <span class="st-a ${(!e.done&&e.a&&e.a.hot)?'hot':''}"${e.done?' style="color:var(--faint)"':''}>${e.done?'Completada':((e.a&&e.a.tipo==='llamada')?ICON_PHONE+' ':'')+esc(e.a?e.a.label:'')}</span>
       <span class="st-n"${e.done?' style="color:var(--muted)"':''}>${esc(e.l.name||e.l.email||'—')}</span>
     </div>`).join("");
+
+  const nLeadsVis=Math.min(6,dia.length);
+  const capPasos=capItems.map((e,ix)=>{ const p=e.p;
+    const tel=p.phoneDirecto||p.phone, em=p.emailDirecto||p.email;
+    return `<div class="step" data-gotab="prospeccion" role="button" tabindex="0">
+      ${e.done?`<span class="chk on undo" data-capundo="${p.id}" title="Sacar el tilde">✓</span>`:`<span class="chk" data-capdone="${p.id}" title="Marcar como completada">✓</span>`}
+      <span class="n">${nLeadsVis+ix+1}</span>
+      <span class="st-a ${(!e.done&&p.prioridad==="A")?'hot':''}"${e.done?' style="color:var(--faint)"':''}>${e.done?'Completada':(tel?ICON_PHONE+' Llamar':'Escribir')}</span>
+      <span class="st-n"${e.done?' style="color:var(--muted)"':''}>${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}</span>
+      <span class="act">
+        ${tel?`<a class="abtn" href="tel:${esc(String(tel).replace(/[^+\d]/g,""))}" title="Llamar — ${esc(tel)}">${ICON_PHONE}</a>`:""}
+        ${em?`<a class="abtn" href="mailto:${esc(em)}" title="Escribir — ${esc(em)}">✉</a>`:""}
+      </span>
+    </div>`;}).join("");
 
   const mx=Math.max(1,nuevos,enviados+sinr,resp,gan);
   const fun=(lbl,v)=>`<div class="mrow"><span class="mk">${lbl}</span><span class="mbar"><span style="width:${Math.round(v/mx*100)}%"></span></span><span class="mv">${v}</span></div>`;
@@ -742,34 +769,16 @@ function renderResumen(){
   </div>
   <div class="bento">
     <div class="bcard hl sp6 rsp2">
-      <div class="bhead"><span class="bt">Para hoy</span><span class="bn" style="font-size:15px;font-weight:700">${nH}/${dia.length}</span></div>
-      ${dia.length?`<div style="margin-top:6px">${pasos}</div>`:""}
-      ${dia.length?`<div style="margin-top:14px">
+      <div class="bhead"><span class="bt">Para hoy</span><span class="bn" style="font-size:15px;font-weight:700">${hechoHoy}/${totHoy}</span></div>
+      ${totHoy?`<div style="margin-top:6px">${pasos}${capPasos}</div>`:""}
+      ${totHoy?`<div style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
           <span class="bt">Efectividad del día</span>
           <span class="bn" style="font-size:14px;font-weight:700">${eff}%</span>
         </div>
         <div class="pbar" style="margin-top:8px"><span style="width:${eff}%;background:${eff>=70?'var(--ok)':'var(--accent)'}"></span></div>
-        <div class="bs" style="margin-top:6px">${nH} completada(s) · ${dia.length-nH} pendiente(s)</div>
+        <div class="bs" style="margin-top:6px">${hechoHoy} completada(s) · ${totHoy-hechoHoy} pendiente(s)</div>
       </div>`:""}
-      ${(function(){
-        const ordP={A:0,B:1,C:2};
-        const pend=prospectos.filter(p=>!p.leadId && !["enviado","respondio","descartado"].includes(p.status) && (p.email||p.emailDirecto||p.phone||p.phoneDirecto))
-          .sort((a,b)=>(((a.prioridad in ordP)?ordP[a.prioridad]:3)-((b.prioridad in ordP)?ordP[b.prioridad]:3)) || (new Date(b.createdAt)-new Date(a.createdAt)))
-          .slice(0,4);
-        if(!pend.length) return "";
-        return `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--hair)">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-            <span class="bt" style="font-size:13px">Captación — primer contacto</span>
-            <button class="linkbtn" style="margin:0" data-gotab="prospeccion">Ver →</button>
-          </div>
-          ${pend.map(p=>`<div class="step" data-gotab="prospeccion" role="button" tabindex="0">
-            <span class="prchip ${p.prioridad?esc(p.prioridad):"C"}">${p.prioridad?esc(p.prioridad):"·"}</span>
-            <span class="st-a">${(p.phoneDirecto||p.phone)?ICON_PHONE+" Llamar":"Escribir"}</span>
-            <span class="st-n">${esc(p.empresa||"—")}</span>
-          </div>`).join("")}
-        </div>`;
-      })()}
       ${items.length?`<button class="linkbtn" style="margin-top:14px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
     </div>
     <div class="bcard sp3">
@@ -1626,6 +1635,16 @@ document.addEventListener("click", async e=>{
     if(error){ note("No se pudo tildar: "+error.message); return; }
     note("✓ Completada — "+(l.name||l.email||""));
     await loadAll(); return;
+  }
+  if(t.dataset.capdone){
+    const {error}=await sb.from("prospectos").update({hoy_hecho:new Date().toISOString().slice(0,10),updated_at:new Date().toISOString()}).eq("id",t.dataset.capdone);
+    if(error){ note("No se pudo tildar: "+error.message); return; }
+    note("✓ Completada"); await loadAll(); return;
+  }
+  if(t.dataset.capundo){
+    const {error}=await sb.from("prospectos").update({hoy_hecho:null,updated_at:new Date().toISOString()}).eq("id",t.dataset.capundo);
+    if(error){ note("No pude sacar el tilde: "+error.message); return; }
+    note("Tilde sacado — sigue pendiente."); await loadAll(); return;
   }
   if(t.dataset.stepundo){
     const id=t.dataset.stepundo;
