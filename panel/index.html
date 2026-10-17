@@ -634,19 +634,21 @@ function renderResumen(){
   // Hecho hoy (para el contador y los tildes tachados)
   const hechas=touches.filter(x=>new Date(x.createdAt)>=hoy0 && (x.tipo==="mail"||x.tipo==="llamada"||/^✓/.test(String(x.texto||""))));
 
-  // La lista del día es ESTABLE: pendientes + hechas de hoy, en orden fijo por llegada.
-  // Tildar no mueve nada — el ítem queda en su lugar con el check lleno.
-  const doneLeads=[]; const vistosChk=new Set();
+  // El tilde es SOLO una marca del día: tildar = completada, destildar = pendiente.
+  // La tarea nunca se borra ni se mueve — la lista queda fija, en orden de llegada.
   const manuales=new Set(hechas.filter(x=>/^✓/.test(String(x.texto||""))).map(x=>x.leadId));
-  for(const x of hechas){ if(!x.leadId||vistosChk.has(x.leadId)) continue; vistosChk.add(x.leadId);
-    const l=leads.find(z=>z.id===x.leadId); if(l && !items.some(it=>it.l.id===l.id)) doneLeads.push(l); }
-  const dia=[...items.map(({l,a})=>({l,a,done:false})), ...doneLeads.map(l=>({l,a:null,done:true}))]
+  const realHoy=new Set(hechas.filter(x=>x.tipo==="mail"||x.tipo==="llamada").map(x=>x.leadId));
+  const hechoIds=new Set([...manuales,...realHoy]);
+  const doneExtra=leads.filter(l=>hechoIds.has(l.id) && !["ganado","perdido"].includes(l.status) && !items.some(it=>it.l.id===l.id));
+  const dia=[...items.map(({l,a})=>({l,a,done:hechoIds.has(l.id)})), ...doneExtra.map(l=>({l,a:null,done:true}))]
     .sort((x,y)=> new Date(x.l.createdAt)-new Date(y.l.createdAt));
+  const nH=dia.filter(e=>e.done).length;
+  const eff = dia.length ? Math.round(nH/dia.length*100) : 0;
   const pasos = dia.slice(0,6).map((e,ix)=>`
     <div class="step" data-openlead="${e.l.id}" role="button" tabindex="0">
-      ${e.done?(manuales.has(e.l.id)?`<span class="chk on undo" data-stepundo="${e.l.id}" title="Sacar el tilde">✓</span>`:`<span class="chk on" title="Se completó con un mail o llamada real">✓</span>`):`<span class="chk" data-stepdone="${e.l.id}" title="Marcar como hecho">✓</span>`}
+      ${e.done?(manuales.has(e.l.id)?`<span class="chk on undo" data-stepundo="${e.l.id}" title="Sacar el tilde">✓</span>`:`<span class="chk on" title="Se completó con un mail o llamada real">✓</span>`):`<span class="chk" data-stepdone="${e.l.id}" title="Marcar como completada">✓</span>`}
       <span class="n">${ix+1}</span>
-      <span class="st-a ${(!e.done&&e.a&&e.a.hot)?'hot':''}"${e.done?' style="color:var(--faint)"':''}>${(!e.done&&e.a&&e.a.tipo==='llamada')?ICON_PHONE+' ':''}${esc(e.done?'Hecho':e.a.label)}</span>
+      <span class="st-a ${(!e.done&&e.a&&e.a.hot)?'hot':''}"${e.done?' style="color:var(--faint)"':''}>${e.done?'Completada':((e.a&&e.a.tipo==='llamada')?ICON_PHONE+' ':'')+esc(e.a?e.a.label:'')}</span>
       <span class="st-n"${e.done?' style="color:var(--muted)"':''}>${esc(e.l.name||e.l.email||'—')}</span>
     </div>`).join("");
 
@@ -668,9 +670,7 @@ function renderResumen(){
     <text x="34" y="38" text-anchor="middle" fill="var(--fg)" font-size="13" font-weight="700">${goal?pct.toFixed(0)+"%":"—"}</text>
   </svg>`;
 
-  // Efectividad del día: hechas sobre el total del día
-  const totDia = hechas.length + items.length;
-  const eff = totDia ? Math.round(hechas.length/totDia*100) : 0;
+  // (la efectividad se calcula más abajo sobre la lista del día)
 
   const pfill=p=>`style="background:linear-gradient(90deg,rgba(221,125,71,.20) ${p}%,transparent ${p}%)"`;
 
@@ -693,15 +693,15 @@ function renderResumen(){
   </div>
   <div class="bento">
     <div class="bcard hl sp5">
-      <div class="bhead"><span class="bt">Para hoy</span><span class="bn" style="font-size:15px;font-weight:700">${hechas.length}/${hechas.length+items.length}</span></div>
+      <div class="bhead"><span class="bt">Para hoy</span><span class="bn" style="font-size:15px;font-weight:700">${nH}/${dia.length}</span></div>
       ${dia.length?`<div style="margin-top:6px">${pasos}</div>`:""}
-      ${totDia?`<div style="margin-top:14px">
+      ${dia.length?`<div style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
           <span class="bt">Efectividad del día</span>
           <span class="bn" style="font-size:14px;font-weight:700">${eff}%</span>
         </div>
         <div class="pbar" style="margin-top:8px"><span style="width:${eff}%;background:${eff>=70?'var(--ok)':'var(--accent)'}"></span></div>
-        <div class="bs" style="margin-top:6px">${hechas.length} hecha(s) · ${items.length} pendiente(s)</div>
+        <div class="bs" style="margin-top:6px">${nH} completada(s) · ${dia.length-nH} pendiente(s)</div>
       </div>`:""}
       ${items.length?`<button class="linkbtn" style="margin-top:14px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
     </div>
@@ -1443,28 +1443,23 @@ document.addEventListener("click", async e=>{
     await loadAll(); return;
   }
   if(t.dataset.stepdone){
+    // El tilde es solo la marca del día: no toca el estado del lead ni la cadencia.
     const id=t.dataset.stepdone; const l=leads.find(x=>x.id===id); if(!l) return;
-    // guardamos el estado previo adentro de la nota, para poder destildar si fue un error
-    const prev={status:l.status,cadencia_paso:l.cadenciaPaso,next_action_at:l.nextAt||null,next_action_tipo:l.nextTipo||null,seguimiento_activo:l.segActivo!==false};
-    const patch = avanzarCadencia(l.cadenciaPaso);
-    if(l.status==="nuevo"||l.status==="respondio") patch.status="enviado"; // lo resolviste por fuera -> sale de la cola
-    const {error}=await sb.from("leads").update(patch).eq("id",id);
-    if(error){ note("No se pudo marcar: "+error.message); return; }
-    try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:"✓ Marcado como hecho desde Para hoy\n[prev:"+JSON.stringify(prev)+"]"}); }catch(e){}
-    note("✓ Hecho — "+(l.name||l.email||""));
+    const {error}=await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:"✓ Hecho (Para hoy)"});
+    if(error){ note("No se pudo tildar: "+error.message); return; }
+    note("✓ Completada — "+(l.name||l.email||""));
     await loadAll(); return;
   }
   if(t.dataset.stepundo){
     const id=t.dataset.stepundo;
     const h0=new Date(); h0.setHours(0,0,0,0);
-    const x=touches.find(k=>k.leadId===id && new Date(k.createdAt)>=h0 && /^✓ Marcado como hecho/.test(String(k.texto||"")));
-    if(!x){ note("Ese se completó con un mail o llamada real — no se destilda."); return; }
-    let prev=null; const m=String(x.texto||"").match(/\[prev:(\{.*\})\]/s);
-    if(m){ try{ prev=JSON.parse(m[1]); }catch(_e){} }
-    if(prev){ const {error:ue}=await sb.from("leads").update(prev).eq("id",id); if(ue){ note("No pude destildar: "+ue.message); return; } }
-    const {error:de}=await sb.from("touches").delete().eq("id",x.id);
-    if(de){ note("No pude sacar el tilde: "+de.message); return; }
-    note("Tilde sacado — vuelve a pendiente.");
+    const marcas=touches.filter(k=>k.leadId===id && new Date(k.createdAt)>=h0 && /^✓/.test(String(k.texto||"")));
+    if(!marcas.length){ note("Ese se completó con un mail o llamada real — no se destilda."); return; }
+    for(const x of marcas){
+      const {error:de}=await sb.from("touches").delete().eq("id",x.id);
+      if(de){ note("No pude sacar el tilde: "+de.message); return; }
+    }
+    note("Tilde sacado — sigue pendiente.");
     await loadAll(); return;
   }
   if(t.dataset.gotab){ tab=t.dataset.gotab; formOpen=null; editing=null; renderApp(); return; }
