@@ -537,7 +537,7 @@ async function runDraft(id, isRehacer){
 
 /* ============================ RENDER ============================ */
 function tabsHtml(){
-  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","PROSPECCIÓN"]]
+  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"]]
                     : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
   const nuevos = leads.filter(x=>x.status==='nuevo').length;
   const hoyN = isAdmin ? leadsHoy().length : 0;
@@ -1023,7 +1023,7 @@ function renderProspeccion(){
         <button class="btn sm ghost btn-del" data-del="prospectos:${p.id}" title="Borrar">${ICON_TRASH}</button></td>
     </tr>`;}).join("");
   $app().innerHTML = `
-  <div class="bar"><h2><span class="tick"></span>Prospección — salir a buscar clientes</h2>
+  <div class="bar"><h2><span class="tick"></span>Captación de clientes — salir a buscarlos</h2>
     ${canWrite?`<div style="display:flex;gap:8px"><button class="btn ghost" data-new="prospimport">📋 Importar lista</button><button class="btn" data-new="prospectos">+ Prospecto</button></div>`:""}</div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">${tile("Prospectos",prospectos.length)}${tile("Con email",conEmail)}${tile("Enviados",env)}${tile("Respondieron",resp)}</div>
   ${(formOpen==="prospectos")? prospForm(d) : ""}
