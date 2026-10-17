@@ -1191,9 +1191,12 @@ async function abrirMapa(){
   document.getElementById("mapcerrar").addEventListener("click",()=>wrap.remove());
   const start=(lat,lng)=>{
     const map=L.map("mapa").setView([lat,lng],11);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
-    const mk=L.marker([lat,lng],{draggable:true}).addTo(map);
-    const circ=L.circle([lat,lng],{radius:10*1609.34,color:"#DD7D47",fillColor:"#DD7D47",fillOpacity:.12,weight:2}).addTo(map);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+      {maxZoom:20,subdomains:"abcd",attribution:"© OpenStreetMap © CARTO"}).addTo(map);
+    const pinIcon=L.divIcon({className:"",iconSize:[34,34],iconAnchor:[17,32],
+      html:'<svg viewBox="0 0 24 24" width="34" height="34" fill="#DD7D47" stroke="#0B0C0E" stroke-width="1"><path d="M12 22s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="10" r="2.8" fill="#0B0C0E"/></svg>'});
+    const mk=L.marker([lat,lng],{draggable:true,icon:pinIcon}).addTo(map);
+    const circ=L.circle([lat,lng],{radius:10*1609.34,color:"#DD7D47",fillColor:"#DD7D47",fillOpacity:.16,weight:2.5}).addTo(map);
     const upd=()=>{ const mi=Number(document.getElementById("mapradio").value);
       const mm=document.getElementById("mapmillas"); if(mm) mm.textContent=mi+" millas alrededor";
       circ.setLatLng(mk.getLatLng()); circ.setRadius(mi*1609.34); };
