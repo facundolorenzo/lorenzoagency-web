@@ -199,6 +199,8 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .step .chk{pointer-events:auto;flex:0 0 auto;width:22px;height:22px;border-radius:99px;border:1.5px solid var(--hair);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:transparent;font-size:11px;transition:.15s}
 .step .chk:hover{border-color:var(--accent);color:#fff;background:var(--accent)}
 .step .chk.on{background:var(--accent);border-color:var(--accent);color:#fff;pointer-events:none}
+.step .chk.on.undo{pointer-events:auto;cursor:pointer}
+.step .chk.on.undo:hover{background:transparent;color:var(--accent);border-color:var(--accent)}
 .step .st-lang{flex:0 0 auto;font-family:var(--mono);font-size:9px;letter-spacing:.1em;border-radius:999px;padding:2px 8px}
 .step .st-lang.es{color:#67c998;border:1px solid rgba(103,201,152,.45)}
 .step .st-lang.en{color:var(--info);border:1px solid rgba(106,165,232,.45)}
@@ -635,13 +637,14 @@ function renderResumen(){
   // La lista del día es ESTABLE: pendientes + hechas de hoy, en orden fijo por llegada.
   // Tildar no mueve nada — el ítem queda en su lugar con el check lleno.
   const doneLeads=[]; const vistosChk=new Set();
+  const manuales=new Set(hechas.filter(x=>/^✓/.test(String(x.texto||""))).map(x=>x.leadId));
   for(const x of hechas){ if(!x.leadId||vistosChk.has(x.leadId)) continue; vistosChk.add(x.leadId);
     const l=leads.find(z=>z.id===x.leadId); if(l && !items.some(it=>it.l.id===l.id)) doneLeads.push(l); }
   const dia=[...items.map(({l,a})=>({l,a,done:false})), ...doneLeads.map(l=>({l,a:null,done:true}))]
     .sort((x,y)=> new Date(x.l.createdAt)-new Date(y.l.createdAt));
   const pasos = dia.slice(0,6).map((e,ix)=>`
     <div class="step" data-openlead="${e.l.id}" role="button" tabindex="0">
-      ${e.done?`<span class="chk on">✓</span>`:`<span class="chk" data-stepdone="${e.l.id}" title="Marcar como hecho">✓</span>`}
+      ${e.done?(manuales.has(e.l.id)?`<span class="chk on undo" data-stepundo="${e.l.id}" title="Sacar el tilde">✓</span>`:`<span class="chk on" title="Se completó con un mail o llamada real">✓</span>`):`<span class="chk" data-stepdone="${e.l.id}" title="Marcar como hecho">✓</span>`}
       <span class="n">${ix+1}</span>
       <span class="st-a ${(!e.done&&e.a&&e.a.hot)?'hot':''}"${e.done?' style="color:var(--faint)"':''}>${(!e.done&&e.a&&e.a.tipo==='llamada')?ICON_PHONE+' ':''}${esc(e.done?'Hecho':e.a.label)}</span>
       <span class="st-n"${e.done?' style="color:var(--muted)"':''}>${esc(e.l.name||e.l.email||'—')}</span>
@@ -1167,7 +1170,8 @@ function leadModalHtml(){
   const analisis = ts.filter(x=>x.tipo==="nota" && /^(🧠|📊)/.test(String(x.texto||"")));
   const resto = ts.filter(x=>x.tipo!=="llamada" && !analisis.includes(x));
   const fmtT = x => String(x.createdAt||"").slice(0,16).replace("T"," ");
-  const item = (x,extra)=>`<div class="tl"><div class="tl-dot"></div><div class="tl-b"><span class="w">${esc(fmtT(x))}${extra||""}</span>${x.texto?`<div style="margin-top:3px;color:var(--muted);white-space:pre-wrap">${esc(String(x.texto).slice(0,250))}${String(x.texto).length>250?"…":""}</div>`:""}</div></div>`;
+  const limpiarNota = t => String(t||"").replace(/\n?\[prev:\{.*\}\]/s,"");
+  const item = (x,extra)=>{ const tx=limpiarNota(x.texto); return `<div class="tl"><div class="tl-dot"></div><div class="tl-b"><span class="w">${esc(fmtT(x))}${extra||""}</span>${tx?`<div style="margin-top:3px;color:var(--muted);white-space:pre-wrap">${esc(tx.slice(0,250))}${tx.length>250?"…":""}</div>`:""}</div></div>`; };
   const LT={mail:"Mail enviado",nota:"Nota"};
   return `<div class="lmodal" data-closeleadbg="1"><div class="lcard">
     <div class="lhead">
@@ -1440,12 +1444,27 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.stepdone){
     const id=t.dataset.stepdone; const l=leads.find(x=>x.id===id); if(!l) return;
+    // guardamos el estado previo adentro de la nota, para poder destildar si fue un error
+    const prev={status:l.status,cadencia_paso:l.cadenciaPaso,next_action_at:l.nextAt||null,next_action_tipo:l.nextTipo||null,seguimiento_activo:l.segActivo!==false};
     const patch = avanzarCadencia(l.cadenciaPaso);
     if(l.status==="nuevo"||l.status==="respondio") patch.status="enviado"; // lo resolviste por fuera -> sale de la cola
     const {error}=await sb.from("leads").update(patch).eq("id",id);
     if(error){ note("No se pudo marcar: "+error.message); return; }
-    try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:"✓ Marcado como hecho desde Para hoy"}); }catch(e){}
+    try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:"✓ Marcado como hecho desde Para hoy\n[prev:"+JSON.stringify(prev)+"]"}); }catch(e){}
     note("✓ Hecho — "+(l.name||l.email||""));
+    await loadAll(); return;
+  }
+  if(t.dataset.stepundo){
+    const id=t.dataset.stepundo;
+    const h0=new Date(); h0.setHours(0,0,0,0);
+    const x=touches.find(k=>k.leadId===id && new Date(k.createdAt)>=h0 && /^✓ Marcado como hecho/.test(String(k.texto||"")));
+    if(!x){ note("Ese se completó con un mail o llamada real — no se destilda."); return; }
+    let prev=null; const m=String(x.texto||"").match(/\[prev:(\{.*\})\]/s);
+    if(m){ try{ prev=JSON.parse(m[1]); }catch(_e){} }
+    if(prev){ const {error:ue}=await sb.from("leads").update(prev).eq("id",id); if(ue){ note("No pude destildar: "+ue.message); return; } }
+    const {error:de}=await sb.from("touches").delete().eq("id",x.id);
+    if(de){ note("No pude sacar el tilde: "+de.message); return; }
+    note("Tilde sacado — vuelve a pendiente.");
     await loadAll(); return;
   }
   if(t.dataset.gotab){ tab=t.dataset.gotab; formOpen=null; editing=null; renderApp(); return; }
