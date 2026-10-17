@@ -316,6 +316,7 @@ let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
 let leadFilter = "todos";
 let leadCollapsed = {};
 let touches = [];
+let prospectos = [];
 let callLeadId = null, closeLeadId = null;
 let callLang = null; // idioma del micrófono en la llamada (es/en); por defecto, el del lead
 let verLlamadaId = null; // visor de transcripción abierto
@@ -403,6 +404,8 @@ const P_STATES = ["borrador","enviada","aprobada","rechazada"];
 const I_STATES = ["pendiente","pagada","vencida"];
 /* Embudo de leads — 6 estados */
 const L_STATES = ["nuevo","enviado","respondio","sin_respuesta","ganado","perdido"];
+const PR_STATES = ["encontrado","contactable","enviado","respondio","descartado"];
+const PR_LABELS = {encontrado:"Encontrado",contactable:"Con email ✓",enviado:"Enviado",respondio:"Respondió 🔥",descartado:"Descartado"};
 const L_LABELS = {nuevo:"Nuevos",enviado:"Enviados",respondio:"Respondieron",sin_respuesta:"Sin respuesta",ganado:"Ganado",perdido:"Perdido"};
 
 const money = n => "$" + (Number(n)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -458,11 +461,17 @@ const FROM = {
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
                   cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
+  prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,phone:r.phone,web:r.web,instagram:r.instagram,
+                  nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
+                  borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
 };
 const TO = {
   proposals: d=>({number:d.number,client_id:d.clientId||null,client_free:d.clientFree||null,title:d.title,amount:Number(d.amount)||0,status:d.status,date:d.date||null,notes:d.notes||null,file_url:d.fileUrl||null,file_name:d.fileName||null,updated_at:new Date().toISOString()}),
   invoices:  d=>({number:d.number,client_id:d.clientId||null,amount:Number(d.amount)||0,status:d.status,issued:d.issued||null,due:d.due||null,notes:d.notes||null,stripe_link:d.stripeLink||null,updated_at:new Date().toISOString()}),
   clients:   d=>({name:d.name,company:d.company||null,contact:d.contact||null,email:d.email||null,phone:d.phone||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
+  prospectos:d=>({empresa:d.empresa,contacto:d.contacto||null,email:d.email||null,phone:d.phone||null,web:d.web||null,
+                  instagram:d.instagram||null,nicho:d.nicho||null,ciudad:d.ciudad||null,fuente:d.fuente||null,
+                  notas:d.notas||null,status:d.status||"encontrado",updated_at:new Date().toISOString()}),
 };
 
 /* ---------- carga de datos ---------- */
@@ -471,18 +480,20 @@ async function loadAll(){
   const pr = await sb.from("proposals").select("*").order("created_at",{ascending:false});
   proposals = (pr.data||[]).map(FROM.proposals);
   if(isAdmin){
-    const [inv, cl, ld, st, tc] = await Promise.all([
+    const [inv, cl, ld, st, tc, pz] = await Promise.all([
       sb.from("invoices").select("*").order("created_at",{ascending:false}),
       sb.from("clients").select("*").order("created_at",{ascending:false}),
       sb.from("leads").select("*").order("created_at",{ascending:false}),
       sb.from("settings").select("*").eq("key","goal").maybeSingle(),
       sb.from("touches").select("*").order("created_at",{ascending:false}),
+      sb.from("prospectos").select("*").order("created_at",{ascending:false}),
     ]);
     invoices = (inv.data||[]).map(FROM.invoices);
     clients  = (cl.data||[]).map(FROM.clients);
     leads    = (ld.data||[]).map(FROM.leads);
     goal = st.data ? Number(st.data.monthly_goal)||0 : 0;
     touches = (tc && !tc.error && tc.data) ? tc.data.map(FROM.touches) : [];
+    prospectos = (pz && !pz.error && pz.data) ? pz.data.map(FROM.prospectos) : [];
   }
   renderApp();
 }
@@ -526,7 +537,7 @@ async function runDraft(id, isRehacer){
 
 /* ============================ RENDER ============================ */
 function tabsHtml(){
-  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"]]
+  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","PROSPECCIÓN"]]
                     : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
   const nuevos = leads.filter(x=>x.status==='nuevo').length;
   const hoyN = isAdmin ? leadsHoy().length : 0;
@@ -602,6 +613,7 @@ function renderBody(){
   else if(tab==="facturas") renderInvoices();
   else if(tab==="clientes") renderClients();
   else if(tab==="leads") renderLeads();
+  else if(tab==="prospeccion") renderProspeccion();
 }
 const $app = () => document.getElementById("app");
 
@@ -989,6 +1001,65 @@ function invoiceForm(d){
     </div></form></div>`;
 }
 
+/* ---------- PROSPECCIÓN (Agente 4 — outbound) ---------- */
+function renderProspeccion(){
+  const d = editing && editing.col==="prospectos" ? prospectos.find(p=>p.id===editing.id) : null;
+  const conEmail=prospectos.filter(p=>p.email).length;
+  const env=prospectos.filter(p=>p.status==="enviado").length;
+  const resp=prospectos.filter(p=>p.status==="respondio"||p.leadId).length;
+  const tile=(lbl,val)=>`<div style="flex:1;min-width:120px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px">
+    <div style="font-family:var(--disp);font-size:14.5px;font-weight:800;color:#fff">${lbl}</div>
+    <div style="font-size:26px;margin-top:4px">${val}</div></div>`;
+  const rows = prospectos.map(p=>{
+    const url = p.web ? (String(p.web).startsWith("http")?p.web:"https://"+p.web) : "";
+    return `<tr>
+      <td><b>${esc(p.empresa||"—")}</b>${p.ciudad?`<div class="bs">${esc(p.ciudad)}</div>`:""}</td>
+      <td style="font-size:12px">${p.contacto?esc(p.contacto)+"<br>":""}${p.email?`<span style="font-family:var(--mono);font-size:11px">${esc(p.email)}</span>`:`<span style="color:var(--faint)">sin email</span>`}</td>
+      <td style="font-size:12px">${esc(p.nicho||"—")}</td>
+      <td style="font-size:12px;color:var(--muted)">${esc(p.fuente||"—")}</td>
+      <td><select class="lsel" data-prstatus="${p.id}">${PR_STATES.map(st=>`<option value="${st}" ${p.status===st?"selected":""}>${esc(PR_LABELS[st])}</option>`).join("")}</select></td>
+      <td class="r" style="white-space:nowrap">${url?`<a class="linkbtn" href="${esc(url)}" target="_blank" rel="noopener">↗ web</a> `:""}${p.leadId?`<button class="linkbtn" data-openlead="${p.leadId}">En Leads →</button>`:`<button class="btn sm ghost" data-prosplead="${p.id}" title="Crea el lead y lo sigue el Agente 1">→ Lead</button>`}
+        <button class="btn sm ghost" data-edit="prospectos:${p.id}">Editar</button>
+        <button class="btn sm ghost btn-del" data-del="prospectos:${p.id}" title="Borrar">${ICON_TRASH}</button></td>
+    </tr>`;}).join("");
+  $app().innerHTML = `
+  <div class="bar"><h2><span class="tick"></span>Prospección — salir a buscar clientes</h2>
+    ${canWrite?`<div style="display:flex;gap:8px"><button class="btn ghost" data-new="prospimport">📋 Importar lista</button><button class="btn" data-new="prospectos">+ Prospecto</button></div>`:""}</div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">${tile("Prospectos",prospectos.length)}${tile("Con email",conEmail)}${tile("Enviados",env)}${tile("Respondieron",resp)}</div>
+  ${(formOpen==="prospectos")? prospForm(d) : ""}
+  ${(formOpen==="prospimport")? prospImportForm() : ""}
+  ${prospectos.length? `<div class="tablewrap"><table>
+    <tr><th>Empresa</th><th>Contacto</th><th>Nicho</th><th>Fuente</th><th>Estado</th><th class="r"></th></tr>${rows}</table></div>` :
+    `<div class="empty"><b>Todavía no hay prospectos.</b><br>Acá van los negocios del nicho que salimos a buscar (venues, restaurantes, lounges). Cargá uno a mano o importá una lista — cuando uno responde, pasa a Leads y lo sigue el Agente 1.</div>`}`;
+}
+function prospForm(d){
+  return `<div class="panel"><form id="f-prospectos" class="form">
+    <label><span class="fl">Empresa / negocio</span><input name="empresa" value="${esc(d?d.empresa:"")}" required placeholder="Nombre del venue"></label>
+    <label><span class="fl">Contacto</span><input name="contacto" value="${esc(d?d.contacto:"")}" placeholder="Nombre y rol (si se sabe)"></label>
+    <label><span class="fl">Email</span><input name="email" type="email" value="${esc(d?d.email:"")}"></label>
+    <label><span class="fl">Teléfono</span><input name="phone" value="${esc(d?d.phone:"")}"></label>
+    <label><span class="fl">Web</span><input name="web" value="${esc(d?d.web:"")}" placeholder="sitio.com"></label>
+    <label><span class="fl">Instagram</span><input name="instagram" value="${esc(d?d.instagram:"")}" placeholder="@cuenta"></label>
+    <label><span class="fl">Nicho</span><input name="nicho" value="${esc(d?d.nicho:"")}" placeholder="venue / restaurante / lounge"></label>
+    <label><span class="fl">Ciudad</span><input name="ciudad" value="${esc(d?d.ciudad:"")}" placeholder="Miami"></label>
+    <label><span class="fl">Fuente</span><input name="fuente" value="${esc(d?d.fuente:"")}" placeholder="Google / Instagram / Sunbiz"></label>
+    <label><span class="fl">Estado</span><select name="status">${PR_STATES.map(st=>`<option value="${st}" ${d&&d.status===st?"selected":""}>${esc(PR_LABELS[st])}</option>`).join("")}</select></label>
+    <label class="full"><span class="fl">Notas</span><textarea name="notas" placeholder="Qué viste del lugar, por qué encaja…">${esc(d?d.notas:"")}</textarea></label>
+    <div class="full" style="display:flex;gap:10px">
+      <button class="btn" type="submit">${d?"Guardar cambios":"Agregar prospecto"}</button>
+      <button class="btn ghost" type="button" data-cancel="1">Cancelar</button>
+    </div></form></div>`;
+}
+function prospImportForm(){
+  return `<div class="panel">
+    <div style="font-family:var(--disp);font-weight:800;color:#fff;margin-bottom:6px">Importar lista</div>
+    <div class="bs" style="margin-bottom:10px">Una línea por negocio, separando con <b>|</b> :&nbsp; empresa | email | web | ciudad | nicho</div>
+    <textarea id="prospimp" style="width:100%;min-height:140px;font-family:var(--mono);font-size:12px" placeholder="Timber Lounge | info@timber.com | timberftl.com | Fort Lauderdale | lounge"></textarea>
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button class="btn" data-prospimport="1">Importar</button>
+      <button class="btn ghost" data-cancel="1">Cancelar</button>
+    </div></div>`;
+}
 function renderClients(){
   const d = editing && editing.col==="clients" ? clients.find(p=>p.id===editing.id) : null;
   $app().innerHTML = `
@@ -1300,7 +1371,7 @@ function transModalHtml(){
 
 function confirmHtml(){
   if(!confirmDel) return "";
-  const labels={proposals:"esta propuesta",invoices:"esta factura",clients:"este cliente",leads:"esta consulta"};
+  const labels={proposals:"esta propuesta",invoices:"esta factura",clients:"este cliente",leads:"esta consulta",prospectos:"este prospecto"};
   return `<div class="cpop-bg" data-delno="1"><div class="cpop">
     <div class="cpop-t">¿Borrar ${labels[confirmDel.col]||"esto"}?</div>
     <div class="cpop-s">No se puede deshacer.</div>
@@ -1661,6 +1732,29 @@ document.addEventListener("click", async e=>{
     if(error) note("No se pudo borrar: "+error.message); else { if(col==="leads") openLeadId=null; await loadAll(); }
     return;
   }
+  if(t.dataset.prosplead){
+    const p=prospectos.find(x=>x.id===t.dataset.prosplead); if(!p) return;
+    const msg=["Prospecto ("+(p.fuente||"prospección")+")",p.web?("Web: "+p.web):"",p.instagram?("IG: "+p.instagram):"",p.notas||""].filter(Boolean).join("\n");
+    const {data:nl,error}=await sb.from("leads").insert({name:p.contacto||p.empresa,email:p.email||null,phone:p.phone||null,service:p.nicho||"prospección",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
+    if(error){ note("No se pudo pasar a Leads: "+error.message); return; }
+    try{ await sb.from("prospectos").update({lead_id:nl.id,updated_at:new Date().toISOString()}).eq("id",p.id); }catch(err){}
+    note("→ Pasó a Leads: "+(p.empresa||p.email||""));
+    await loadAll(); return;
+  }
+  if(t.dataset.prospimport){
+    const ta=document.getElementById("prospimp"); if(!ta) return;
+    const lines=ta.value.split("\n").map(x=>x.trim()).filter(Boolean);
+    if(!lines.length){ note("Pegá al menos una línea."); return; }
+    const rows=lines.map(ln=>{ const c=ln.split("|").map(x=>x.trim());
+      return {empresa:c[0]||null,email:c[1]||null,web:c[2]||null,ciudad:c[3]||null,nicho:c[4]||null,
+        fuente:"import",status:(c[1]?"contactable":"encontrado"),created_at:new Date().toISOString()}; })
+      .filter(r=>r.empresa);
+    if(!rows.length){ note("No encontré ninguna empresa en las líneas."); return; }
+    const {error}=await sb.from("prospectos").insert(rows);
+    if(error){ note("No se pudo importar: "+error.message); return; }
+    note("✓ "+rows.length+" prospecto(s) importados.");
+    formOpen=null; await loadAll(); return;
+  }
   if(t.dataset.goaledit){
     const el=document.getElementById("goaleditor");
     if(el){ const show=el.style.display==="none"; el.style.display=show?"flex":"none";
@@ -1747,6 +1841,11 @@ document.addEventListener("input", e=>{ if(e.target && e.target.id==="lreply") a
 // cambio de estado del lead (dropdown)
 document.addEventListener("change", async e=>{
   const t = e.target;
+  if(t.dataset && t.dataset.prstatus){
+    const { error } = await sb.from("prospectos").update({ status: t.value, updated_at:new Date().toISOString() }).eq("id", t.dataset.prstatus);
+    if(error) note("No se pudo cambiar el estado: "+error.message); else await loadAll();
+    return;
+  }
   if(t.dataset && t.dataset.lstatus){
     const { error } = await sb.from("leads").update({ status: t.value }).eq("id", t.dataset.lstatus);
     if(error) note("No se pudo cambiar el estado: "+error.message); else await loadAll();
