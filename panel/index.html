@@ -1442,7 +1442,7 @@ function prospModalHtml(){
   const tel=p.phoneDirecto||p.phone, em=p.emailDirecto||p.email;
   const url=p.web?(String(p.web).startsWith("http")?p.web:"https://"+p.web):"";
   const kv=(k,v)=>v?`<div style="display:flex;gap:10px;margin-top:8px;font-size:13px"><span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;min-width:84px;padding-top:2px">${k}</span><span style="min-width:0;overflow-wrap:anywhere">${v}</span></div>`:"";
-  return `<div class="cpop-bg" data-closeprosp="1"><div class="cpop" style="max-width:380px" onclick="event.stopPropagation()">
+  return `<div class="cpop-bg" data-closeprosp="1"><div class="cpop" style="max-width:380px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
       <div style="font-family:var(--disp);font-size:16px;font-weight:800;color:#fff">${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}</div>
       <button class="btn ghost sm" data-closeprosp="1" style="flex:none">← Volver</button>
