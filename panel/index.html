@@ -690,7 +690,7 @@ function renderResumen(){
       <div class="bhead"><span class="bt">Para hoy</span><span class="bn" style="font-size:15px;font-weight:700">${hechas.length}/${hechas.length+items.length}</span></div>
       ${items.length?`<div style="margin-top:6px">${pasos}</div>`:""}
       ${items.length?`<button class="linkbtn" style="margin-top:12px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
-      ${hechas.length?`<div class="bt" style="margin-top:16px;margin-bottom:4px">Hecho hoy</div>${hechasHtml}`:""}
+      ${hechas.length?`<div style="margin-top:6px">${hechasHtml}</div>`:""}
       ${totDia?`<div style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
           <span class="bt">Efectividad del día</span>
