@@ -73,7 +73,7 @@ nav button.on{color:#fff;border-color:var(--accent);background:var(--accent);fon
 .imini{display:inline-flex;align-items:center;gap:7px}
 .imini .n{font-family:var(--mono);font-size:10px;color:var(--faint)}
 /* barra de cierre (avance hacia la venta) */
-.cbar-wrap{margin:14px 0;padding:12px 14px;border:1px solid var(--hair2);border-radius:10px}
+.cbar-wrap{margin:16px 0;padding:14px 16px;border:1px solid var(--hair2);border-radius:14px;background:rgba(255,255,255,.02)}
 .cbar-h{font-family:var(--disp);font-size:14.5px;font-weight:800;letter-spacing:.01em;color:#fff;margin-bottom:12px}
 .cbar{height:6px;background:var(--hair2);border-radius:99px;overflow:hidden;margin-top:8px}
 .cbar-row{display:flex;gap:14px;margin-top:9px;font-size:13.5px;line-height:1.6}
@@ -107,10 +107,11 @@ nav button.on{color:#fff;border-color:var(--accent);background:var(--accent);fon
 .lhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
 .lname{font-size:18px;font-weight:700}
 .lmeta{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:4px}
-.lcontact{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:#C9CBD1;margin-bottom:14px;padding-bottom:14px;
-  border-bottom:1px solid var(--hair2)}
+.lcontact{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .lcontact span{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint);margin-right:4px}
-.lmsg{font-size:19px;line-height:1.5;color:var(--fg);font-weight:500;white-space:pre-wrap;word-break:break-word;margin:6px 0 6px}
+.lmsg{font-size:15px;line-height:1.6;color:var(--fg);white-space:pre-wrap;word-break:break-word;margin:4px 0 6px;
+  background:rgba(255,255,255,.03);border:1px solid var(--hair2);border-left:3px solid var(--accent);
+  border-radius:12px;padding:13px 16px}
 .lreplied{margin:16px 0 0;border-left:2px solid var(--accent);padding:2px 0 2px 12px}
 .lreplied-h{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin-bottom:5px}
 .lreplied-b{font-size:14px;line-height:1.55;color:#C9CBD1;white-space:pre-wrap;word-break:break-word}
@@ -135,8 +136,9 @@ nav button.on{color:#fff;border-color:var(--accent);background:var(--accent);fon
 .btn-reply:hover{border-color:var(--accent);color:var(--accent)}
 .lrubro{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted);
   border:1px solid var(--hair);border-radius:999px;padding:3px 9px;text-transform:uppercase;white-space:nowrap}
-.btn-trash{background:rgba(229,96,76,.12);border:1px solid rgba(229,96,76,.4);color:var(--bad);
-  border-radius:8px;padding:9px 13px;font-size:15px;line-height:1;cursor:pointer}
+.btn-trash{background:transparent;border:1px solid var(--hair2);color:var(--muted);
+  width:29px;height:29px;padding:0;border-radius:8px;cursor:pointer}
+.btn-trash:hover{color:var(--bad);border-color:rgba(229,96,76,.4)}
 .btn-trash:hover{background:rgba(229,96,76,.22)}
 .lactions .btn-trash{margin-left:auto}
 .rowactions .btn-trash{padding:6px 9px;font-size:13px}
@@ -1367,16 +1369,18 @@ function leadModalHtml(){
       <button class="btn ghost sm" data-closelead="1">← Volver</button>
     </div>
     <div class="lcontact">
-      ${l.email?`<div><span>EMAIL</span>${esc(l.email)}</div>`:""}
-      ${l.phone?`<div><span>TEL</span><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">${ICON_PHONE} ${esc(l.phone)}</a></div>`:""}
+      ${l.email?`<a class="cpill" href="mailto:${esc(l.email)}" title="${esc(l.email)}">${esc(l.email)}</a>`:""}
+      ${l.phone?`<a class="cpill" href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" title="${esc(l.phone)}">${ICON_PHONE} ${esc(l.phone)}</a>`:""}
     </div>
     <div class="lactions" style="margin:12px 0 2px">
       ${l.phone?`<button class="btn ghost sm" data-calllead="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">${ICON_PHONE} Llamar</button>`:``}
-      <button class="btn ghost sm" data-ganado="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">✓ Ganado</button>
-      <button class="btn ghost sm" data-perdido="${l.id}" style="color:var(--bad);border-color:rgba(229,96,76,.4)">✕ Perdido</button>
       ${l.email?`<button class="btn-reply" data-replymail="${esc(l.email)}">Webmail</button>`:``}
       <select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select>
-      <button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">${ICON_TRASH}</button>
+      <span style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <button class="btn ghost sm" data-ganado="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">✓ Ganado</button>
+        <button class="btn ghost sm" data-perdido="${l.id}" style="color:var(--bad);border-color:rgba(229,96,76,.4)">✕ Perdido</button>
+        <button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">${ICON_TRASH}</button>
+      </span>
     </div>
     ${cierreBarHtml(l)}
 
@@ -1393,18 +1397,15 @@ function leadModalHtml(){
       ${l.ultimaRespuesta?`<div class="lreplied"><div class="lreplied-h">↩ Su última respuesta</div><div class="lreplied-b">${esc(l.ultimaRespuesta)}</div></div>`:""}
       <div class="sect">Tu respuesta</div>
       <div class="lreplywrap" style="margin-top:0;border-top:none;padding-top:0">
-        <div class="lreplyhead"><span>Respuesta sugerida ${cnt}</span>
-          <span style="display:flex;gap:10px;align-items:center">
-            <span class="c" style="color:var(--faint)">editá lo que quieras · el agente aprende</span>
-            <button class="btn ghost sm" data-replyfull="1" style="padding:3px 10px;font-size:10px;letter-spacing:.08em">⛶ Agrandar</button>
-          </span></div>
+        <div class="lreplyhead"><span>Respuesta sugerida ${cnt} <span style="color:var(--faint);text-transform:none;letter-spacing:0">· el agente aprende de lo que edites</span></span>
+          <button class="btn ghost sm" data-replyfull="1" style="padding:3px 10px;font-size:10px;letter-spacing:.08em">⛶ Agrandar</button></div>
         <div id="tradhint" class="tradhint" style="display:none">⇄ En español · podés editar · se envía en el idioma del lead</div>
         <textarea class="lreply" id="lreply" placeholder="Tocá ↻ Rehacer para que el agente redacte una respuesta, o escribí vos directamente.">${esc(l.borrador||"")}</textarea>
         <div class="lreplyactions">
           <button class="btn ghost sm" data-rehacer="${l.id}">↻ Rehacer</button>
           <button class="btn ghost sm btn-trad" data-traducir="1" title="Traducir al español (podés editar)">⇄ Traducir</button>
-          ${l.email?`<button class="btn" data-enviarmail="${l.id}">Enviar</button>`:`<span style="color:var(--muted);font-size:12px">Sin email para enviar</span>`}
           <span class="lsent">${sent}</span>
+          ${l.email?`<button class="btn" data-enviarmail="${l.id}" style="margin-left:4px">Enviar →</button>`:`<span style="color:var(--muted);font-size:12px">Sin email para enviar</span>`}
         </div>
       </div>
     </div>
