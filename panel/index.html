@@ -744,6 +744,24 @@ function renderResumen(){
         <div class="pbar" style="margin-top:8px"><span style="width:${eff}%;background:${eff>=70?'var(--ok)':'var(--accent)'}"></span></div>
         <div class="bs" style="margin-top:6px">${nH} completada(s) · ${dia.length-nH} pendiente(s)</div>
       </div>`:""}
+      ${(function(){
+        const ordP={A:0,B:1,C:2};
+        const pend=prospectos.filter(p=>!p.leadId && !["enviado","respondio","descartado"].includes(p.status) && (p.email||p.emailDirecto||p.phone||p.phoneDirecto))
+          .sort((a,b)=>(((a.prioridad in ordP)?ordP[a.prioridad]:3)-((b.prioridad in ordP)?ordP[b.prioridad]:3)) || (new Date(b.createdAt)-new Date(a.createdAt)))
+          .slice(0,4);
+        if(!pend.length) return "";
+        return `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--hair)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+            <span class="bt" style="font-size:13px">Captación — primer contacto</span>
+            <button class="linkbtn" style="margin:0" data-gotab="prospeccion">Ver →</button>
+          </div>
+          ${pend.map(p=>`<div class="step" data-gotab="prospeccion" role="button" tabindex="0">
+            <span class="prchip ${p.prioridad?esc(p.prioridad):"C"}">${p.prioridad?esc(p.prioridad):"·"}</span>
+            <span class="st-a">${(p.phoneDirecto||p.phone)?ICON_PHONE+" Llamar":"Escribir"}</span>
+            <span class="st-n">${esc(p.empresa||"—")}</span>
+          </div>`).join("")}
+        </div>`;
+      })()}
       ${items.length?`<button class="linkbtn" style="margin-top:14px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
     </div>
     <div class="bcard sp4">
