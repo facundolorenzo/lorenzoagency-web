@@ -41,7 +41,7 @@ nav button.on{color:#fff;border-color:var(--accent);background:var(--accent);fon
 .btn-trad{color:var(--info);border-color:rgba(106,165,232,.5)!important}
 .btn-trad:hover{background:rgba(106,165,232,.12)}
 .tradhint{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--info);background:rgba(106,165,232,.1);border:1px solid rgba(106,165,232,.3);border-radius:8px;padding:6px 10px;margin-bottom:8px}
-.langchip{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;border-radius:999px;padding:3px 9px;cursor:pointer;background:transparent;transition:.15s}
+.langchip{font-family:var(--mono);font-size:9px;letter-spacing:.06em;border-radius:999px;padding:2px 8px;cursor:pointer;background:transparent;transition:.15s;white-space:nowrap;display:inline-block}
 .langchip.es{color:#67c998;border:1px solid rgba(103,201,152,.45)}
 .langchip.es:hover{background:rgba(103,201,152,.12)}
 .langchip.en{color:var(--info);border:1px solid rgba(106,165,232,.45)}
@@ -146,6 +146,7 @@ nav button.on{color:#fff;border-color:var(--accent);background:var(--accent);fon
 .btn-trash{display:inline-flex;align-items:center;justify-content:center}
 .btn-del{display:inline-flex;align-items:center;justify-content:center;color:var(--bad)!important;
   width:26px;height:26px;padding:0!important;margin-left:10px;flex:none;border-color:rgba(229,96,76,.35)!important}
+.rowactions .btn-del,.rowactions .btn-trash{margin-left:2px}
 .btn-del svg{width:15px;height:15px}
 .btn-del:hover{background:rgba(229,96,76,.12)}
 nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
@@ -285,7 +286,7 @@ th.r{text-align:right}
   text-transform:uppercase;margin-bottom:6px;display:block}
 .empty{border:1px dashed var(--hair);border-radius:12px;padding:36px 20px;text-align:center;color:var(--muted)}
 .empty b{color:var(--fg)}
-.rowactions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.rowactions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:nowrap;align-items:center;white-space:nowrap}
 .tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--hair2);border-radius:16px;padding:6px 18px}
 .clientcard{background:var(--card);border:1px solid var(--hair2);border-radius:12px;padding:18px}
 .clients{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
