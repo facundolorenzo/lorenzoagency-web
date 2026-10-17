@@ -1117,12 +1117,19 @@ function renderProspeccion(){
   ${(formOpen==="prospectos")? prospForm(d) : ""}
   ${(formOpen==="busquedas")? busquedaForm() : ""}
   ${busquedas.length?`<div class="bcard" style="margin-bottom:18px">
-    <div class="bhead" style="margin-bottom:10px"><span class="bt">Búsquedas pedidas</span></div>
-    ${busquedas.map(b=>`<div class="brow"><span>🔎 ${esc(b.rubro)}${b.zona?" — "+esc(b.zona):""}${b.cantidad?` · ${b.cantidad}`:""}</span>
+    <div class="bhead" style="margin-bottom:10px"><span class="bt">Búsquedas</span></div>
+    ${busquedas.map(b=>{
+      const enRubro=p=>p.busqueda&&b.rubro&&String(p.busqueda).toLowerCase().includes(String(b.rubro).toLowerCase());
+      const enc=prospectos.filter(enRubro).length;
+      const gan=prospectos.filter(p=>{ if(!enRubro(p)||!p.leadId) return false; const l=leads.find(x=>x.id===p.leadId); return l&&l.status==="ganado"; }).length;
+      const renovable=(Date.now()-new Date(b.createdAt).getTime())>120*24*3600*1000;
+      return `<div class="brow"><span>🔎 <b>${esc(b.rubro)}</b>${b.zona?" — "+esc(b.zona):""}
+        <span class="bs" style="margin-left:6px">${esc(String(b.createdAt||"").slice(0,10))} · ${enc} encontrados · ${gan} ganados</span></span>
       <span style="display:flex;gap:10px;align-items:center">
+        ${renovable?`<button class="btn sm ghost" data-renovar="${b.id}" title="Pasaron 4+ meses — repetir para captar empresas nuevas">↻ Renovar</button>`:""}
         <b style="color:${b.status==="lista"?"var(--ok)":"var(--warn)"};font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase">${esc(b.status)}</b>
-        <button class="btn-trash" data-del="busquedas:${b.id}" title="Cancelar la búsqueda">${ICON_TRASH}</button></span></div>`).join("")}
-    <div class="bs" style="margin-top:10px">El buscador las toma en orden y carga los negocios solo. Mientras lo construimos, quedan en cola.</div>
+        <button class="btn-trash" data-del="busquedas:${b.id}" title="Cancelar la búsqueda">${ICON_TRASH}</button></span></div>`;}).join("")}
+    <div class="bs" style="margin-top:10px">Cada nicho + zona queda guardado y no se repite hasta los 4 meses — ahí aparece ↻ Renovar para captar las empresas nuevas que abrieron.</div>
   </div>`:""}
   ${prospectos.length? tablas :
     `<div class="empty"><b>Todavía no hay búsquedas de clientes.</b><br>Acá van los negocios del nicho que salimos a buscar (venues, restaurantes, gimnasios, lo que sea). Tocá 🔎 Buscar y pedile un nicho al buscador, o cargá uno a mano — cuando un negocio responde, pasa a Leads y lo sigue el Agente 1.</div>`}`;
@@ -1774,6 +1781,12 @@ document.addEventListener("click", async e=>{
     note("✓ Completada — "+(l.name||l.email||""));
     await loadAll(); return;
   }
+  if(t.dataset.renovar){
+    const b=busquedas.find(x=>x.id===t.dataset.renovar); if(!b) return;
+    const {error}=await sb.from("busquedas").insert({rubro:b.rubro,zona:b.zona||null,target:b.target||null,detalles:b.detalles||null,lat:b.lat||null,lng:b.lng||null,radio_millas:b.radioMillas||null,status:"pendiente",created_at:new Date().toISOString()});
+    if(error){ note("No se pudo renovar: "+error.message); return; }
+    note("↻ Búsqueda renovada — en cola para el buscador."); await loadAll(); return;
+  }
   if(t.dataset.abrirmapa){ abrirMapa(); return; }
   if(t.dataset.vercap){
     hlProspId=t.dataset.vercap; openProspId=null; tab="prospeccion"; formOpen=null; editing=null; renderApp();
@@ -2060,6 +2073,26 @@ document.addEventListener("submit", async e=>{
     if(editing && editing.col===col && !data.fileUrl){
       const prev=(col==="proposals"?proposals:col==="invoices"?invoices:clients).find(x=>x.id===editing.id);
       if(prev && prev.fileUrl){ data.fileUrl=prev.fileUrl; data.fileName=prev.fileName||""; }
+    }
+    if(col==="busquedas"){
+      const VENTANA=120*24*3600*1000; // 4 meses
+      const toR=x=>x*Math.PI/180;
+      const dup=busquedas.find(b=>{
+        if(String(b.rubro||"").trim().toLowerCase()!==String(data.rubro||"").trim().toLowerCase()) return false;
+        if((Date.now()-new Date(b.createdAt).getTime())>VENTANA) return false;
+        if(String(b.zona||"").trim().toLowerCase()===String(data.zona||"").trim().toLowerCase()) return true;
+        if(b.lat&&b.lng&&data.lat&&data.lng){
+          const la1=toR(Number(b.lat)), la2=toR(Number(data.lat));
+          const d=2*3959*Math.asin(Math.sqrt(Math.pow(Math.sin((la2-la1)/2),2)+Math.cos(la1)*Math.cos(la2)*Math.pow(Math.sin((toR(Number(data.lng))-toR(Number(b.lng)))/2),2)));
+          return d < Math.max(10, Number(b.radioMillas||0)/2);
+        }
+        return false;
+      });
+      if(dup){
+        const desde=new Date(new Date(dup.createdAt).getTime()+VENTANA).toISOString().slice(0,10);
+        note("Ese nicho en esa zona ya se buscó el "+String(dup.createdAt||"").slice(0,10)+". Se repite desde el "+desde+" — así entran solo las empresas nuevas.");
+        return;
+      }
     }
     const row=TO[col](data);
     let error;
