@@ -162,6 +162,12 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 @media(max-width:980px){.bcard,.bcard.sp3,.bcard.sp4,.bcard.sp5,.bcard.sp6{grid-column:span 12}}
 .bcard.hl{background:linear-gradient(180deg,rgba(221,125,71,.13),rgba(221,125,71,.04));border-color:rgba(221,125,71,.3)}
 .bhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:14px}
+.iconbtn{width:26px;height:26px;border-radius:8px;border:1px solid var(--hair);background:transparent;color:var(--faint);
+  font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+.iconbtn:hover{color:var(--fg);border-color:var(--hair2)}
+.goalmsg{margin-top:16px;padding:9px 11px;border-radius:10px;font-size:12.5px;color:var(--muted);
+  background:rgba(221,125,71,.07);border:1px solid rgba(221,125,71,.14)}
+.goalmsg.ok{background:rgba(76,195,138,.08);border-color:rgba(76,195,138,.18)}
 .bt{font-family:var(--disp);font-size:15px;font-weight:800;letter-spacing:.01em;color:#fff}
 .bn{font-family:var(--mono);font-size:12px;color:var(--accent)}
 .bs{font-size:12.5px;color:var(--faint)}
@@ -673,12 +679,17 @@ function renderResumen(){
   const barras=dias.map((d,k)=>`<div class="dbar"><span class="${porDia[k]?'':'z'}" style="height:${Math.max(6,Math.round(porDia[k]/mxc*44))}px"></span><i>${esc(d.toLocaleDateString("es-AR",{weekday:"narrow"}))}</i></div>`).join("");
 
   // Anillo de progreso del objetivo
-  const R=26, CIR=2*Math.PI*R;
-  const anillo=`<svg width="68" height="68" viewBox="0 0 68 68" aria-hidden="true">
-    <circle cx="34" cy="34" r="${R}" fill="none" stroke="var(--hair2)" stroke-width="7"/>
-    <circle cx="34" cy="34" r="${R}" fill="none" stroke="${(goal&&cobradoMes>=goal)?'var(--ok)':'var(--accent)'}" stroke-width="7" stroke-linecap="round"
-      stroke-dasharray="${CIR.toFixed(1)}" stroke-dashoffset="${(CIR*(1-pct/100)).toFixed(1)}" transform="rotate(-90 34 34)"/>
-    <text x="34" y="38" text-anchor="middle" fill="var(--fg)" font-size="13" font-weight="700">${goal?pct.toFixed(0)+"%":"—"}</text>
+  const R=34, CIR=2*Math.PI*R;
+  const metGoal = goal>0 && cobradoMes>=goal;
+  const anillo=`<svg width="86" height="86" viewBox="0 0 86 86" aria-hidden="true" style="flex:none">
+    <defs><linearGradient id="goalgrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="${metGoal?'#4CC38A':'#DD7D47'}"/>
+      <stop offset="100%" stop-color="${metGoal?'#8FE7BE':'#F2B27A'}"/>
+    </linearGradient></defs>
+    <circle cx="43" cy="43" r="${R}" fill="none" stroke="var(--hair2)" stroke-width="8"/>
+    <circle cx="43" cy="43" r="${R}" fill="none" stroke="url(#goalgrad)" stroke-width="8" stroke-linecap="round"
+      stroke-dasharray="${CIR.toFixed(1)}" stroke-dashoffset="${(CIR*(1-pct/100)).toFixed(1)}" transform="rotate(-90 43 43)"/>
+    <text x="43" y="48" text-anchor="middle" fill="var(--fg)" font-size="15" font-weight="800">${goal?pct.toFixed(0)+"%":"—"}</text>
   </svg>`;
 
   // (la efectividad se calcula más abajo sobre la lista del día)
@@ -717,15 +728,17 @@ function renderResumen(){
       ${items.length?`<button class="linkbtn" style="margin-top:14px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
     </div>
     <div class="bcard sp4">
-      <div class="bhead"><span class="bt">Objetivo del mes</span></div>
-      <div style="display:flex;gap:16px;align-items:center;margin-top:4px">
+      <div class="bhead"><span class="bt">Objetivo del mes</span><button class="iconbtn" data-goaledit="1" title="Cambiar el objetivo">✎</button></div>
+      <div style="display:flex;gap:18px;align-items:center">
         ${anillo}
-        <div><div class="big" style="margin:0">${money(cobradoMes)}</div>
-        <div class="bs">${goal?"de "+money(goal)+" · ":""}cobrado este mes</div></div>
+        <div style="min-width:0">
+          <div class="big" style="margin:0">${money(cobradoMes)}</div>
+          <div class="bs" style="margin-top:4px">cobrado este mes${goal?" · de "+money(goal):""}</div>
+        </div>
       </div>
-      <div class="bs" style="margin-top:12px">${msg}</div>
-      <div style="display:flex;gap:8px;margin-top:14px">
-        <input id="goalinput" type="number" min="0" step="100" value="${goal||""}" placeholder="5000" style="width:110px">
+      <div class="goalmsg${metGoal?' ok':''}">${msg}</div>
+      <div id="goaleditor" style="display:${goal?"none":"flex"};gap:8px;margin-top:12px;align-items:center">
+        <input id="goalinput" type="number" min="0" step="100" value="${goal||""}" placeholder="15000" style="width:110px">
         <button class="btn sm ghost" data-goalsave="1">Guardar</button>
       </div>
     </div>
@@ -1646,6 +1659,12 @@ document.addEventListener("click", async e=>{
     const[col,id]=t.dataset.delyes.split(":"); confirmDel=null;
     const {error}=await sb.from(col).delete().eq("id",id);
     if(error) note("No se pudo borrar: "+error.message); else { if(col==="leads") openLeadId=null; await loadAll(); }
+    return;
+  }
+  if(t.dataset.goaledit){
+    const el=document.getElementById("goaleditor");
+    if(el){ const show=el.style.display==="none"; el.style.display=show?"flex":"none";
+      if(show){ const i=document.getElementById("goalinput"); if(i){ i.focus(); i.select(); } } }
     return;
   }
   if(t.dataset.goalsave){
