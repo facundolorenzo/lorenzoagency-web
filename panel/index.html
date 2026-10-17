@@ -492,7 +492,7 @@ const FROM = {
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
                   cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
-  busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,status:r.status||"pendiente",createdAt:r.created_at}),
+  busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,
@@ -502,7 +502,7 @@ const TO = {
   proposals: d=>({number:d.number,client_id:d.clientId||null,client_free:d.clientFree||null,title:d.title,amount:Number(d.amount)||0,status:d.status,date:d.date||null,notes:d.notes||null,file_url:d.fileUrl||null,file_name:d.fileName||null,updated_at:new Date().toISOString()}),
   invoices:  d=>({number:d.number,client_id:d.clientId||null,amount:Number(d.amount)||0,status:d.status,issued:d.issued||null,due:d.due||null,notes:d.notes||null,stripe_link:d.stripeLink||null,updated_at:new Date().toISOString()}),
   clients:   d=>({name:d.name,company:d.company||null,contact:d.contact||null,email:d.email||null,phone:d.phone||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
-  busquedas: d=>({rubro:d.rubro,zona:d.zona||null,target:d.target||null,cantidad:Number(d.cantidad)||null,detalles:d.detalles||null,status:"pendiente",updated_at:new Date().toISOString()}),
+  busquedas: d=>({rubro:d.rubro,zona:d.zona||null,target:d.target||null,cantidad:Number(d.cantidad)||null,detalles:d.detalles||null,lat:d.lat?Number(d.lat):null,lng:d.lng?Number(d.lng):null,radio_millas:d.radio?Number(d.radio):null,status:"pendiente",updated_at:new Date().toISOString()}),
   prospectos:d=>({empresa:d.empresa,contacto:d.contacto||null,email:d.email||null,email_directo:d.emailDirecto||null,phone:d.phone||null,phone_directo:d.phoneDirecto||null,web:d.web||null,
                   instagram:d.instagram||null,nicho:d.nicho||null,ciudad:d.ciudad||null,fuente:d.fuente||null,
                   notas:d.notas||null,status:d.status||"encontrado",prioridad:d.prioridad||null,
@@ -1153,6 +1153,66 @@ function prospForm(d){
       <button class="btn ghost" type="button" data-cancel="1">Cancelar</button>
     </div></form></div>`;
 }
+/* ---------- mapa con radio en millas (patron punto+radio, como la publicidad) ---------- */
+let _leafletP=null;
+function cargarLeaflet(){
+  if(window.L) return Promise.resolve();
+  if(_leafletP) return _leafletP;
+  _leafletP=new Promise((res,rej)=>{
+    const css=document.createElement("link"); css.rel="stylesheet";
+    css.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"; document.head.appendChild(css);
+    const sc=document.createElement("script");
+    sc.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    sc.onload=()=>res(); sc.onerror=()=>{_leafletP=null;rej(new Error("No se pudo cargar el mapa — probá de nuevo."));};
+    document.head.appendChild(sc);
+  });
+  return _leafletP;
+}
+async function abrirMapa(){
+  try{ await cargarLeaflet(); }catch(e){ note(e.message); return; }
+  if(document.getElementById("mapamodal")) return;
+  const wrap=document.createElement("div");
+  wrap.id="mapamodal";
+  wrap.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:70;display:flex;align-items:center;justify-content:center;padding:18px";
+  wrap.innerHTML=`<div style="background:#141519;border:1px solid rgba(255,255,255,.14);border-radius:16px;max-width:780px;width:100%;padding:16px 18px;box-shadow:0 30px 90px rgba(0,0,0,.55)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-family:var(--disp);font-weight:800;color:#fff">📍 Zona de búsqueda</span>
+      <button class="btn ghost sm" id="mapcerrar" type="button">← Volver</button></div>
+    <div id="mapa" style="height:52vh;min-height:300px;border-radius:12px;overflow:hidden"></div>
+    <div style="display:flex;gap:14px;align-items:center;margin-top:12px;flex-wrap:wrap">
+      <input type="range" id="mapradio" min="1" max="50" value="10" style="flex:1;min-width:160px;accent-color:#DD7D47">
+      <b id="mapmillas" style="font-family:var(--mono);font-size:13px;color:#DD7D47;min-width:160px">10 millas alrededor</b>
+      <button class="btn sm" id="mapusar" type="button">Usar esta zona</button>
+    </div>
+    <div class="bs" style="margin-top:8px">Arrastrá el punto para mover el centro · el deslizador agranda o achica el círculo</div>
+  </div>`;
+  document.body.appendChild(wrap);
+  document.getElementById("mapcerrar").addEventListener("click",()=>wrap.remove());
+  const start=(lat,lng)=>{
+    const map=L.map("mapa").setView([lat,lng],11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
+    const mk=L.marker([lat,lng],{draggable:true}).addTo(map);
+    const circ=L.circle([lat,lng],{radius:10*1609.34,color:"#DD7D47",fillColor:"#DD7D47",fillOpacity:.12,weight:2}).addTo(map);
+    const upd=()=>{ const mi=Number(document.getElementById("mapradio").value);
+      const mm=document.getElementById("mapmillas"); if(mm) mm.textContent=mi+" millas alrededor";
+      circ.setLatLng(mk.getLatLng()); circ.setRadius(mi*1609.34); };
+    mk.on("drag",upd); mk.on("dragend",()=>{ map.panTo(mk.getLatLng()); upd(); });
+    document.getElementById("mapradio").addEventListener("input",upd);
+    document.getElementById("mapusar").addEventListener("click",()=>{
+      const mi=Number(document.getElementById("mapradio").value), c=mk.getLatLng();
+      const f=document.getElementById("f-busquedas");
+      if(f){ f.zona.value=mi+" millas alrededor de ("+c.lat.toFixed(4)+", "+c.lng.toFixed(4)+")";
+        f.lat.value=c.lat.toFixed(6); f.lng.value=c.lng.toFixed(6); f.radio.value=mi; }
+      wrap.remove();
+    });
+  };
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      pos=>start(pos.coords.latitude,pos.coords.longitude),
+      ()=>start(25.890,-80.186), {timeout:6000});
+  } else start(25.890,-80.186);
+}
+
 function busquedaForm(){
   return `<div class="panel">
     <button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button>
@@ -1160,7 +1220,9 @@ function busquedaForm(){
     <div class="full" style="font-family:var(--disp);font-weight:800;color:#fff;font-size:15px">🔎 Pedir una búsqueda</div>
     <div class="full bs">La estructura (fuentes, filtro, prioridad) ya está armada — acá solo definís el nicho. Cuanto más específico, mejor sale la lista.</div>
     <label><span class="fl">Rubro</span><input name="rubro" required placeholder="gimnasios / lounges / dealers de autos"></label>
-    <label><span class="fl">Zona</span><input name="zona" placeholder="Miami · Brickell · 10 millas de North Miami"></label>
+    <label><span class="fl">Zona</span><div style="display:flex;gap:8px"><input name="zona" style="flex:1" placeholder="Miami · Brickell · toda Florida">
+      <button class="btn ghost sm" type="button" data-abrirmapa="1" title="Elegir en el mapa con un radio en millas">📍 Mapa</button></div>
+      <input type="hidden" name="lat"><input type="hidden" name="lng"><input type="hidden" name="radio"></label>
     <label><span class="fl">Tipo de empresa</span><select name="target">
       <option value="ambas">Ambas</option>
       <option value="nuevas con capital">Nuevas con capital (por abrir)</option>
@@ -1709,6 +1771,7 @@ document.addEventListener("click", async e=>{
     note("✓ Completada — "+(l.name||l.email||""));
     await loadAll(); return;
   }
+  if(t.dataset.abrirmapa){ abrirMapa(); return; }
   if(t.dataset.vercap){
     hlProspId=t.dataset.vercap; openProspId=null; tab="prospeccion"; formOpen=null; editing=null; renderApp();
     setTimeout(()=>{ const el=document.getElementById("pr-"+hlProspId); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); },80);
