@@ -442,6 +442,7 @@ const L_LABELS = {nuevo:"Nuevos",enviado:"Enviados",respondio:"Respondieron",sin
 const money = n => "$" + (Number(n)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today = () => new Date().toISOString().slice(0,10);
+const ICON_PIN = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;flex:none"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>';
 const ICON_TRASH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;pointer-events:none"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v6M14 11v6"/></svg>';
 const ICON_PHONE = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1.5px;pointer-events:none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
 function autoGrow(ta){ if(!ta) return; ta.style.height='auto'; const max = ta.classList.contains('full') ? Math.round((window.innerHeight||800)*0.62) : 170; ta.style.height=Math.min(ta.scrollHeight+2,max)+'px'; }
@@ -1176,7 +1177,7 @@ async function abrirMapa(){
   wrap.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:70;display:flex;align-items:center;justify-content:center;padding:18px";
   wrap.innerHTML=`<div style="background:#141519;border:1px solid rgba(255,255,255,.14);border-radius:16px;max-width:780px;width:100%;padding:16px 18px;box-shadow:0 30px 90px rgba(0,0,0,.55)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <span style="font-family:var(--disp);font-weight:800;color:#fff">📍 Zona de búsqueda</span>
+      <span style="font-family:var(--disp);font-weight:800;color:#fff;display:inline-flex;align-items:center;gap:8px">${ICON_PIN} Zona de búsqueda</span>
       <button class="btn ghost sm" id="mapcerrar" type="button">← Volver</button></div>
     <div id="mapa" style="height:52vh;min-height:300px;border-radius:12px;overflow:hidden"></div>
     <div style="display:flex;gap:14px;align-items:center;margin-top:12px;flex-wrap:wrap">
@@ -1221,7 +1222,7 @@ function busquedaForm(){
     <div class="full bs">La estructura (fuentes, filtro, prioridad) ya está armada — acá solo definís el nicho. Cuanto más específico, mejor sale la lista.</div>
     <label><span class="fl">Rubro</span><input name="rubro" required placeholder="gimnasios / lounges / dealers de autos"></label>
     <label><span class="fl">Zona</span><div style="display:flex;gap:8px;align-items:center"><input name="zona" style="flex:1" placeholder="Miami · Brickell · toda Florida">
-      <button class="btn ghost" type="button" data-abrirmapa="1" title="Elegir en el mapa con un radio en millas" style="height:40px;white-space:nowrap;padding:0 14px;display:inline-flex;align-items:center">📍 Mapa</button></div>
+      <button class="btn ghost" type="button" data-abrirmapa="1" title="Elegir en el mapa con un radio en millas" style="height:40px;white-space:nowrap;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;line-height:1">${ICON_PIN} Mapa</button></div>
       <input type="hidden" name="lat"><input type="hidden" name="lng"><input type="hidden" name="radio"></label>
     <label><span class="fl">Tipo de empresa</span><select name="target">
       <option value="ambas">Ambas</option>
