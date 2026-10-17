@@ -194,6 +194,8 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .done{display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--faint);padding:5px 2px}
 .done .dk{flex:0 0 auto;width:18px;height:18px;border-radius:99px;background:var(--accent);color:#fff;font-size:10px;display:inline-flex;align-items:center;justify-content:center}
 .done s{text-decoration-color:var(--faint)}
+.step .chk{pointer-events:auto;margin-left:auto;flex:0 0 auto;width:22px;height:22px;border-radius:99px;border:1.5px solid var(--hair);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:transparent;font-size:11px;transition:.15s}
+.step .chk:hover{border-color:var(--accent);color:#fff;background:var(--accent)}
 .stat .l{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
 .stat .v{font-size:26px;font-weight:800;margin-top:8px;font-variant-numeric:tabular-nums}
 .stat .s{font-size:12px;color:var(--faint);margin-top:4px}
@@ -620,13 +622,17 @@ function renderResumen(){
   else if(cobradoMes>=goal) msg="🏆 Objetivo superado por "+money(cobradoMes-goal)+".";
   else { const gap=goal-cobradoMes; msg="Faltan "+money(gap)+(avg>0?" · ≈ "+Math.ceil(gap/avg)+" propuesta(s) más":"")+"."; }
 
-  // Para hoy: paso a paso (lo más importante del día, estilo checklist)
+  // Hecho hoy (para el contador y los tildes tachados)
+  const hechas=touches.filter(x=>new Date(x.createdAt)>=hoy0 && (x.tipo==="mail"||x.tipo==="llamada"||/^✓/.test(String(x.texto||""))));
+
+  // Para hoy: paso a paso con círculo para ir concretando (como la referencia)
   const pasos = items.slice(0,6).map(({l,a},ix)=>`
     <button class="step" data-openlead="${l.id}">
       <span class="n">${ix+1}</span>
       <span class="st-a ${a.hot?'hot':''}">${a.tipo==='llamada'?ICON_PHONE+' ':''}${esc(a.label)}</span>
       <span class="st-n">${esc(l.name||l.email||'—')}</span>
       ${langChip(l)}
+      <span class="chk" data-stepdone="${l.id}" title="Marcar como hecho">✓</span>
     </button>`).join("");
 
   const mx=Math.max(1,nuevos,enviados+sinr,resp,gan);
@@ -648,9 +654,9 @@ function renderResumen(){
   </svg>`;
 
   // Hecho hoy (tildes tachados, como la referencia)
-  const hechas=touches.filter(x=>new Date(x.createdAt)>=hoy0 && (x.tipo==="mail"||x.tipo==="llamada"));
-  const hechasHtml=hechas.slice(0,3).map(x=>{const l=leads.find(z=>z.id===x.leadId);
-    return `<div class="done"><span class="dk">✓</span><s>${x.tipo==="mail"?"Mail enviado":"Llamada"} — ${esc(l?(l.name||l.email||""):"")}</s></div>`;}).join("");
+  const hechasHtml=hechas.slice(0,4).map(x=>{const l=leads.find(z=>z.id===x.leadId);
+    const que = x.tipo==="mail"?"Mail enviado":x.tipo==="llamada"?"Llamada":"Hecho";
+    return `<div class="done"><span class="dk">✓</span><s>${que} — ${esc(l?(l.name||l.email||""):"")}</s></div>`;}).join("");
 
   const pfill=p=>`style="background:linear-gradient(90deg,rgba(221,125,71,.20) ${p}%,transparent ${p}%)"`;
 
@@ -673,7 +679,7 @@ function renderResumen(){
   </div>
   <div class="bento">
     <div class="bcard hl sp5">
-      <div class="bhead"><span class="bt">Para hoy</span><span class="bn">${items.length}</span></div>
+      <div class="bhead"><span class="bt">Para hoy</span><span class="bn" style="font-size:15px;font-weight:700">${hechas.length}/${hechas.length+items.length}</span></div>
       <div class="bs">Paso a paso — resolvés y desaparece.</div>
       <div style="margin-top:6px">${items.length? pasos : `<div class="fempty">Nada pendiente ✦</div>`}</div>
       ${items.length?`<button class="linkbtn" style="margin-top:12px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
@@ -1375,6 +1381,16 @@ document.addEventListener("click", async e=>{
       }
       note("🧠 Análisis guardado en la línea de tiempo del lead.");
     }
+    await loadAll(); return;
+  }
+  if(t.dataset.stepdone){
+    const id=t.dataset.stepdone; const l=leads.find(x=>x.id===id); if(!l) return;
+    const patch = avanzarCadencia(l.cadenciaPaso);
+    if(l.status==="nuevo"||l.status==="respondio") patch.status="enviado"; // lo resolviste por fuera -> sale de la cola
+    const {error}=await sb.from("leads").update(patch).eq("id",id);
+    if(error){ note("No se pudo marcar: "+error.message); return; }
+    try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:"✓ Marcado como hecho desde Para hoy"}); }catch(e){}
+    note("✓ Hecho — "+(l.name||l.email||""));
     await loadAll(); return;
   }
   if(t.dataset.gotab){ tab=t.dataset.gotab; formOpen=null; editing=null; renderApp(); return; }
