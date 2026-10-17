@@ -174,7 +174,7 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .step:last-of-type{border-bottom:none}
 .step *{pointer-events:none}
 .step:hover{background:rgba(255,255,255,.03)}
-.step .n{flex:0 0 auto;width:22px;height:22px;border-radius:99px;border:1px solid var(--hair);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.step .n{flex:0 0 auto;width:14px;text-align:center;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
 .step .st-a{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);flex:0 0 auto;min-width:86px}
 .step .st-a.hot{color:var(--accent)}
 .step .st-n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -196,7 +196,7 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .done .dk{flex:0 0 auto;width:22px;height:22px;border-radius:99px;background:var(--accent);color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center}
 .done .da{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);flex:0 0 auto;min-width:86px}
 .done .dn{flex:1;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.step .chk{pointer-events:auto;margin-left:auto;flex:0 0 auto;width:22px;height:22px;border-radius:99px;border:1.5px solid var(--hair);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:transparent;font-size:11px;transition:.15s}
+.step .chk{pointer-events:auto;flex:0 0 auto;width:22px;height:22px;border-radius:99px;border:1.5px solid var(--hair);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:transparent;font-size:11px;transition:.15s}
 .step .chk:hover{border-color:var(--accent);color:#fff;background:var(--accent)}
 .step .st-lang{flex:0 0 auto;font-family:var(--mono);font-size:9px;letter-spacing:.1em;border-radius:999px;padding:2px 8px}
 .step .st-lang.es{color:#67c998;border:1px solid rgba(103,201,152,.45)}
@@ -634,10 +634,10 @@ function renderResumen(){
   // Para hoy: paso a paso con círculo para ir concretando (como la referencia)
   const pasos = items.slice(0,6).map(({l,a},ix)=>`
     <div class="step" data-openlead="${l.id}" role="button" tabindex="0">
+      <span class="chk" data-stepdone="${l.id}" title="Marcar como hecho">✓</span>
       <span class="n">${ix+1}</span>
       <span class="st-a ${a.hot?'hot':''}">${a.tipo==='llamada'?ICON_PHONE+' ':''}${esc(a.label)}</span>
       <span class="st-n">${esc(l.name||l.email||'—')}</span>
-      <span class="chk" data-stepdone="${l.id}" title="Marcar como hecho">✓</span>
     </div>`).join("");
 
   const mx=Math.max(1,nuevos,enviados+sinr,resp,gan);
@@ -661,7 +661,7 @@ function renderResumen(){
   // Hecho hoy: tilde y listo, mismo orden visual que los pendientes (sin tachar)
   const hechasHtml=hechas.slice(0,5).map(x=>{const l=leads.find(z=>z.id===x.leadId);
     const que = x.tipo==="mail"?"Mail":x.tipo==="llamada"?"Llamada":"Hecho";
-    return `<div class="done"><span class="dk">✓</span><span class="da">${que}</span><span class="dn">${esc(l?(l.name||l.email||""):"")}</span></div>`;}).join("");
+    return `<div class="done"><span class="dk">✓</span><span class="n" style="flex:0 0 auto;width:14px"></span><span class="da">${que}</span><span class="dn">${esc(l?(l.name||l.email||""):"")}</span></div>`;}).join("");
   // Efectividad del día: hechas sobre el total del día
   const totDia = hechas.length + items.length;
   const eff = totDia ? Math.round(hechas.length/totDia*100) : 0;
