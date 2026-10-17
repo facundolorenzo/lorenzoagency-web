@@ -167,6 +167,12 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .prchip.A{background:rgba(221,125,71,.16);color:var(--accent);border:1px solid rgba(221,125,71,.35)}
 .prchip.B{background:rgba(229,180,84,.10);color:var(--warn);border:1px solid rgba(229,180,84,.28)}
 .prchip.C{background:rgba(255,255,255,.04);color:var(--faint);border:1px solid var(--hair2)}
+.cpills{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;max-width:260px}
+.cpill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--hair2);border-radius:999px;
+  font-family:var(--mono);font-size:10.5px;color:var(--muted);text-decoration:none;max-width:240px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cpill:hover{border-color:var(--muted)}
+.cpill.dir{color:var(--accent);border-color:rgba(221,125,71,.35);background:rgba(221,125,71,.07)}
 .bcard.hl{background:linear-gradient(180deg,rgba(221,125,71,.13),rgba(221,125,71,.04));border-color:rgba(221,125,71,.3)}
 .bhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:14px}
 .iconbtn{width:26px;height:26px;border-radius:8px;border:1px solid var(--hair);background:transparent;color:var(--faint);
@@ -1056,7 +1062,13 @@ function renderProspeccion(){
     const sub=[p.ciudad, p.prioridadMotivo].filter(Boolean).join(" · ");
     return `<tr>
       <td>${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="Prioridad ${esc(p.prioridad)}${p.prioridadMotivo?" — "+esc(p.prioridadMotivo):""}">${esc(p.prioridad)}</span>`:""}<b>${esc(p.empresa||"—")}</b>${sub?`<div class="bs">${esc(sub.slice(0,90))}</div>`:""}</td>
-      <td style="font-size:12px">${p.contacto?esc(p.contacto)+"<br>":""}${p.emailDirecto?`<span style="font-family:var(--mono);font-size:11px;color:var(--accent)">⭐ ${esc(p.emailDirecto)}</span><br>`:""}${p.phoneDirecto?`<span style="font-family:var(--mono);font-size:11px;color:var(--accent)">⭐ ${esc(p.phoneDirecto)}</span><br>`:""}${p.email?`<span style="font-family:var(--mono);font-size:11px;color:${p.emailDirecto?"var(--faint)":"var(--fg)"}">${esc(p.email)}</span>`:(p.emailDirecto?"":`<span style="color:var(--faint)">sin email</span>`)}</td>
+      <td style="font-size:12.5px">${p.contacto?esc(p.contacto):(p.emailDirecto||p.phoneDirecto||p.email||p.phone?"":`<span style="color:var(--faint)">sin contacto</span>`)}
+        ${(function(){ const pl=[];
+          if(p.emailDirecto) pl.push(`<a class="cpill dir" href="mailto:${esc(p.emailDirecto)}" title="Contacto directo — ${esc(p.emailDirecto)}">★ ${esc(p.emailDirecto)}</a>`);
+          if(p.phoneDirecto) pl.push(`<a class="cpill dir" href="tel:${esc(String(p.phoneDirecto).replace(/[^+\d]/g,""))}" title="Contacto directo — ${esc(p.phoneDirecto)}">★ ${esc(p.phoneDirecto)}</a>`);
+          if(p.email) pl.push(`<a class="cpill" href="mailto:${esc(p.email)}" title="${esc(p.email)}">${esc(p.email)}</a>`);
+          if(p.phone) pl.push(`<a class="cpill" href="tel:${esc(String(p.phone).replace(/[^+\d]/g,""))}" title="${esc(p.phone)}">${esc(p.phone)}</a>`);
+          return pl.length?`<div class="cpills">${pl.join("")}</div>`:""; })()}</td>
       <td style="font-size:12px">${esc(p.nicho||"—")}</td>
       <td style="font-size:12px;color:var(--muted)">${esc(p.fuente||"—")}</td>
       <td><select class="lsel" data-prstatus="${p.id}">${PR_STATES.map(st=>`<option value="${st}" ${p.status===st?"selected":""}>${esc(PR_LABELS[st])}</option>`).join("")}</select></td>
