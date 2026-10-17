@@ -466,7 +466,7 @@ const FROM = {
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
                   cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
-  prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,web:r.web,instagram:r.instagram,
+  prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
@@ -475,7 +475,7 @@ const TO = {
   proposals: d=>({number:d.number,client_id:d.clientId||null,client_free:d.clientFree||null,title:d.title,amount:Number(d.amount)||0,status:d.status,date:d.date||null,notes:d.notes||null,file_url:d.fileUrl||null,file_name:d.fileName||null,updated_at:new Date().toISOString()}),
   invoices:  d=>({number:d.number,client_id:d.clientId||null,amount:Number(d.amount)||0,status:d.status,issued:d.issued||null,due:d.due||null,notes:d.notes||null,stripe_link:d.stripeLink||null,updated_at:new Date().toISOString()}),
   clients:   d=>({name:d.name,company:d.company||null,contact:d.contact||null,email:d.email||null,phone:d.phone||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
-  prospectos:d=>({empresa:d.empresa,contacto:d.contacto||null,email:d.email||null,email_directo:d.emailDirecto||null,phone:d.phone||null,web:d.web||null,
+  prospectos:d=>({empresa:d.empresa,contacto:d.contacto||null,email:d.email||null,email_directo:d.emailDirecto||null,phone:d.phone||null,phone_directo:d.phoneDirecto||null,web:d.web||null,
                   instagram:d.instagram||null,nicho:d.nicho||null,ciudad:d.ciudad||null,fuente:d.fuente||null,
                   notas:d.notas||null,status:d.status||"encontrado",prioridad:d.prioridad||null,
                   prioridad_motivo:d.prioridadMotivo||null,busqueda:d.busqueda||null,updated_at:new Date().toISOString()}),
@@ -1037,7 +1037,7 @@ function renderProspeccion(){
     const sub=[p.ciudad, p.prioridadMotivo].filter(Boolean).join(" · ");
     return `<tr>
       <td>${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="Prioridad ${esc(p.prioridad)}${p.prioridadMotivo?" — "+esc(p.prioridadMotivo):""}">${esc(p.prioridad)}</span>`:""}<b>${esc(p.empresa||"—")}</b>${sub?`<div class="bs">${esc(sub.slice(0,90))}</div>`:""}</td>
-      <td style="font-size:12px">${p.contacto?esc(p.contacto)+"<br>":""}${p.emailDirecto?`<span style="font-family:var(--mono);font-size:11px;color:var(--accent)">⭐ ${esc(p.emailDirecto)}</span><br>`:""}${p.email?`<span style="font-family:var(--mono);font-size:11px;color:${p.emailDirecto?"var(--faint)":"var(--fg)"}">${esc(p.email)}</span>`:(p.emailDirecto?"":`<span style="color:var(--faint)">sin email</span>`)}</td>
+      <td style="font-size:12px">${p.contacto?esc(p.contacto)+"<br>":""}${p.emailDirecto?`<span style="font-family:var(--mono);font-size:11px;color:var(--accent)">⭐ ${esc(p.emailDirecto)}</span><br>`:""}${p.phoneDirecto?`<span style="font-family:var(--mono);font-size:11px;color:var(--accent)">⭐ ${esc(p.phoneDirecto)}</span><br>`:""}${p.email?`<span style="font-family:var(--mono);font-size:11px;color:${p.emailDirecto?"var(--faint)":"var(--fg)"}">${esc(p.email)}</span>`:(p.emailDirecto?"":`<span style="color:var(--faint)">sin email</span>`)}</td>
       <td style="font-size:12px">${esc(p.nicho||"—")}</td>
       <td style="font-size:12px;color:var(--muted)">${esc(p.fuente||"—")}</td>
       <td><select class="lsel" data-prstatus="${p.id}">${PR_STATES.map(st=>`<option value="${st}" ${p.status===st?"selected":""}>${esc(PR_LABELS[st])}</option>`).join("")}</select></td>
@@ -1069,7 +1069,8 @@ function prospForm(d){
     <label><span class="fl">Empresa / negocio</span><input name="empresa" value="${esc(d?d.empresa:"")}" required placeholder="Nombre del venue"></label>
     <label><span class="fl">Contacto</span><input name="contacto" value="${esc(d?d.contacto:"")}" placeholder="Nombre y rol (si se sabe)"></label>
     <label><span class="fl">Email genérico</span><input name="email" type="email" value="${esc(d?d.email:"")}" placeholder="info@lugar.com"></label>
-    <label><span class="fl">⭐ Mail de contacto directo</span><input name="emailDirecto" type="email" value="${esc(d?d.emailDirecto:"")}" placeholder="el de la persona (gerente/dueño) — a este se le escribe"></label>
+    <label><span class="fl">⭐ Contacto directo</span><input name="emailDirecto" type="email" value="${esc(d?d.emailDirecto:"")}" placeholder="Email"></label>
+    <label><span class="fl">⭐ Contacto directo</span><input name="phoneDirecto" value="${esc(d?d.phoneDirecto:"")}" placeholder="Número de teléfono"></label>
     <label><span class="fl">Teléfono</span><input name="phone" value="${esc(d?d.phone:"")}"></label>
     <label><span class="fl">Web</span><input name="web" value="${esc(d?d.web:"")}" placeholder="sitio.com"></label>
     <label><span class="fl">Instagram</span><input name="instagram" value="${esc(d?d.instagram:"")}" placeholder="@cuenta"></label>
@@ -1776,7 +1777,7 @@ document.addEventListener("click", async e=>{
   if(t.dataset.prosplead){
     const p=prospectos.find(x=>x.id===t.dataset.prosplead); if(!p) return;
     const msg=["Prospecto ("+(p.fuente||"prospección")+")",p.web?("Web: "+p.web):"",p.instagram?("IG: "+p.instagram):"",p.notas||""].filter(Boolean).join("\n");
-    const {data:nl,error}=await sb.from("leads").insert({name:p.contacto||p.empresa,email:p.emailDirecto||p.email||null,phone:p.phone||null,service:p.nicho||"prospección",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
+    const {data:nl,error}=await sb.from("leads").insert({name:p.contacto||p.empresa,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"prospección",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
     if(error){ note("No se pudo pasar a Leads: "+error.message); return; }
     try{ await sb.from("prospectos").update({lead_id:nl.id,updated_at:new Date().toISOString()}).eq("id",p.id); }catch(err){}
     note("→ Pasó a Leads: "+(p.empresa||p.email||""));
