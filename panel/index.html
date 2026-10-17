@@ -689,7 +689,6 @@ function renderResumen(){
     <div class="bcard hl sp5">
       <div class="bhead"><span class="bt">Para hoy</span><span class="bn" style="font-size:15px;font-weight:700">${hechas.length}/${hechas.length+items.length}</span></div>
       ${items.length?`<div style="margin-top:6px">${pasos}</div>`:""}
-      ${items.length?`<button class="linkbtn" style="margin-top:12px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
       ${hechas.length?`<div style="margin-top:6px">${hechasHtml}</div>`:""}
       ${totDia?`<div style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
@@ -699,6 +698,7 @@ function renderResumen(){
         <div class="pbar" style="margin-top:8px"><span style="width:${eff}%;background:${eff>=70?'var(--ok)':'var(--accent)'}"></span></div>
         <div class="bs" style="margin-top:6px">${hechas.length} hecha(s) · ${items.length} pendiente(s)</div>
       </div>`:""}
+      ${items.length?`<button class="linkbtn" style="margin-top:14px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
     </div>
     <div class="bcard sp4">
       <div class="bhead"><span class="bt">Objetivo del mes</span></div>
@@ -1083,7 +1083,7 @@ function renderLeads(){
 /* ---------- PARA HOY (cola de acción del día) ---------- */
 function accionHoy(l){
   if(l.status==='nuevo')    return { label:'Responder', tipo:'mail',    hot:false };
-  if(l.status==='respondio')return { label:'Contestar',  tipo:'mail',    hot:true  };
+  if(l.status==='respondio')return { label:'Responder', tipo:'mail',    hot:true  }; // caliente: te respondió — mismo verbo, distinto color
   if((l.status==='enviado'||l.status==='sin_respuesta') && l.segActivo && l.nextAt){
     const fin=new Date(); fin.setHours(23,59,59,999);
     if(new Date(l.nextAt)<=fin) return { label:(l.nextTipo==='llamada'?'Llamar':'Seguimiento'), tipo:(l.nextTipo||'mail'), hot:false };
