@@ -183,6 +183,17 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .mrow .mbar{flex:1;height:7px;background:var(--hair2);border-radius:99px;overflow:hidden}
 .mrow .mbar span{display:block;height:100%;background:var(--accent)}
 .mrow .mv{font-family:var(--mono);font-size:11px;min-width:20px;text-align:right}
+/* deals calientes */
+.hd{padding:10px 2px;border-bottom:1px solid var(--hair2);cursor:pointer}
+.hd:last-of-type{border-bottom:none}
+.hd *{pointer-events:none}
+.hd:hover{background:rgba(255,255,255,.03)}
+.hd-t{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.hd-n{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hd-p{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;flex:0 0 auto}
+.hd-bar{height:5px;background:var(--hair2);border-radius:99px;overflow:hidden;margin-top:6px}
+.hd-bar span{display:block;height:100%;background:var(--accent)}
+.hd-s{font-size:11.5px;color:var(--faint);margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hnums{display:flex;gap:30px;align-items:flex-end}
 .hnums b{display:block;font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
 .hnums span{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;display:block;margin-top:6px}
@@ -738,10 +749,19 @@ function renderResumen(){
       <button class="linkbtn" style="margin-top:12px" data-gotab="llamadas">Ver el registro →</button>
     </div>
     <div class="bcard sp4">
-      <div class="bhead"><span class="bt">Calientes</span></div>
-      <div class="big">${resp}</div>
-      <div class="bs">respondieron — hay que seguirlos ya</div>
-      <button class="linkbtn" style="margin-top:12px" data-gotab="hoy">Ir a contestar →</button>
+      <div class="bhead"><span class="bt">Deals calientes</span></div>
+      ${(function(){
+        const hot=leads.filter(l=>l.cierrePct!=null && !["ganado","perdido"].includes(l.status))
+          .sort((a,b)=>b.cierrePct-a.cierrePct).slice(0,4);
+        if(!hot.length) return `<div class="fempty">Acá se rankean los leads por % de cierre — se arma solo cuando el agente analiza tus llamadas.</div>${resp?`<div class="bs" style="margin-top:8px">${resp} respondieron — hay que seguirlos ya</div>`:""}`;
+        return hot.map(l=>{
+          const sub = l.cierreFalta ? "falta: "+l.cierreFalta : (l.cierreFreno ? "freno: "+l.cierreFreno : "");
+          return `<div class="hd" data-openlead="${l.id}" role="button" tabindex="0">
+            <div class="hd-t"><span class="hd-n">${esc(l.name||l.email||"—")}</span><span class="hd-p">${l.cierrePct}%</span></div>
+            <div class="hd-bar"><span style="width:${l.cierrePct}%"></span></div>
+            ${sub?`<div class="hd-s">${esc(sub.slice(0,80))}</div>`:""}
+          </div>`; }).join("");
+      })()}
     </div>
   </div>
   <div class="bar" style="margin-top:28px"><h2><span class="tick"></span>Últimas propuestas</h2></div>
