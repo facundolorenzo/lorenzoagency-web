@@ -962,7 +962,7 @@ function renderProposals(){
 }
 function proposalForm(d){
   const num = d? d.number : nextNumber(proposals,"LA");
-  return `<div class="panel"><form id="f-proposals" class="form">
+  return `<div class="panel"><button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button><form id="f-proposals" class="form">
     <label><span class="fl">Número</span><input name="number" value="${esc(num)}" required></label>
     <label><span class="fl">Cliente</span><select name="clientId"><option value="">— elegir —</option>
       ${clients.map(c=>`<option value="${esc(c.id)}" ${d&&d.clientId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
@@ -1033,7 +1033,7 @@ function renderInvoices(){
 }
 function invoiceForm(d){
   const num = d? d.number : nextNumber(invoices,"INV");
-  return `<div class="panel"><form id="f-invoices" class="form">
+  return `<div class="panel"><button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button><form id="f-invoices" class="form">
     <label><span class="fl">Número</span><input name="number" value="${esc(num)}" required></label>
     <label><span class="fl">Cliente</span><select name="clientId"><option value="">— elegir —</option>
       ${clients.map(c=>`<option value="${esc(c.id)}" ${d&&d.clientId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
@@ -1105,7 +1105,7 @@ function renderProspeccion(){
     `<div class="empty"><b>Todavía no hay búsquedas de clientes.</b><br>Acá van los negocios del nicho que salimos a buscar (venues, restaurantes, gimnasios, lo que sea). Cargá uno a mano o importá una lista — cuando uno responde, pasa a Leads y lo sigue el Agente 1.</div>`}`;
 }
 function prospForm(d){
-  return `<div class="panel"><form id="f-prospectos" class="form">
+  return `<div class="panel"><button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button><form id="f-prospectos" class="form">
     <label><span class="fl">Empresa / negocio</span><input name="empresa" value="${esc(d?d.empresa:"")}" required placeholder="Nombre del venue"></label>
     <label><span class="fl">Contacto</span><input name="contacto" value="${esc(d?d.contacto:"")}" placeholder="Nombre y rol (si se sabe)"></label>
     <label><span class="fl">Email genérico</span><input name="email" type="email" value="${esc(d?d.email:"")}" placeholder="info@lugar.com"></label>
@@ -1133,6 +1133,7 @@ function prospForm(d){
 }
 function prospImportForm(){
   return `<div class="panel">
+    <button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button>
     <div style="font-family:var(--disp);font-weight:800;color:#fff;margin-bottom:6px">Importar lista</div>
     <div class="bs" style="margin-bottom:10px">Una línea por negocio, separando con <b>|</b> :&nbsp; empresa | email | web | ciudad | nicho</div>
     <input id="prospbusq" placeholder="Título de la búsqueda (ej: Lounges Fort Lauderdale — oct 2026)" style="width:100%;margin-bottom:8px">
@@ -1167,7 +1168,7 @@ function renderClients(){
     '<div class="empty"><b>Sin clientes todavía.</b></div>'}`;
 }
 function clientForm(d){
-  return `<div class="panel"><form id="f-clients" class="form">
+  return `<div class="panel"><button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button><form id="f-clients" class="form">
     <label><span class="fl">Nombre</span><input name="name" value="${esc(d?d.name:"")}" required placeholder="Compass"></label>
     <label><span class="fl">Empresa / división</span><input name="company" value="${esc(d?d.company:"")}"></label>
     <label><span class="fl">Contacto</span><input name="contact" value="${esc(d?d.contact:"")}" placeholder="Nombre y rol"></label>
@@ -1363,7 +1364,7 @@ function leadModalHtml(){
     <div class="lhead">
       <div><div class="lname">${esc(l.name||"—")} &nbsp;${langChip(l)}</div>
         <div class="lmeta">${esc(String(l.createdAt||"").slice(0,10))}${l.service?` &nbsp;·&nbsp; <span class="lrubro">${esc(l.service)}</span>`:""} &nbsp;·&nbsp; ${interestBar(l.respuestas)}</div></div>
-      <button class="btn ghost sm" data-closelead="1">✕</button>
+      <button class="btn ghost sm" data-closelead="1">← Volver</button>
     </div>
     <div class="lcontact">
       ${l.email?`<div><span>EMAIL</span>${esc(l.email)}</div>`:""}
@@ -1444,7 +1445,7 @@ function prospModalHtml(){
   return `<div class="cpop-bg" data-closeprosp="1"><div class="cpop" style="max-width:380px" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
       <div style="font-family:var(--disp);font-size:16px;font-weight:800;color:#fff">${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}</div>
-      <button class="btn ghost sm" data-closeprosp="1" style="flex:none">✕</button>
+      <button class="btn ghost sm" data-closeprosp="1" style="flex:none">← Volver</button>
     </div>
     <div class="bs" style="margin-top:2px">${esc([p.nicho,p.ciudad].filter(Boolean).join(" · "))}</div>
     ${p.prioridadMotivo?`<div class="goalmsg" style="margin-top:10px">${esc(p.prioridadMotivo)}</div>`:""}
