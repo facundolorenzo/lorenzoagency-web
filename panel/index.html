@@ -347,6 +347,7 @@ let leadFilter = "todos";
 let leadCollapsed = {};
 let touches = [];
 let prospectos = [];
+let busquedas = [];
 let callLeadId = null, closeLeadId = null;
 let callLang = null; // idioma del micrófono en la llamada (es/en); por defecto, el del lead
 let verLlamadaId = null; // visor de transcripción abierto
@@ -491,6 +492,7 @@ const FROM = {
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
                   cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
+  busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,status:r.status||"pendiente",createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,
@@ -500,6 +502,7 @@ const TO = {
   proposals: d=>({number:d.number,client_id:d.clientId||null,client_free:d.clientFree||null,title:d.title,amount:Number(d.amount)||0,status:d.status,date:d.date||null,notes:d.notes||null,file_url:d.fileUrl||null,file_name:d.fileName||null,updated_at:new Date().toISOString()}),
   invoices:  d=>({number:d.number,client_id:d.clientId||null,amount:Number(d.amount)||0,status:d.status,issued:d.issued||null,due:d.due||null,notes:d.notes||null,stripe_link:d.stripeLink||null,updated_at:new Date().toISOString()}),
   clients:   d=>({name:d.name,company:d.company||null,contact:d.contact||null,email:d.email||null,phone:d.phone||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
+  busquedas: d=>({rubro:d.rubro,zona:d.zona||null,target:d.target||null,cantidad:Number(d.cantidad)||null,detalles:d.detalles||null,status:"pendiente",updated_at:new Date().toISOString()}),
   prospectos:d=>({empresa:d.empresa,contacto:d.contacto||null,email:d.email||null,email_directo:d.emailDirecto||null,phone:d.phone||null,phone_directo:d.phoneDirecto||null,web:d.web||null,
                   instagram:d.instagram||null,nicho:d.nicho||null,ciudad:d.ciudad||null,fuente:d.fuente||null,
                   notas:d.notas||null,status:d.status||"encontrado",prioridad:d.prioridad||null,
@@ -512,13 +515,14 @@ async function loadAll(){
   const pr = await sb.from("proposals").select("*").order("created_at",{ascending:false});
   proposals = (pr.data||[]).map(FROM.proposals);
   if(isAdmin){
-    const [inv, cl, ld, st, tc, pz] = await Promise.all([
+    const [inv, cl, ld, st, tc, pz, bq] = await Promise.all([
       sb.from("invoices").select("*").order("created_at",{ascending:false}),
       sb.from("clients").select("*").order("created_at",{ascending:false}),
       sb.from("leads").select("*").order("created_at",{ascending:false}),
       sb.from("settings").select("*").eq("key","goal").maybeSingle(),
       sb.from("touches").select("*").order("created_at",{ascending:false}),
       sb.from("prospectos").select("*").order("created_at",{ascending:false}),
+      sb.from("busquedas").select("*").order("created_at",{ascending:false}),
     ]);
     invoices = (inv.data||[]).map(FROM.invoices);
     clients  = (cl.data||[]).map(FROM.clients);
@@ -526,6 +530,7 @@ async function loadAll(){
     goal = st.data ? Number(st.data.monthly_goal)||0 : 0;
     touches = (tc && !tc.error && tc.data) ? tc.data.map(FROM.touches) : [];
     prospectos = (pz && !pz.error && pz.data) ? pz.data.map(FROM.prospectos) : [];
+    busquedas = (bq && !bq.error && bq.data) ? bq.data.map(FROM.busquedas) : [];
   }
   renderApp();
 }
@@ -1100,7 +1105,7 @@ function renderProspeccion(){
       <tr><th>Empresa</th><th>Contacto</th><th>Nicho</th><th>Fuente</th><th>Estado</th><th class="r"></th></tr>${arr.map(row).join("")}</table></div>`).join("");
   $app().innerHTML = `
   <div class="bar"><h2><span class="tick"></span>Captación de clientes — salir a buscarlos</h2>
-    ${canWrite?`<div style="display:flex;gap:12px;align-items:center"><button class="linkbtn" data-new="prospectos" style="color:var(--faint)">+ cargar a mano</button><button class="btn" data-new="prospimport">📋 Importar lista</button></div>`:""}</div>
+    ${canWrite?`<div style="display:flex;gap:12px;align-items:center"><button class="linkbtn" data-new="prospectos" style="color:var(--faint)">+ cargar a mano</button><button class="btn" data-new="busquedas">🔎 Buscar</button></div>`:""}</div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">${tile("Encontrados",prospectos.length)}${tile("Con email",conEmail)}${tile("Enviados",env)}${tile("Respondieron",resp)}${(function(){
     const pr = env>0 ? Math.round(resp/env*100) : null;
     const col = pr==null?"var(--fg)":(pr>=5?"var(--ok)":(pr>=3?"var(--warn)":"var(--bad)"));
@@ -1109,9 +1114,17 @@ function renderProspeccion(){
       <div style="font-size:26px;margin-top:4px;color:${col}">${pr==null?"—":pr+"%"}</div>
       <div class="bs" style="margin-top:2px">bueno: 5-10%</div></div>`; })()}</div>
   ${(formOpen==="prospectos")? prospForm(d) : ""}
-  ${(formOpen==="prospimport")? prospImportForm() : ""}
+  ${(formOpen==="busquedas")? busquedaForm() : ""}
+  ${busquedas.length?`<div class="bcard" style="margin-bottom:18px">
+    <div class="bhead" style="margin-bottom:10px"><span class="bt">Búsquedas pedidas</span></div>
+    ${busquedas.map(b=>`<div class="brow"><span>🔎 ${esc(b.rubro)}${b.zona?" — "+esc(b.zona):""}${b.cantidad?` · ${b.cantidad}`:""}</span>
+      <span style="display:flex;gap:10px;align-items:center">
+        <b style="color:${b.status==="lista"?"var(--ok)":"var(--warn)"};font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase">${esc(b.status)}</b>
+        <button class="btn-trash" data-del="busquedas:${b.id}" title="Cancelar la búsqueda">${ICON_TRASH}</button></span></div>`).join("")}
+    <div class="bs" style="margin-top:10px">El buscador las toma en orden y carga los negocios solo. Mientras lo construimos, quedan en cola.</div>
+  </div>`:""}
   ${prospectos.length? tablas :
-    `<div class="empty"><b>Todavía no hay búsquedas de clientes.</b><br>Acá van los negocios del nicho que salimos a buscar (venues, restaurantes, gimnasios, lo que sea). Cargá uno a mano o importá una lista — cuando uno responde, pasa a Leads y lo sigue el Agente 1.</div>`}`;
+    `<div class="empty"><b>Todavía no hay búsquedas de clientes.</b><br>Acá van los negocios del nicho que salimos a buscar (venues, restaurantes, gimnasios, lo que sea). Tocá 🔎 Buscar y pedile un nicho al buscador, o cargá uno a mano — cuando un negocio responde, pasa a Leads y lo sigue el Agente 1.</div>`}`;
 }
 function prospForm(d){
   return `<div class="panel"><button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button><form id="f-prospectos" class="form">
@@ -1137,6 +1150,25 @@ function prospForm(d){
     <label class="full"><span class="fl">Notas</span><textarea name="notas" placeholder="Qué viste del lugar, por qué encaja…">${esc(d?d.notas:"")}</textarea></label>
     <div class="full" style="display:flex;gap:10px">
       <button class="btn" type="submit">${d?"Guardar cambios":"Agregar negocio"}</button>
+      <button class="btn ghost" type="button" data-cancel="1">Cancelar</button>
+    </div></form></div>`;
+}
+function busquedaForm(){
+  return `<div class="panel">
+    <button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button>
+    <form id="f-busquedas" class="form">
+    <div class="full" style="font-family:var(--disp);font-weight:800;color:#fff;font-size:15px">🔎 Pedir una búsqueda</div>
+    <div class="full bs">La estructura (fuentes, filtro, prioridad) ya está armada — acá solo definís el nicho. Cuanto más específico, mejor sale la lista.</div>
+    <label><span class="fl">Rubro</span><input name="rubro" required placeholder="gimnasios / lounges / dealers de autos"></label>
+    <label><span class="fl">Zona</span><input name="zona" placeholder="Miami · Brickell · 10 millas de North Miami"></label>
+    <label><span class="fl">Tipo de empresa</span><select name="target">
+      <option value="ambas">Ambas</option>
+      <option value="nuevas con capital">Nuevas con capital (por abrir)</option>
+      <option value="medias-altas">Medias-altas (establecidas)</option></select></label>
+    <label><span class="fl">Cantidad</span><select name="cantidad"><option>10</option><option selected>25</option><option>50</option></select></label>
+    <label class="full"><span class="fl">Especificá el nicho — todo lo que sirva</span><textarea name="detalles" placeholder="ej: que tengan web vieja o no tengan · con local a la calle · evitar cadenas grandes · que vendan al público…"></textarea></label>
+    <div class="full" style="display:flex;gap:10px">
+      <button class="btn" type="submit">Pedir búsqueda</button>
       <button class="btn ghost" type="button" data-cancel="1">Cancelar</button>
     </div></form></div>`;
 }
@@ -1494,7 +1526,7 @@ function transModalHtml(){
 
 function confirmHtml(){
   if(!confirmDel) return "";
-  const labels={proposals:"esta propuesta",invoices:"esta factura",clients:"este cliente",leads:"esta consulta",prospectos:"este negocio"};
+  const labels={proposals:"esta propuesta",invoices:"esta factura",clients:"este cliente",leads:"esta consulta",prospectos:"este negocio",busquedas:"esta búsqueda"};
   return `<div class="cpop-bg" data-delno="1"><div class="cpop">
     <div class="cpop-t">¿Borrar ${labels[confirmDel.col]||"esto"}?</div>
     <div class="cpop-s">No se puede deshacer.</div>
