@@ -198,6 +198,7 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .done .dn{flex:1;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .step .chk{pointer-events:auto;flex:0 0 auto;width:22px;height:22px;border-radius:99px;border:1.5px solid var(--hair);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:transparent;font-size:11px;transition:.15s}
 .step .chk:hover{border-color:var(--accent);color:#fff;background:var(--accent)}
+.step .chk.on{background:var(--accent);border-color:var(--accent);color:#fff;pointer-events:none}
 .step .st-lang{flex:0 0 auto;font-family:var(--mono);font-size:9px;letter-spacing:.1em;border-radius:999px;padding:2px 8px}
 .step .st-lang.es{color:#67c998;border:1px solid rgba(103,201,152,.45)}
 .step .st-lang.en{color:var(--info);border:1px solid rgba(106,165,232,.45)}
@@ -631,13 +632,19 @@ function renderResumen(){
   // Hecho hoy (para el contador y los tildes tachados)
   const hechas=touches.filter(x=>new Date(x.createdAt)>=hoy0 && (x.tipo==="mail"||x.tipo==="llamada"||/^✓/.test(String(x.texto||""))));
 
-  // Para hoy: paso a paso con círculo para ir concretando (como la referencia)
-  const pasos = items.slice(0,6).map(({l,a},ix)=>`
-    <div class="step" data-openlead="${l.id}" role="button" tabindex="0">
-      <span class="chk" data-stepdone="${l.id}" title="Marcar como hecho">✓</span>
+  // La lista del día es ESTABLE: pendientes + hechas de hoy, en orden fijo por llegada.
+  // Tildar no mueve nada — el ítem queda en su lugar con el check lleno.
+  const doneLeads=[]; const vistosChk=new Set();
+  for(const x of hechas){ if(!x.leadId||vistosChk.has(x.leadId)) continue; vistosChk.add(x.leadId);
+    const l=leads.find(z=>z.id===x.leadId); if(l && !items.some(it=>it.l.id===l.id)) doneLeads.push(l); }
+  const dia=[...items.map(({l,a})=>({l,a,done:false})), ...doneLeads.map(l=>({l,a:null,done:true}))]
+    .sort((x,y)=> new Date(x.l.createdAt)-new Date(y.l.createdAt));
+  const pasos = dia.slice(0,6).map((e,ix)=>`
+    <div class="step" data-openlead="${e.l.id}" role="button" tabindex="0">
+      ${e.done?`<span class="chk on">✓</span>`:`<span class="chk" data-stepdone="${e.l.id}" title="Marcar como hecho">✓</span>`}
       <span class="n">${ix+1}</span>
-      <span class="st-a ${a.hot?'hot':''}">${a.tipo==='llamada'?ICON_PHONE+' ':''}${esc(a.label)}</span>
-      <span class="st-n">${esc(l.name||l.email||'—')}</span>
+      <span class="st-a ${(!e.done&&e.a&&e.a.hot)?'hot':''}"${e.done?' style="color:var(--faint)"':''}>${(!e.done&&e.a&&e.a.tipo==='llamada')?ICON_PHONE+' ':''}${esc(e.done?'Hecho':e.a.label)}</span>
+      <span class="st-n"${e.done?' style="color:var(--muted)"':''}>${esc(e.l.name||e.l.email||'—')}</span>
     </div>`).join("");
 
   const mx=Math.max(1,nuevos,enviados+sinr,resp,gan);
@@ -658,10 +665,6 @@ function renderResumen(){
     <text x="34" y="38" text-anchor="middle" fill="var(--fg)" font-size="13" font-weight="700">${goal?pct.toFixed(0)+"%":"—"}</text>
   </svg>`;
 
-  // Hecho hoy: tilde y listo, mismo orden visual que los pendientes (sin tachar)
-  const hechasHtml=hechas.slice(0,5).map(x=>{const l=leads.find(z=>z.id===x.leadId);
-    const que = x.tipo==="mail"?"Mail":x.tipo==="llamada"?"Llamada":"Hecho";
-    return `<div class="done"><span class="dk">✓</span><span class="n" style="flex:0 0 auto;width:14px"></span><span class="da">${que}</span><span class="dn">${esc(l?(l.name||l.email||""):"")}</span></div>`;}).join("");
   // Efectividad del día: hechas sobre el total del día
   const totDia = hechas.length + items.length;
   const eff = totDia ? Math.round(hechas.length/totDia*100) : 0;
@@ -688,8 +691,7 @@ function renderResumen(){
   <div class="bento">
     <div class="bcard hl sp5">
       <div class="bhead"><span class="bt">Para hoy</span><span class="bn" style="font-size:15px;font-weight:700">${hechas.length}/${hechas.length+items.length}</span></div>
-      ${items.length?`<div style="margin-top:6px">${pasos}</div>`:""}
-      ${hechas.length?`<div style="margin-top:6px">${hechasHtml}</div>`:""}
+      ${dia.length?`<div style="margin-top:6px">${pasos}</div>`:""}
       ${totDia?`<div style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
           <span class="bt">Efectividad del día</span>
