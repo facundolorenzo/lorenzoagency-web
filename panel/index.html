@@ -1250,7 +1250,7 @@ function leadRowHtml(l){
   const short = msg.length>44 ? esc(msg.slice(0,44))+"…" : (esc(msg)||"(ver)");
   return `<tr>
     <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${esc(String(l.createdAt||"").slice(0,10))}</td>
-    <td>${esc(l.name||"—")}<div style="margin-top:6px">${langChip(l)}</div></td>
+    <td>${esc(l.name||"—")}<div style="margin-top:10px">${langChip(l)}</div></td>
     <td>${interestBar(l.respuestas)}</td>
     <td style="font-size:12px;line-height:1.5">${l.email?`<div style="word-break:break-all">${esc(l.email)}</div>`:""}${l.phone?`<div style="margin-top:7px"><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">${ICON_PHONE} ${esc(l.phone)}</a></div>`:""}</td>
     <td>${l.service?`<span class="lrubro">${esc(l.service)}</span>`:"—"}</td>
