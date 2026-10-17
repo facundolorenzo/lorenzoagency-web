@@ -688,8 +688,7 @@ function renderResumen(){
   <div class="bento">
     <div class="bcard hl sp5">
       <div class="bhead"><span class="bt">Para hoy</span><span class="bn" style="font-size:15px;font-weight:700">${hechas.length}/${hechas.length+items.length}</span></div>
-      <div class="bs">Paso a paso — resolvés y desaparece.</div>
-      <div style="margin-top:6px">${items.length? pasos : `<div class="fempty">Nada pendiente ✦</div>`}</div>
+      ${items.length?`<div style="margin-top:6px">${pasos}</div>`:""}
       ${items.length?`<button class="linkbtn" style="margin-top:12px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
       ${hechas.length?`<div class="bt" style="margin-top:16px;margin-bottom:4px">Hecho hoy</div>${hechasHtml}`:""}
       ${totDia?`<div style="margin-top:14px">
