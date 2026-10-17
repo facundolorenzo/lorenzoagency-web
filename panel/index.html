@@ -333,6 +333,7 @@ let isAdmin = false, canWrite = false, goal = 0, sessionEmail = "";
 let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
+let openProspId = null;
 let leadFilter = "todos";
 let leadCollapsed = {};
 let touches = [];
@@ -616,7 +617,7 @@ function renderApp(){
     ${tabsHtml()}
     <div id="app"></div>
     <footer><span>LORENZO AGENCY · MIAMI, FL</span><span>TALK@LORENZOAGENCY.TECH</span></footer>
-  </div>` + leadModalHtml() + confirmHtml() + callModalHtml() + closeModalHtml() + transModalHtml();
+  </div>` + leadModalHtml() + prospModalHtml() + confirmHtml() + callModalHtml() + closeModalHtml() + transModalHtml();
   renderBody();
   const _lr=document.getElementById("lreply"); if(_lr) autoGrow(_lr);
   document.getElementById("logout").onclick = async()=>{ await sb.auth.signOut(); };
@@ -714,15 +715,12 @@ function renderResumen(){
   const nLeadsVis=Math.min(6,dia.length);
   const capPasos=capItems.map((e,ix)=>{ const p=e.p;
     const tel=p.phoneDirecto||p.phone, em=p.emailDirecto||p.email;
-    return `<div class="step" data-gotab="prospeccion" role="button" tabindex="0">
+    const yaEnviado=p.status==="enviado";
+    return `<div class="step" data-openprosp="${p.id}" role="button" tabindex="0">
       ${e.done?`<span class="chk on undo" data-capundo="${p.id}" title="Sacar el tilde">✓</span>`:`<span class="chk" data-capdone="${p.id}" title="Marcar como completada">✓</span>`}
       <span class="n">${nLeadsVis+ix+1}</span>
-      <span class="st-a ${(!e.done&&p.prioridad==="A")?'hot':''}"${e.done?' style="color:var(--faint)"':''}>${e.done?'Completada':(tel?ICON_PHONE+' Llamar':'Escribir')}</span>
-      <span class="st-n"${e.done?' style="color:var(--muted)"':''}>${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}</span>
-      <span class="act">
-        ${tel?`<a class="abtn" href="tel:${esc(String(tel).replace(/[^+\d]/g,""))}" title="Llamar — ${esc(tel)}">${ICON_PHONE}</a>`:""}
-        ${em?`<a class="abtn" href="mailto:${esc(em)}" title="Escribir — ${esc(em)}">✉</a>`:""}
-      </span>
+      <span class="st-a ${(!e.done&&p.prioridad==="A")?'hot':''}"${e.done?' style="color:var(--faint)"':''}>${e.done?'Completada':(tel?'Llamar (1º)':'Escribir (1º)')}</span>
+      <span class="st-n"${e.done?' style="color:var(--muted)"':''}>${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}${tel?` <span style="font-family:var(--mono);font-size:10.5px;color:var(--faint)">· ${esc(tel)}</span>`:""}</span>
     </div>`;}).join("");
 
   const mx=Math.max(1,nuevos,enviados+sinr,resp,gan);
@@ -1436,6 +1434,38 @@ function leadModalHtml(){
 }
 
 /* visor de transcripción (dentro del panel; desde acá se baja a PDF o .txt) */
+/* ---------- subpantalla rápida de un negocio de captación ---------- */
+function prospModalHtml(){
+  if(!openProspId) return "";
+  const p=prospectos.find(x=>x.id===openProspId); if(!p) return "";
+  const tel=p.phoneDirecto||p.phone, em=p.emailDirecto||p.email;
+  const url=p.web?(String(p.web).startsWith("http")?p.web:"https://"+p.web):"";
+  const kv=(k,v)=>v?`<div style="display:flex;gap:10px;margin-top:8px;font-size:13px"><span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;min-width:84px;padding-top:2px">${k}</span><span style="min-width:0;overflow-wrap:anywhere">${v}</span></div>`:"";
+  return `<div class="cpop-bg" data-closeprosp="1"><div class="cpop" style="max-width:380px" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+      <div style="font-family:var(--disp);font-size:16px;font-weight:800;color:#fff">${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}</div>
+      <button class="btn ghost sm" data-closeprosp="1" style="flex:none">✕</button>
+    </div>
+    <div class="bs" style="margin-top:2px">${esc([p.nicho,p.ciudad].filter(Boolean).join(" · "))}</div>
+    ${p.prioridadMotivo?`<div class="goalmsg" style="margin-top:10px">${esc(p.prioridadMotivo)}</div>`:""}
+    <div style="margin-top:6px">
+      ${kv("Contacto", p.contacto?esc(p.contacto):"")}
+      ${kv("⭐ Directo", [p.emailDirecto?`<span style="font-family:var(--mono);font-size:12px;color:var(--accent)">${esc(p.emailDirecto)}</span>`:"",p.phoneDirecto?`<span style="font-family:var(--mono);font-size:12px;color:var(--accent)">${esc(p.phoneDirecto)}</span>`:""].filter(Boolean).join(" · "))}
+      ${kv("Email", p.email?`<span style="font-family:var(--mono);font-size:12px">${esc(p.email)}</span>`:"")}
+      ${kv("Teléfono", p.phone?`<span style="font-family:var(--mono);font-size:12px">${esc(p.phone)}</span>`:"")}
+      ${kv("Web", url?`<a class="linkbtn" href="${esc(url)}" target="_blank" rel="noopener">${esc(p.web)} ↗</a>`:"")}
+      ${kv("Instagram", p.instagram?esc(p.instagram):"")}
+      ${kv("Fuente", p.fuente?esc(p.fuente):"")}
+      ${p.notas&&p.notas!=="DEMO"?kv("Notas",esc(p.notas)):""}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+      ${tel?`<a class="btn sm" style="text-decoration:none;background:var(--ok)" href="tel:${esc(String(tel).replace(/[^+\d]/g,""))}">${ICON_PHONE} Llamar</a>`:""}
+      ${em?`<a class="btn sm ghost" style="text-decoration:none" href="mailto:${esc(em)}">✉ Escribir</a>`:""}
+      <button class="btn sm ghost" data-gotab="prospeccion">Ver en Captación</button>
+    </div>
+  </div></div>`;
+}
+
 function transModalHtml(){
   if(!verLlamadaId) return "";
   const x=touches.find(k=>k.id===verLlamadaId); if(!x) return "";
@@ -1638,6 +1668,8 @@ document.addEventListener("click", async e=>{
     note("✓ Completada — "+(l.name||l.email||""));
     await loadAll(); return;
   }
+  if(t.dataset.openprosp){ openProspId=t.dataset.openprosp; renderApp(); return; }
+  if(t.dataset.closeprosp){ openProspId=null; renderApp(); return; }
   if(t.dataset.capdone){
     const {error}=await sb.from("prospectos").update({hoy_hecho:new Date().toISOString().slice(0,10),updated_at:new Date().toISOString()}).eq("id",t.dataset.capdone);
     if(error){ note("No se pudo tildar: "+error.message); return; }
@@ -1660,7 +1692,7 @@ document.addEventListener("click", async e=>{
     note("Tilde sacado — sigue pendiente.");
     await loadAll(); return;
   }
-  if(t.dataset.gotab){ tab=t.dataset.gotab; formOpen=null; editing=null; renderApp(); return; }
+  if(t.dataset.gotab){ tab=t.dataset.gotab; formOpen=null; editing=null; openProspId=null; renderApp(); return; }
   if(t.dataset.invpdf){
     const i=invoices.find(k=>k.id===t.dataset.invpdf); if(!i) return;
     const c=clients.find(z=>z.id===i.clientId)||{};
