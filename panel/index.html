@@ -634,7 +634,6 @@ function renderResumen(){
       <span class="n">${ix+1}</span>
       <span class="st-a ${a.hot?'hot':''}">${a.tipo==='llamada'?ICON_PHONE+' ':''}${esc(a.label)}</span>
       <span class="st-n">${esc(l.name||l.email||'—')}</span>
-      <span class="st-lang ${langOf(l)}">${langOf(l).toUpperCase()}</span>
       <span class="chk" data-stepdone="${l.id}" title="Marcar como hecho">✓</span>
     </div>`).join("");
 
