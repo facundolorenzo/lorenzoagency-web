@@ -177,6 +177,8 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cpill:hover{border-color:var(--muted)}
 .cpill.dir{color:var(--accent);border-color:rgba(221,125,71,.35);background:rgba(221,125,71,.07)}
+tr.rowhl td{background:rgba(221,125,71,.07);transition:background .4s}
+tr.rowhl td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 .bcard.hl{background:linear-gradient(180deg,rgba(221,125,71,.13),rgba(221,125,71,.04));border-color:rgba(221,125,71,.3)}
 .bhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:14px}
 .iconbtn{width:26px;height:26px;border-radius:8px;border:1px solid var(--hair);background:transparent;color:var(--faint);
@@ -335,7 +337,7 @@ let isAdmin = false, canWrite = false, goal = 0, sessionEmail = "";
 let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
-let openProspId = null;
+let openProspId = null, hlProspId = null;
 let leadFilter = "todos";
 let leadCollapsed = {};
 let touches = [];
@@ -625,7 +627,7 @@ function renderApp(){
   document.getElementById("logout").onclick = async()=>{ await sb.auth.signOut(); };
   document.getElementById("tabs").addEventListener("click",e=>{
     const b=e.target.closest("button[data-t]"); if(!b) return;
-    tab=b.dataset.t; formOpen=null; editing=null; confirmDel=null; renderApp();
+    tab=b.dataset.t; formOpen=null; editing=null; confirmDel=null; hlProspId=null; renderApp();
   });
 }
 
@@ -1071,7 +1073,7 @@ function renderProspeccion(){
   const row = p=>{
     const url = p.web ? (String(p.web).startsWith("http")?p.web:"https://"+p.web) : "";
     const sub=[p.ciudad, p.prioridadMotivo].filter(Boolean).join(" · ");
-    return `<tr>
+    return `<tr id="pr-${p.id}"${hlProspId===p.id?' class="rowhl"':''}>
       <td>${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="Prioridad ${esc(p.prioridad)}${p.prioridadMotivo?" — "+esc(p.prioridadMotivo):""}">${esc(p.prioridad)}</span>`:""}<b>${esc(p.empresa||"—")}</b>${sub?`<div class="bs">${esc(sub.slice(0,90))}</div>`:""}</td>
       <td style="font-size:12.5px">${p.contacto?esc(p.contacto):(p.emailDirecto||p.phoneDirecto||p.email||p.phone?"":`<span style="color:var(--faint)">sin contacto</span>`)}
         ${(function(){ const pl=[];
@@ -1463,7 +1465,7 @@ function prospModalHtml(){
     <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
       ${tel?`<a class="btn sm" style="text-decoration:none;background:var(--ok)" href="tel:${esc(String(tel).replace(/[^+\d]/g,""))}">${ICON_PHONE} Llamar</a>`:""}
       ${em?`<a class="btn sm ghost" style="text-decoration:none" href="mailto:${esc(em)}">✉ Email</a>`:""}
-      <button class="btn sm ghost" data-gotab="prospeccion">Ver en Captación</button>
+      <button class="btn sm ghost" data-vercap="${p.id}">Ver en Captación</button>
     </div>
   </div></div>`;
 }
@@ -1670,6 +1672,11 @@ document.addEventListener("click", async e=>{
     note("✓ Completada — "+(l.name||l.email||""));
     await loadAll(); return;
   }
+  if(t.dataset.vercap){
+    hlProspId=t.dataset.vercap; openProspId=null; tab="prospeccion"; formOpen=null; editing=null; renderApp();
+    setTimeout(()=>{ const el=document.getElementById("pr-"+hlProspId); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); },80);
+    return;
+  }
   if(t.dataset.openprosp){ openProspId=t.dataset.openprosp; renderApp(); return; }
   if(t.dataset.closeprosp){ openProspId=null; renderApp(); return; }
   if(t.dataset.capdone){
@@ -1694,7 +1701,7 @@ document.addEventListener("click", async e=>{
     note("Tilde sacado — sigue pendiente.");
     await loadAll(); return;
   }
-  if(t.dataset.gotab){ tab=t.dataset.gotab; formOpen=null; editing=null; openProspId=null; renderApp(); return; }
+  if(t.dataset.gotab){ tab=t.dataset.gotab; formOpen=null; editing=null; openProspId=null; hlProspId=null; renderApp(); return; }
   if(t.dataset.invpdf){
     const i=invoices.find(k=>k.id===t.dataset.invpdf); if(!i) return;
     const c=clients.find(z=>z.id===i.clientId)||{};
