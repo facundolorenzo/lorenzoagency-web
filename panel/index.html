@@ -158,8 +158,13 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .kpi.hl{border-color:rgba(221,125,71,.45);background:rgba(221,125,71,.1);color:var(--fg)}
 .bento{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
 .bcard{background:var(--card);border:1px solid var(--hair2);border-radius:16px;padding:20px;grid-column:span 4;min-width:0}
-.bcard.sp3{grid-column:span 3}.bcard.sp4{grid-column:span 4}.bcard.sp5{grid-column:span 5}.bcard.sp6{grid-column:span 6}
+.bcard.sp3{grid-column:span 3}.bcard.sp4{grid-column:span 4}.bcard.sp5{grid-column:span 5}.bcard.sp6{grid-column:span 6}.bcard.sp12{grid-column:span 12}
 @media(max-width:980px){.bcard,.bcard.sp3,.bcard.sp4,.bcard.sp5,.bcard.sp6{grid-column:span 12}}
+.prchip{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:6px;
+  font-size:10.5px;font-weight:800;font-family:var(--disp);margin-right:8px;flex:none;vertical-align:middle}
+.prchip.A{background:rgba(221,125,71,.16);color:var(--accent);border:1px solid rgba(221,125,71,.35)}
+.prchip.B{background:rgba(229,180,84,.10);color:var(--warn);border:1px solid rgba(229,180,84,.28)}
+.prchip.C{background:rgba(255,255,255,.04);color:var(--faint);border:1px solid var(--hair2)}
 .bcard.hl{background:linear-gradient(180deg,rgba(221,125,71,.13),rgba(221,125,71,.04));border-color:rgba(221,125,71,.3)}
 .bhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:14px}
 .iconbtn{width:26px;height:26px;border-radius:8px;border:1px solid var(--hair);background:transparent;color:var(--faint);
@@ -472,7 +477,8 @@ const TO = {
   clients:   d=>({name:d.name,company:d.company||null,contact:d.contact||null,email:d.email||null,phone:d.phone||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
   prospectos:d=>({empresa:d.empresa,contacto:d.contacto||null,email:d.email||null,email_directo:d.emailDirecto||null,phone:d.phone||null,web:d.web||null,
                   instagram:d.instagram||null,nicho:d.nicho||null,ciudad:d.ciudad||null,fuente:d.fuente||null,
-                  notas:d.notas||null,status:d.status||"encontrado",updated_at:new Date().toISOString()}),
+                  notas:d.notas||null,status:d.status||"encontrado",prioridad:d.prioridad||null,
+                  prioridad_motivo:d.prioridadMotivo||null,busqueda:d.busqueda||null,updated_at:new Date().toISOString()}),
 };
 
 /* ---------- carga de datos ---------- */
@@ -789,6 +795,13 @@ function renderResumen(){
           </div>`; }).join("");
       })()}
     </div>
+    <div class="bcard sp12" style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <span class="bt">Captación de clientes</span>
+        <span class="bs">${prospectos.length} prospecto(s) · ${prospectos.filter(p=>p.email||p.emailDirecto).length} con email · ${prospectos.filter(p=>p.prioridad==="A"&&!["enviado","respondio","descartado"].includes(p.status)&&!p.leadId).length} prioridad A sin contactar</span>
+      </div>
+      <button class="linkbtn" data-gotab="prospeccion">Abrir →</button>
+    </div>
   </div>
   <div class="bar" style="margin-top:28px"><h2><span class="tick"></span>Últimas propuestas</h2></div>
   ${proposals.length? proposalTable(proposals.slice(0,5), false) :
@@ -1011,10 +1024,19 @@ function renderProspeccion(){
   const tile=(lbl,val)=>`<div style="flex:1;min-width:120px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px">
     <div style="font-family:var(--disp);font-size:14.5px;font-weight:800;color:#fff">${lbl}</div>
     <div style="font-size:26px;margin-top:4px">${val}</div></div>`;
-  const rows = prospectos.map(p=>{
+  const ordP={A:0,B:1,C:2};
+  const ordenados=[...prospectos].sort((a,b)=>{
+    const pa=(a.prioridad in ordP)?ordP[a.prioridad]:3, pb=(b.prioridad in ordP)?ordP[b.prioridad]:3;
+    if(pa!==pb) return pa-pb;
+    return new Date(b.createdAt)-new Date(a.createdAt);
+  });
+  const grupos={};
+  for(const p of ordenados){ const k=p.busqueda||""; (grupos[k]=grupos[k]||[]).push(p); }
+  const row = p=>{
     const url = p.web ? (String(p.web).startsWith("http")?p.web:"https://"+p.web) : "";
+    const sub=[p.ciudad, p.prioridadMotivo].filter(Boolean).join(" · ");
     return `<tr>
-      <td><b>${esc(p.empresa||"—")}</b>${p.ciudad?`<div class="bs">${esc(p.ciudad)}</div>`:""}</td>
+      <td>${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="Prioridad ${esc(p.prioridad)}${p.prioridadMotivo?" — "+esc(p.prioridadMotivo):""}">${esc(p.prioridad)}</span>`:""}<b>${esc(p.empresa||"—")}</b>${sub?`<div class="bs">${esc(sub.slice(0,90))}</div>`:""}</td>
       <td style="font-size:12px">${p.contacto?esc(p.contacto)+"<br>":""}${p.emailDirecto?`<span style="font-family:var(--mono);font-size:11px;color:var(--accent)">⭐ ${esc(p.emailDirecto)}</span><br>`:""}${p.email?`<span style="font-family:var(--mono);font-size:11px;color:${p.emailDirecto?"var(--faint)":"var(--fg)"}">${esc(p.email)}</span>`:(p.emailDirecto?"":`<span style="color:var(--faint)">sin email</span>`)}</td>
       <td style="font-size:12px">${esc(p.nicho||"—")}</td>
       <td style="font-size:12px;color:var(--muted)">${esc(p.fuente||"—")}</td>
@@ -1022,7 +1044,11 @@ function renderProspeccion(){
       <td class="r" style="white-space:nowrap">${url?`<a class="linkbtn" href="${esc(url)}" target="_blank" rel="noopener">↗ web</a> `:""}${p.leadId?`<button class="linkbtn" data-openlead="${p.leadId}">En Leads →</button>`:`<button class="btn sm ghost" data-prosplead="${p.id}" title="Crea el lead y lo sigue el Agente 1">→ Lead</button>`}
         <button class="btn sm ghost" data-edit="prospectos:${p.id}">Editar</button>
         <button class="btn sm ghost btn-del" data-del="prospectos:${p.id}" title="Borrar">${ICON_TRASH}</button></td>
-    </tr>`;}).join("");
+    </tr>`;};
+  const tablas = Object.entries(grupos).map(([k,arr])=>`
+    ${k?`<div class="sect">${esc(k)} <span style="font-weight:600;color:var(--faint);font-size:12.5px">· ${arr.length}</span></div>`:""}
+    <div class="tablewrap"><table>
+      <tr><th>Empresa</th><th>Contacto</th><th>Nicho</th><th>Fuente</th><th>Estado</th><th class="r"></th></tr>${arr.map(row).join("")}</table></div>`).join("");
   $app().innerHTML = `
   <div class="bar"><h2><span class="tick"></span>Captación de clientes — salir a buscarlos</h2>
     ${canWrite?`<div style="display:flex;gap:12px;align-items:center"><button class="linkbtn" data-new="prospectos" style="color:var(--faint)">+ cargar a mano</button><button class="btn" data-new="prospimport">📋 Importar lista</button></div>`:""}</div>
@@ -1035,8 +1061,7 @@ function renderProspeccion(){
       <div class="bs" style="margin-top:2px">bueno: 5-10%</div></div>`; })()}</div>
   ${(formOpen==="prospectos")? prospForm(d) : ""}
   ${(formOpen==="prospimport")? prospImportForm() : ""}
-  ${prospectos.length? `<div class="tablewrap"><table>
-    <tr><th>Empresa</th><th>Contacto</th><th>Nicho</th><th>Fuente</th><th>Estado</th><th class="r"></th></tr>${rows}</table></div>` :
+  ${prospectos.length? tablas :
     `<div class="empty"><b>Todavía no hay prospectos.</b><br>Acá van los negocios del nicho que salimos a buscar (venues, restaurantes, lounges). Cargá uno a mano o importá una lista — cuando uno responde, pasa a Leads y lo sigue el Agente 1.</div>`}`;
 }
 function prospForm(d){
@@ -1052,6 +1077,13 @@ function prospForm(d){
     <label><span class="fl">Ciudad</span><input name="ciudad" value="${esc(d?d.ciudad:"")}" placeholder="Miami"></label>
     <label><span class="fl">Fuente</span><input name="fuente" value="${esc(d?d.fuente:"")}" placeholder="Google / Instagram / Sunbiz"></label>
     <label><span class="fl">Estado</span><select name="status">${PR_STATES.map(st=>`<option value="${st}" ${d&&d.status===st?"selected":""}>${esc(PR_LABELS[st])}</option>`).join("")}</select></label>
+    <label><span class="fl">Prioridad</span><select name="prioridad">
+      <option value="">—</option>
+      <option value="A" ${d&&d.prioridad==="A"?"selected":""}>A — máxima (plata en movimiento)</option>
+      <option value="B" ${d&&d.prioridad==="B"?"selected":""}>B — buena chance</option>
+      <option value="C" ${d&&d.prioridad==="C"?"selected":""}>C — tibio</option></select></label>
+    <label><span class="fl">Motivo de la prioridad</span><input name="prioridadMotivo" value="${esc(d?d.prioridadMotivo:"")}" placeholder="ej: sacó el BTR hace 3 semanas"></label>
+    <label><span class="fl">Búsqueda (nicho buscado)</span><input name="busqueda" value="${esc(d?d.busqueda:"")}" placeholder="ej: Lounges Fort Lauderdale — oct 2026"></label>
     <label class="full"><span class="fl">Notas</span><textarea name="notas" placeholder="Qué viste del lugar, por qué encaja…">${esc(d?d.notas:"")}</textarea></label>
     <div class="full" style="display:flex;gap:10px">
       <button class="btn" type="submit">${d?"Guardar cambios":"Agregar prospecto"}</button>
@@ -1062,6 +1094,7 @@ function prospImportForm(){
   return `<div class="panel">
     <div style="font-family:var(--disp);font-weight:800;color:#fff;margin-bottom:6px">Importar lista</div>
     <div class="bs" style="margin-bottom:10px">Una línea por negocio, separando con <b>|</b> :&nbsp; empresa | email | web | ciudad | nicho</div>
+    <input id="prospbusq" placeholder="Título de la búsqueda (ej: Lounges Fort Lauderdale — oct 2026)" style="width:100%;margin-bottom:8px">
     <textarea id="prospimp" style="width:100%;min-height:140px;font-family:var(--mono);font-size:12px" placeholder="Timber Lounge | info@timber.com | timberftl.com | Fort Lauderdale | lounge"></textarea>
     <div style="display:flex;gap:10px;margin-top:10px">
       <button class="btn" data-prospimport="1">Importar</button>
@@ -1753,8 +1786,9 @@ document.addEventListener("click", async e=>{
     const ta=document.getElementById("prospimp"); if(!ta) return;
     const lines=ta.value.split("\n").map(x=>x.trim()).filter(Boolean);
     if(!lines.length){ note("Pegá al menos una línea."); return; }
+    const bq=document.getElementById("prospbusq"); const busq=bq&&bq.value.trim()?bq.value.trim():null;
     const rows=lines.map(ln=>{ const c=ln.split("|").map(x=>x.trim());
-      return {empresa:c[0]||null,email:c[1]||null,web:c[2]||null,ciudad:c[3]||null,nicho:c[4]||null,
+      return {empresa:c[0]||null,email:c[1]||null,web:c[2]||null,ciudad:c[3]||null,nicho:c[4]||null,busqueda:busq,
         fuente:"import",status:(c[1]?"contactable":"encontrado"),created_at:new Date().toISOString()}; })
       .filter(r=>r.empresa);
     if(!rows.length){ note("No encontré ninguna empresa en las líneas."); return; }
