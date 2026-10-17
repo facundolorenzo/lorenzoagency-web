@@ -191,9 +191,11 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .dbar span{display:block;width:9px;border-radius:99px;background:var(--accent)}
 .dbar span.z{background:var(--hair2)}
 .dbar i{font-style:normal;font-family:var(--mono);font-size:8.5px;color:var(--faint);text-transform:uppercase}
-.done{display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--faint);padding:5px 2px}
-.done .dk{flex:0 0 auto;width:18px;height:18px;border-radius:99px;background:var(--accent);color:#fff;font-size:10px;display:inline-flex;align-items:center;justify-content:center}
-.done s{text-decoration-color:var(--faint)}
+.done{display:flex;gap:12px;align-items:center;font-size:13.5px;padding:8px 2px;border-bottom:1px solid var(--hair2)}
+.done:last-of-type{border-bottom:none}
+.done .dk{flex:0 0 auto;width:22px;height:22px;border-radius:99px;background:var(--accent);color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center}
+.done .da{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);flex:0 0 auto;min-width:86px}
+.done .dn{flex:1;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .step .chk{pointer-events:auto;margin-left:auto;flex:0 0 auto;width:22px;height:22px;border-radius:99px;border:1.5px solid var(--hair);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:transparent;font-size:11px;transition:.15s}
 .step .chk:hover{border-color:var(--accent);color:#fff;background:var(--accent)}
 .step .st-lang{flex:0 0 auto;font-family:var(--mono);font-size:9px;letter-spacing:.1em;border-radius:999px;padding:2px 8px}
@@ -298,6 +300,7 @@ let callLeadId = null, closeLeadId = null;
 let callLang = null; // idioma del micrófono en la llamada (es/en); por defecto, el del lead
 let verLlamadaId = null; // visor de transcripción abierto
 let fichaTab = "email";  // pestaña activa dentro de la ficha del lead
+let invFilter = "todas"; // filtro de la tabla de facturas
 let tradActivo = false, tradOriginal = "", tradShown = "";
 let transcribiendo = false, transcripcion = "", recog = null;
 
@@ -655,10 +658,13 @@ function renderResumen(){
     <text x="34" y="38" text-anchor="middle" fill="var(--fg)" font-size="13" font-weight="700">${goal?pct.toFixed(0)+"%":"—"}</text>
   </svg>`;
 
-  // Hecho hoy (tildes tachados, como la referencia)
-  const hechasHtml=hechas.slice(0,4).map(x=>{const l=leads.find(z=>z.id===x.leadId);
-    const que = x.tipo==="mail"?"Mail enviado":x.tipo==="llamada"?"Llamada":"Hecho";
-    return `<div class="done"><span class="dk">✓</span><s>${que} — ${esc(l?(l.name||l.email||""):"")}</s></div>`;}).join("");
+  // Hecho hoy: tilde y listo, mismo orden visual que los pendientes (sin tachar)
+  const hechasHtml=hechas.slice(0,5).map(x=>{const l=leads.find(z=>z.id===x.leadId);
+    const que = x.tipo==="mail"?"Mail":x.tipo==="llamada"?"Llamada":"Hecho";
+    return `<div class="done"><span class="dk">✓</span><span class="da">${que}</span><span class="dn">${esc(l?(l.name||l.email||""):"")}</span></div>`;}).join("");
+  // Efectividad del día: hechas sobre el total del día
+  const totDia = hechas.length + items.length;
+  const eff = totDia ? Math.round(hechas.length/totDia*100) : 0;
 
   const pfill=p=>`style="background:linear-gradient(90deg,rgba(221,125,71,.20) ${p}%,transparent ${p}%)"`;
 
@@ -685,7 +691,15 @@ function renderResumen(){
       <div class="bs">Paso a paso — resolvés y desaparece.</div>
       <div style="margin-top:6px">${items.length? pasos : `<div class="fempty">Nada pendiente ✦</div>`}</div>
       ${items.length?`<button class="linkbtn" style="margin-top:12px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
-      ${hechas.length?`<div class="bt" style="margin-top:16px">Hecho hoy · ${hechas.length}</div>${hechasHtml}`:""}
+      ${hechas.length?`<div class="bt" style="margin-top:16px;margin-bottom:4px">Hecho hoy</div>${hechasHtml}`:""}
+      ${totDia?`<div style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span class="bt">Efectividad del día</span>
+          <span class="bn" style="font-size:14px;font-weight:700">${eff}%</span>
+        </div>
+        <div class="pbar" style="margin-top:8px"><span style="width:${eff}%;background:${eff>=70?'var(--ok)':'var(--accent)'}"></span></div>
+        <div class="bs" style="margin-top:6px">${hechas.length} hecha(s) · ${items.length} pendiente(s)</div>
+      </div>`:""}
     </div>
     <div class="bcard sp4">
       <div class="bhead"><span class="bt">Objetivo del mes</span></div>
@@ -869,25 +883,56 @@ function proposalForm(d){
 
 function renderInvoices(){
   const d = editing && editing.col==="invoices" ? invoices.find(p=>p.id===editing.id) : null;
+  const sum=a=>a.reduce((s,x)=>s+(Number(x.amount)||0),0);
+  const hoyD=new Date(); hoyD.setHours(0,0,0,0);
+  const esVencida=i=>i.status!=="pagada" && i.due && new Date(i.due+"T23:59:59")<hoyD;
+  const pagadas=invoices.filter(i=>i.status==="pagada");
+  const impagas=invoices.filter(i=>i.status!=="pagada");
+  const vencidas=impagas.filter(esVencida);
+  // Aging: impagas vencidas por antigüedad (días desde el vencimiento)
+  const buckets=[["0–30",0],["31–60",0],["61–90",0],["90+",0]];
+  for(const i of vencidas){
+    const dias=Math.floor((hoyD-new Date(i.due))/(24*3600*1000));
+    const k=dias<=30?0:dias<=60?1:dias<=90?2:3;
+    buckets[k][1]+=Number(i.amount)||0;
+  }
+  const mxb=Math.max(1,...buckets.map(b=>b[1]));
+  const agingHtml = vencidas.length?`<div class="bcard" style="grid-column:span 12;margin-bottom:0">
+    <div class="bhead"><span class="bt">Vencidas por antigüedad</span><span class="bn" style="color:var(--bad)">${vencidas.length} vencida(s) · ${money(sum(vencidas))}</span></div>
+    ${buckets.map(([lbl,v])=>`<div class="mrow"><span class="mk">${lbl} días</span><span class="mbar"><span style="width:${Math.round(v/mxb*100)}%;background:var(--bad)"></span></span><span class="mv" style="min-width:70px">${money(v)}</span></div>`).join("")}
+  </div>`:"";
+  const F={todas:"Todas",pendientes:"Pendientes",vencidas:"Vencidas",pagadas:"Pagadas"};
+  const lista=invoices.filter(i=>
+    invFilter==="pagadas"?i.status==="pagada":
+    invFilter==="vencidas"?esVencida(i):
+    invFilter==="pendientes"?i.status!=="pagada":true);
   $app().innerHTML = `
   <div class="bar"><h2><span class="tick"></span>Facturas</h2>
     ${canWrite?`<button class="btn" data-new="invoices">+ Nueva factura</button>`:''}</div>
   ${(formOpen==="invoices")? invoiceForm(d) : ""}
-  ${invoices.length? `<div class="tablewrap"><table>
+  <div class="grid" style="margin-bottom:16px">
+    <div class="stat"><span class="l">Cobrado</span><div class="v">${money(sum(pagadas))}</div><div class="s">${pagadas.length} pagada(s)</div></div>
+    <div class="stat"><span class="l">Pendiente</span><div class="v">${money(sum(impagas))}</div><div class="s">${impagas.length} por cobrar</div></div>
+    <div class="stat"><span class="l" style="color:${vencidas.length?'var(--bad)':'var(--muted)'}">Vencido</span><div class="v" style="${vencidas.length?'color:var(--bad)':''}">${money(sum(vencidas))}</div><div class="s">${vencidas.length?vencidas.length+" vencida(s) — a perseguir":"nada vencido ✦"}</div></div>
+  </div>
+  ${agingHtml?agingHtml+'<div style="height:16px"></div>':""}
+  <div class="fchips">${Object.entries(F).map(([k,v])=>`<button class="fchip ${invFilter===k?'on':''} ${k==='vencidas'&&vencidas.length?'hot':''}" data-invfilter="${k}">${v}<b>${k==="todas"?invoices.length:k==="pagadas"?pagadas.length:k==="vencidas"?vencidas.length:impagas.length}</b></button>`).join("")}</div>
+  ${lista.length? `<div class="tablewrap"><table>
     <tr><th>Nº</th><th>Cliente</th><th class="r">Monto</th><th>Estado</th><th>Emitida</th><th>Vence</th><th class="r"></th></tr>
-    ${invoices.map(i=>{
+    ${lista.map(i=>{
       const del = confirmDel && confirmDel.col==="invoices" && confirmDel.id===i.id;
+      const venc = esVencida(i);
       return `<tr class="${del?'confirmrow':''}">
       <td style="font-family:var(--mono);font-size:12px">${esc(i.number)}</td>
       <td>${esc(clientName(i.clientId)||"—")}</td>
       <td class="money">${money(i.amount)}</td>
       <td>${statusPill("invoices",i)}</td>
       <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">${esc(i.issued||"")}</td>
-      <td style="font-family:var(--mono);font-size:11.5px;color:var(--muted)">${esc(i.due||"")}</td>
-      <td><div class="rowactions"><button class="btn sm ghost" data-invpdf="${i.id}" title="Ver la factura con el diseño de LORENZO y guardarla en PDF">🧾 Factura</button><button class="btn sm ghost" data-edit="invoices:${i.id}">Editar</button><button class="btn sm ghost btn-del" data-del="invoices:${i.id}" title="Borrar">${ICON_TRASH}</button></div></td>
+      <td style="font-family:var(--mono);font-size:11.5px;color:${venc?'var(--bad)':'var(--muted)'}">${esc(i.due||"")}${venc?" ⚠":""}</td>
+      <td><div class="rowactions">${i.status!=="pagada"?`<button class="btn sm ghost" data-invpaid="${i.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">✓ Pagada</button>`:""}<button class="btn sm ghost" data-invpdf="${i.id}" title="Ver la factura con el diseño de LORENZO y guardarla en PDF">🧾 Factura</button><button class="btn sm ghost" data-edit="invoices:${i.id}">Editar</button><button class="btn sm ghost btn-del" data-del="invoices:${i.id}" title="Borrar">${ICON_TRASH}</button></div></td>
     </tr>`}).join("")}
     </table></div>` :
-    '<div class="empty"><b>Sin facturas todavía.</b></div>'}`;
+    `<div class="empty"><b>${invoices.length?"Nada en este filtro.":"Sin facturas todavía."}</b></div>`}`;
 }
 function invoiceForm(d){
   const num = d? d.number : nextNumber(invoices,"INV");
@@ -1383,6 +1428,13 @@ document.addEventListener("click", async e=>{
       }
       note("🧠 Análisis guardado en la línea de tiempo del lead.");
     }
+    await loadAll(); return;
+  }
+  if(t.dataset.invfilter){ invFilter=t.dataset.invfilter; renderApp(); return; }
+  if(t.dataset.invpaid){
+    const {error}=await sb.from("invoices").update({status:"pagada"}).eq("id",t.dataset.invpaid);
+    if(error){ note("No se pudo marcar: "+error.message); return; }
+    note("✓ Factura marcada como pagada.");
     await loadAll(); return;
   }
   if(t.dataset.stepdone){
