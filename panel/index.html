@@ -159,6 +159,8 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .bento{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
 .bcard{background:var(--card);border:1px solid var(--hair2);border-radius:16px;padding:20px;grid-column:span 4;min-width:0}
 .bcard.sp3{grid-column:span 3}.bcard.sp4{grid-column:span 4}.bcard.sp5{grid-column:span 5}.bcard.sp6{grid-column:span 6}.bcard.sp12{grid-column:span 12}
+.bcard.rsp2{grid-row:span 2}
+@media(max-width:980px){.bcard.rsp2{grid-row:auto}}
 @media(max-width:980px){.bcard,.bcard.sp3,.bcard.sp4,.bcard.sp5,.bcard.sp6{grid-column:span 12}}
 .prchip{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:6px;
   font-size:10.5px;font-weight:800;font-family:var(--disp);margin-right:8px;flex:none;vertical-align:middle}
@@ -733,7 +735,7 @@ function renderResumen(){
     <span class="kpi"><b>${es}</b> ES · <b>${en}</b> EN</span>
   </div>
   <div class="bento">
-    <div class="bcard hl sp5">
+    <div class="bcard hl sp6 rsp2">
       <div class="bhead"><span class="bt">Para hoy</span><span class="bn" style="font-size:15px;font-weight:700">${nH}/${dia.length}</span></div>
       ${dia.length?`<div style="margin-top:6px">${pasos}</div>`:""}
       ${dia.length?`<div style="margin-top:14px">
@@ -764,12 +766,12 @@ function renderResumen(){
       })()}
       ${items.length?`<button class="linkbtn" style="margin-top:14px" data-gotab="hoy">${items.length>6?`Ver los ${items.length} →`:"Abrir la lista completa →"}</button>`:""}
     </div>
-    <div class="bcard sp4">
+    <div class="bcard sp3">
       <div class="bhead"><span class="bt">Objetivo del mes</span><button class="iconbtn" data-goaledit="1" title="Cambiar el objetivo">✎</button></div>
       <div style="display:flex;gap:18px;align-items:center">
         ${anillo}
         <div style="min-width:0">
-          <div class="big" style="margin:0">${money(cobradoMes)}</div>
+          <div class="big" style="margin:0;font-size:clamp(20px,1.8vw,28px)">${money(cobradoMes)}</div>
           <div class="bs" style="margin-top:4px">cobrado este mes${goal?" · de "+money(goal):""}</div>
         </div>
       </div>
@@ -784,21 +786,21 @@ function renderResumen(){
       ${fun("Nuevos",nuevos)}${fun("Contactados",enviados+sinr)}${fun("Respondieron",resp)}${fun("Ganados",gan)}
       <div class="bs" style="margin-top:12px">${perd} perdido(s) · cierre ${tasaCierre}%</div>
     </div>
-    <div class="bcard sp4">
+    <div class="bcard sp3">
       <div class="bhead"><span class="bt">Pipeline</span></div>
       <div class="big">${money(sum(sent))}</div>
       <div class="bs">${sent.length} propuesta(s) enviadas esperando</div>
       <div class="brow"><span>Aprobado</span><b>${money(sum(appr))}</b></div>
       <div class="brow"><span>Cobrado total</span><b>${money(sum(paid))}</b></div>
     </div>
-    <div class="bcard sp4">
+    <div class="bcard sp3">
       <div class="bhead"><span class="bt">Llamadas</span><span class="bn">${cHoy} hoy</span></div>
       <div class="big">${c7}</div>
       <div class="bs">últimos 7 días · ${calls.length} en total</div>
       <div class="dbars">${barras}</div>
       <button class="linkbtn" style="margin-top:12px" data-gotab="llamadas">Ver el registro →</button>
     </div>
-    <div class="bcard sp4">
+    <div class="bcard sp6">
       <div class="bhead"><span class="bt">Deals calientes</span></div>
       ${(function(){
         const hot=leads.filter(l=>l.cierrePct!=null && !["ganado","perdido"].includes(l.status))
@@ -813,12 +815,11 @@ function renderResumen(){
           </div>`; }).join("");
       })()}
     </div>
-    <div class="bcard sp12" style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
-      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
-        <span class="bt">Captación de clientes</span>
-        <span class="bs">${prospectos.length} negocio(s) encontrados · ${prospectos.filter(p=>p.email||p.emailDirecto).length} con email · ${prospectos.filter(p=>p.prioridad==="A"&&!["enviado","respondio","descartado"].includes(p.status)&&!p.leadId).length} prioridad A sin contactar</span>
-      </div>
-      <button class="linkbtn" data-gotab="prospeccion">Abrir →</button>
+    <div class="bcard sp6">
+      <div class="bhead"><span class="bt">Captación de clientes</span><button class="linkbtn" style="margin:0" data-gotab="prospeccion">Abrir →</button></div>
+      <div class="brow"><span>Negocios encontrados</span><b>${prospectos.length}</b></div>
+      <div class="brow"><span>Con email</span><b>${prospectos.filter(p=>p.email||p.emailDirecto).length}</b></div>
+      <div class="brow"><span>Prioridad A sin contactar</span><b style="color:var(--accent)">${prospectos.filter(p=>p.prioridad==="A"&&!["enviado","respondio","descartado"].includes(p.status)&&!p.leadId).length}</b></div>
     </div>
   </div>
   <div class="bar" style="margin-top:28px"><h2><span class="tick"></span>Últimas propuestas</h2></div>
