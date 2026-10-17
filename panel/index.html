@@ -798,7 +798,7 @@ function renderResumen(){
     <div class="bcard sp12" style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
       <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
         <span class="bt">Captación de clientes</span>
-        <span class="bs">${prospectos.length} prospecto(s) · ${prospectos.filter(p=>p.email||p.emailDirecto).length} con email · ${prospectos.filter(p=>p.prioridad==="A"&&!["enviado","respondio","descartado"].includes(p.status)&&!p.leadId).length} prioridad A sin contactar</span>
+        <span class="bs">${prospectos.length} negocio(s) encontrados · ${prospectos.filter(p=>p.email||p.emailDirecto).length} con email · ${prospectos.filter(p=>p.prioridad==="A"&&!["enviado","respondio","descartado"].includes(p.status)&&!p.leadId).length} prioridad A sin contactar</span>
       </div>
       <button class="linkbtn" data-gotab="prospeccion">Abrir →</button>
     </div>
@@ -1052,7 +1052,7 @@ function renderProspeccion(){
   $app().innerHTML = `
   <div class="bar"><h2><span class="tick"></span>Captación de clientes — salir a buscarlos</h2>
     ${canWrite?`<div style="display:flex;gap:12px;align-items:center"><button class="linkbtn" data-new="prospectos" style="color:var(--faint)">+ cargar a mano</button><button class="btn" data-new="prospimport">📋 Importar lista</button></div>`:""}</div>
-  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">${tile("Prospectos",prospectos.length)}${tile("Con email",conEmail)}${tile("Enviados",env)}${tile("Respondieron",resp)}${(function(){
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">${tile("Encontrados",prospectos.length)}${tile("Con email",conEmail)}${tile("Enviados",env)}${tile("Respondieron",resp)}${(function(){
     const pr = env>0 ? Math.round(resp/env*100) : null;
     const col = pr==null?"var(--fg)":(pr>=5?"var(--ok)":(pr>=3?"var(--warn)":"var(--bad)"));
     return `<div style="flex:1;min-width:120px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px">
@@ -1062,7 +1062,7 @@ function renderProspeccion(){
   ${(formOpen==="prospectos")? prospForm(d) : ""}
   ${(formOpen==="prospimport")? prospImportForm() : ""}
   ${prospectos.length? tablas :
-    `<div class="empty"><b>Todavía no hay prospectos.</b><br>Acá van los negocios del nicho que salimos a buscar (venues, restaurantes, lounges). Cargá uno a mano o importá una lista — cuando uno responde, pasa a Leads y lo sigue el Agente 1.</div>`}`;
+    `<div class="empty"><b>Todavía no hay búsquedas de clientes.</b><br>Acá van los negocios del nicho que salimos a buscar (venues, restaurantes, gimnasios, lo que sea). Cargá uno a mano o importá una lista — cuando uno responde, pasa a Leads y lo sigue el Agente 1.</div>`}`;
 }
 function prospForm(d){
   return `<div class="panel"><form id="f-prospectos" class="form">
@@ -1087,7 +1087,7 @@ function prospForm(d){
     <label><span class="fl">Búsqueda (nicho buscado)</span><input name="busqueda" value="${esc(d?d.busqueda:"")}" placeholder="ej: Lounges Fort Lauderdale — oct 2026"></label>
     <label class="full"><span class="fl">Notas</span><textarea name="notas" placeholder="Qué viste del lugar, por qué encaja…">${esc(d?d.notas:"")}</textarea></label>
     <div class="full" style="display:flex;gap:10px">
-      <button class="btn" type="submit">${d?"Guardar cambios":"Agregar prospecto"}</button>
+      <button class="btn" type="submit">${d?"Guardar cambios":"Agregar negocio"}</button>
       <button class="btn ghost" type="button" data-cancel="1">Cancelar</button>
     </div></form></div>`;
 }
@@ -1413,7 +1413,7 @@ function transModalHtml(){
 
 function confirmHtml(){
   if(!confirmDel) return "";
-  const labels={proposals:"esta propuesta",invoices:"esta factura",clients:"este cliente",leads:"esta consulta",prospectos:"este prospecto"};
+  const labels={proposals:"esta propuesta",invoices:"esta factura",clients:"este cliente",leads:"esta consulta",prospectos:"este negocio"};
   return `<div class="cpop-bg" data-delno="1"><div class="cpop">
     <div class="cpop-t">¿Borrar ${labels[confirmDel.col]||"esto"}?</div>
     <div class="cpop-s">No se puede deshacer.</div>
@@ -1776,7 +1776,7 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.prosplead){
     const p=prospectos.find(x=>x.id===t.dataset.prosplead); if(!p) return;
-    const msg=["Prospecto ("+(p.fuente||"prospección")+")",p.web?("Web: "+p.web):"",p.instagram?("IG: "+p.instagram):"",p.notas||""].filter(Boolean).join("\n");
+    const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.web?("Web: "+p.web):"",p.instagram?("IG: "+p.instagram):"",p.notas||""].filter(Boolean).join("\n");
     const {data:nl,error}=await sb.from("leads").insert({name:p.contacto||p.empresa,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"prospección",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
     if(error){ note("No se pudo pasar a Leads: "+error.message); return; }
     try{ await sb.from("prospectos").update({lead_id:nl.id,updated_at:new Date().toISOString()}).eq("id",p.id); }catch(err){}
@@ -1795,7 +1795,7 @@ document.addEventListener("click", async e=>{
     if(!rows.length){ note("No encontré ninguna empresa en las líneas."); return; }
     const {error}=await sb.from("prospectos").insert(rows);
     if(error){ note("No se pudo importar: "+error.message); return; }
-    note("✓ "+rows.length+" prospecto(s) importados.");
+    note("✓ "+rows.length+" negocio(s) importados.");
     formOpen=null; await loadAll(); return;
   }
   if(t.dataset.goaledit){
