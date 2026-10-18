@@ -1133,6 +1133,26 @@ function renderProspeccion(){
       <div class="bs" style="margin-top:2px">bueno: 5-10%</div></div>`; })()}</div>
   ${(formOpen==="prospectos")? prospForm(d) : ""}
   ${(formOpen==="busquedas")? busquedaForm() : ""}
+  ${(function(){
+    const CUOTA=10;
+    const h0=new Date(); h0.setHours(0,0,0,0);
+    const mailsHoy=touches.filter(x=>x.tipo==="mail" && new Date(x.createdAt)>=h0).length;
+    const pc=Math.min(100,Math.round(mailsHoy/CUOTA*100));
+    const ordQ={A:0,B:1,C:2};
+    const cand=prospectos.filter(p=>!p.leadId && (p.email||p.emailDirecto) && !["enviado","respondio","descartado"].includes(p.status))
+      .sort((a,b)=>(((a.prioridad in ordQ)?ordQ[a.prioridad]:3)-((b.prioridad in ordQ)?ordQ[b.prioridad]:3)) || (new Date(b.createdAt)-new Date(a.createdAt)))
+      .slice(0, Math.max(0, CUOTA-mailsHoy));
+    if(!cand.length && !mailsHoy) return "";
+    return `<div class="bcard" style="margin-bottom:18px">
+      <div class="bhead" style="margin-bottom:10px"><span class="bt">✉ Tanda del día — ${CUOTA} mails</span>
+        <span style="font-family:var(--mono);font-size:12.5px;font-weight:700;color:${mailsHoy>=CUOTA?"var(--ok)":"var(--fg)"}">${mailsHoy}/${CUOTA}</span></div>
+      <div class="pbar"><span style="width:${pc}%;background:${mailsHoy>=CUOTA?"var(--ok)":"var(--accent)"}"></span></div>
+      ${mailsHoy>=CUOTA
+        ? `<div class="bs" style="margin-top:10px">✓ Cuota de hoy cumplida — mañana sigue la tanda. Mandar de más quema la casilla.</div>`
+        : `<div style="margin-top:10px">${cand.map(p=>`<div class="brow"><span>${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")} <span class="bs">· ${esc((p.emailDirecto||p.email||"").slice(0,40))}</span></span>
+            <button class="btn sm ghost" data-prospmail="${p.id}">✉ Preparar mail</button></div>`).join("")}
+          <div class="bs" style="margin-top:10px">Prioridad A primero. "Preparar mail" lo pasa a Leads y abre la ficha con el borrador del agente listo para enviar.</div></div>`}
+    </div>`; })()}
   ${busquedas.length?`<div class="bcard" style="margin-bottom:18px">
     <div class="bhead" style="margin-bottom:10px"><span class="bt">Búsquedas</span></div>
     ${busquedas.map(b=>{
@@ -2017,6 +2037,15 @@ document.addEventListener("click", async e=>{
     const {error}=await sb.from(col).delete().eq("id",id);
     if(error) note("No se pudo borrar: "+error.message); else { if(col==="leads") openLeadId=null; await loadAll(); }
     return;
+  }
+  if(t.dataset.prospmail){
+    const p=prospectos.find(x=>x.id===t.dataset.prospmail); if(!p) return;
+    const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.notas||""].filter(Boolean).join("\n");
+    const {data:nl,error}=await sb.from("leads").insert({name:p.contacto||p.empresa,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"captación",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
+    if(error){ note("No se pudo preparar: "+error.message); return; }
+    try{ await sb.from("prospectos").update({lead_id:nl.id,updated_at:new Date().toISOString()}).eq("id",p.id); }catch(err){}
+    openLeadId=nl.id; fichaTab="email";
+    await loadAll(); return;
   }
   if(t.dataset.prosplead){
     const p=prospectos.find(x=>x.id===t.dataset.prosplead); if(!p) return;
