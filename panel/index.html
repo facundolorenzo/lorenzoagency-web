@@ -1189,13 +1189,27 @@ async function abrirMapa(){
     <div id="mapa" style="height:52vh;min-height:300px;border-radius:12px;overflow:hidden"></div>
     <div style="display:flex;gap:14px;align-items:center;margin-top:12px;flex-wrap:wrap">
       <input type="range" id="mapradio" min="1" max="200" value="10" style="flex:1;min-width:160px;accent-color:#DD7D47">
-      <b id="mapmillas" style="font-family:var(--mono);font-size:13px;color:#DD7D47;min-width:160px">10 millas alrededor</b>
+      <b id="mapmillas" style="font-family:var(--mono);font-size:13px;color:#DD7D47;white-space:nowrap">10 millas alrededor</b>
+      <span id="maplugar" class="bs" style="min-width:120px"></span>
       <button class="btn sm" id="mapusar" type="button">Usar esta zona</button>
     </div>
     <div class="bs" style="margin-top:8px">Arrastrá el punto para mover el centro · el deslizador agranda o achica el círculo</div>
   </div>`;
   document.body.appendChild(wrap);
   document.getElementById("mapcerrar").addEventListener("click",()=>wrap.remove());
+  let lugarActual="";
+  let _geoT=0;
+  const buscarLugar=async (lat,lng)=>{
+    if(Date.now()-_geoT<1200) return; _geoT=Date.now();
+    try{
+      const r=await fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&lat="+lat+"&lon="+lng,{headers:{"Accept":"application/json"}});
+      const j=await r.json(); const a=j.address||{};
+      const barrio=a.neighbourhood||a.suburb||a.quarter||a.city_district||"";
+      const ciudad=a.city||a.town||a.village||a.county||"";
+      lugarActual=[barrio,ciudad].filter(Boolean).join(", ")||(j.name||"");
+      const el=document.getElementById("maplugar"); if(el) el.textContent=lugarActual?("· "+lugarActual):"";
+    }catch(e){}
+  };
   const start=(lat,lng)=>{
     const map=L.map("mapa").setView([lat,lng],11);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
@@ -1206,12 +1220,13 @@ async function abrirMapa(){
     const upd=()=>{ const mi=Number(document.getElementById("mapradio").value);
       const mm=document.getElementById("mapmillas"); if(mm) mm.textContent=mi+" millas alrededor";
       circ.setLatLng(mk.getLatLng()); circ.setRadius(mi*1609.34); };
-    mk.on("drag",upd); mk.on("dragend",()=>{ map.panTo(mk.getLatLng()); upd(); });
+    mk.on("drag",upd); mk.on("dragend",()=>{ map.panTo(mk.getLatLng()); upd(); const c=mk.getLatLng(); buscarLugar(c.lat,c.lng); });
+    buscarLugar(lat,lng);
     document.getElementById("mapradio").addEventListener("input",upd);
     document.getElementById("mapusar").addEventListener("click",()=>{
       const mi=Number(document.getElementById("mapradio").value), c=mk.getLatLng();
       const f=document.getElementById("f-busquedas");
-      if(f){ f.zona.value=mi+" millas alrededor de ("+c.lat.toFixed(4)+", "+c.lng.toFixed(4)+")";
+      if(f){ f.zona.value=mi+" millas alrededor de "+(lugarActual||("("+c.lat.toFixed(4)+", "+c.lng.toFixed(4)+")"));
         f.lat.value=c.lat.toFixed(6); f.lng.value=c.lng.toFixed(6); f.radio.value=mi; }
       wrap.remove();
     });
