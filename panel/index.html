@@ -346,6 +346,7 @@ let openProspId = null, hlProspId = null;
 let leadFilter = "todos";
 let leadCollapsed = {};
 let touches = [];
+let metaCont = 0;
 let prospectos = [];
 let busquedas = [];
 let callLeadId = null, closeLeadId = null;
@@ -529,6 +530,7 @@ async function loadAll(){
     clients  = (cl.data||[]).map(FROM.clients);
     leads    = (ld.data||[]).map(FROM.leads);
     goal = st.data ? Number(st.data.monthly_goal)||0 : 0;
+    metaCont = st.data ? Number(st.data.meta_contactos)||0 : 0;
     touches = (tc && !tc.error && tc.data) ? tc.data.map(FROM.touches) : [];
     prospectos = (pz && !pz.error && pz.data) ? pz.data.map(FROM.prospectos) : [];
     busquedas = (bq && !bq.error && bq.data) ? bq.data.map(FROM.busquedas) : [];
@@ -806,9 +808,21 @@ function renderResumen(){
         </div>
       </div>
       <div class="goalmsg${metGoal?' ok':''}">${msg}</div>
-      <div id="goaleditor" style="display:${goal?"none":"flex"};gap:8px;margin-top:12px;align-items:center">
-        <input id="goalinput" type="number" min="0" step="100" value="${goal||""}" placeholder="15000" style="width:110px">
-        <button class="btn sm ghost" data-goalsave="1">Guardar</button>
+      ${(function(){ if(!metaCont) return "";
+        const contMes=touches.filter(x=>(x.tipo==="mail"||x.tipo==="llamada") && String(x.createdAt||"").slice(0,7)===mkey).length;
+        const pc=Math.min(100,Math.round(contMes/metaCont*100));
+        return `<div style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span class="bs">Contactos del mes</span>
+            <span style="font-family:var(--mono);font-size:12.5px;font-weight:700;color:${contMes>=metaCont?"var(--ok)":"var(--fg)"}">${contMes}/${metaCont}</span></div>
+          <div class="pbar" style="margin-top:6px"><span style="width:${pc}%;background:${contMes>=metaCont?"var(--ok)":"var(--accent)"}"></span></div>
+        </div>`; })()}
+      <div id="goaleditor" style="display:${goal?"none":"flex"};gap:10px;margin-top:12px;align-items:flex-end;flex-wrap:wrap">
+        <label style="display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--faint)">PLATA ($)
+          <input id="goalinput" type="number" min="0" step="100" value="${goal||""}" placeholder="15000" style="width:100px"></label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--faint)">CONTACTOS
+          <input id="contactosinput" type="number" min="0" step="10" value="${metaCont||""}" placeholder="200" style="width:90px"></label>
+        <button class="btn sm ghost" data-goalsave="1" style="margin-bottom:1px">Guardar</button>
       </div>
     </div>
     <div class="bcard sp3">
@@ -2036,7 +2050,9 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.goalsave){
     const v=Number(document.getElementById("goalinput").value)||0;
-    const {error}=await sb.from("settings").upsert({key:"goal",monthly_goal:v,updated_at:new Date().toISOString()});
+    const ci=document.getElementById("contactosinput");
+    const c=ci?(Number(ci.value)||0):0;
+    const {error}=await sb.from("settings").upsert({key:"goal",monthly_goal:v,meta_contactos:c,updated_at:new Date().toISOString()});
     if(error) note("No se pudo guardar el objetivo: "+error.message); else await loadAll();
     return;
   }
