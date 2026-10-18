@@ -1125,12 +1125,12 @@ function renderProspeccion(){
   <div class="bar"><h2><span class="tick"></span>Captación de clientes — salir a buscarlos</h2>
     ${canWrite?`<div style="display:flex;gap:12px;align-items:center"><button class="linkbtn" data-new="prospectos" style="color:var(--faint)">+ cargar a mano</button><button class="btn" data-new="busquedas">🔎 Buscar</button></div>`:""}</div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">${tile("Encontrados",prospectos.length)}${tile("Con email",conEmail)}${tile("Enviados",env)}${tile("Respondieron",resp)}${(function(){
-    const pr = env>0 ? Math.round(resp/env*100) : null;
+    const pr = env>=5 ? Math.round(resp/env*100) : null;
     const col = pr==null?"var(--fg)":(pr>=5?"var(--ok)":(pr>=3?"var(--warn)":"var(--bad)"));
     return `<div style="flex:1;min-width:120px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px">
       <div style="font-family:var(--disp);font-size:14.5px;font-weight:800;color:#fff">% respuesta</div>
       <div style="font-size:26px;margin-top:4px;color:${col}">${pr==null?"—":pr+"%"}</div>
-      <div class="bs" style="margin-top:2px">bueno: 5-10%</div></div>`; })()}</div>
+      <div class="bs" style="margin-top:2px">${pr==null?"se mide desde 5 enviados":"bueno: 5-10%"}</div></div>`; })()}</div>
   ${(formOpen==="prospectos")? prospForm(d) : ""}
   ${(formOpen==="busquedas")? busquedaForm() : ""}
   ${(function(){
@@ -1555,10 +1555,10 @@ function leadModalHtml(){
     </div>
 
     <div class="ftabc" data-ftabc="email" style="display:${fichaTab==="email"?"block":"none"}">
-      <div class="sect" style="margin-top:0">Lo que escribió</div>
+      <div class="sect" style="margin-top:0">${/^Captado en la búsqueda/.test(String(l.message||""))?"Ficha del negocio":"Lo que escribió"}</div>
       <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
       ${l.ultimaRespuesta?`<div class="lreplied"><div class="lreplied-h">↩ Su última respuesta</div><div class="lreplied-b">${esc(l.ultimaRespuesta)}</div></div>`:""}
-      <div class="sect">Tu respuesta</div>
+      <div class="sect">${/^Captado en la búsqueda/.test(String(l.message||""))?"Primer contacto":"Tu respuesta"}</div>
       <div class="lreplywrap" style="margin-top:0;border-top:none;padding-top:0">
         <div class="lreplyhead"><span>Respuesta sugerida ${cnt} <span style="color:var(--faint);text-transform:none;letter-spacing:0">· el agente aprende de lo que edites</span></span>
           <button class="btn ghost sm" data-replyfull="1" style="padding:3px 10px;font-size:10px;letter-spacing:.08em">⛶ Agrandar</button></div>
@@ -2040,8 +2040,8 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.prospmail){
     const p=prospectos.find(x=>x.id===t.dataset.prospmail); if(!p) return;
-    const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.notas||""].filter(Boolean).join("\n");
-    const {data:nl,error}=await sb.from("leads").insert({name:p.contacto||p.empresa,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"captación",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
+    const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.contacto?("Contacto: "+p.contacto):"",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.notas||""].filter(Boolean).join("\n");
+    const {data:nl,error}=await sb.from("leads").insert({name:p.empresa||p.contacto,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"captación",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
     if(error){ note("No se pudo preparar: "+error.message); return; }
     try{ await sb.from("prospectos").update({lead_id:nl.id,updated_at:new Date().toISOString()}).eq("id",p.id); }catch(err){}
     openLeadId=nl.id; fichaTab="email";
@@ -2049,8 +2049,8 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.prosplead){
     const p=prospectos.find(x=>x.id===t.dataset.prosplead); if(!p) return;
-    const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.web?("Web: "+p.web):"",p.instagram?("IG: "+p.instagram):"",p.notas||""].filter(Boolean).join("\n");
-    const {data:nl,error}=await sb.from("leads").insert({name:p.contacto||p.empresa,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"prospección",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
+    const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.contacto?("Contacto: "+p.contacto):"",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.instagram?("IG: "+p.instagram):"",p.notas||""].filter(Boolean).join("\n");
+    const {data:nl,error}=await sb.from("leads").insert({name:p.empresa||p.contacto,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"prospección",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
     if(error){ note("No se pudo pasar a Leads: "+error.message); return; }
     try{ await sb.from("prospectos").update({lead_id:nl.id,updated_at:new Date().toISOString()}).eq("id",p.id); }catch(err){}
     note("→ Pasó a Leads: "+(p.empresa||p.email||""));
