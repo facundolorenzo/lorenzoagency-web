@@ -496,7 +496,7 @@ const FROM = {
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
-                  busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,
+                  busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,entrada:r.entrada||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
 };
 const TO = {
@@ -1579,6 +1579,9 @@ function prospModalHtml(){
     </div>
     <div class="bs" style="margin-top:2px">${esc([p.nicho,p.ciudad].filter(Boolean).join(" · "))}</div>
     ${p.prioridadMotivo?`<div class="goalmsg" style="margin-top:10px">${esc(p.prioridadMotivo)}</div>`:""}
+    ${p.entrada?`<div style="margin-top:12px;padding:10px 12px;border:1px solid var(--hair2);border-radius:10px;background:rgba(255,255,255,.02)">
+      <div style="font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin-bottom:6px">Qué está pasando — por dónde entrar</div>
+      <div style="font-size:13px;line-height:1.6;white-space:pre-wrap">${esc(p.entrada)}</div></div>`:""}
     <div style="margin-top:6px">
       ${kv("Contacto", p.contacto?esc(p.contacto):"")}
       ${kv("⭐ Directo", [p.emailDirecto?`<span style="font-family:var(--mono);font-size:12px;color:var(--accent)">${esc(p.emailDirecto)}</span>`:"",p.phoneDirecto?`<span style="font-family:var(--mono);font-size:12px;color:var(--accent)">${esc(p.phoneDirecto)}</span>`:""].filter(Boolean).join(" · "))}
