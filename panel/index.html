@@ -1130,7 +1130,7 @@ function renderProspeccion(){
     return `<tr id="pr-${p.id}"${hlProspId===p.id?' class="rowhl"':''}${p.feedback==="no"?' style="opacity:.45" title="Descartado'+(p.feedbackMotivo?": "+esc(p.feedbackMotivo):"")+'"':''}>
       <td><div style="display:flex;align-items:flex-start">
         ${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="Prioridad ${esc(p.prioridad)}${p.prioridadMotivo?" — "+esc(p.prioridadMotivo):""}">${esc(p.prioridad)}</span>`:""}
-        <div style="min-width:0"><b>${esc(p.empresa||"—")}</b>${sub?`<div class="bs" style="margin-top:5px;line-height:1.5;max-width:230px">${esc(sub.slice(0,90))}</div>`:""}</div>
+        <div style="min-width:0"><b data-openprosp="${p.id}" style="cursor:pointer" title="Ver la ficha completa del negocio">${esc(p.empresa||"—")}</b>${sub?`<div class="bs" style="margin-top:5px;line-height:1.5;max-width:230px">${esc(sub.slice(0,90))}</div>`:""}</div>
       </div></td>
       <td style="font-size:12.5px">${p.contacto?esc(p.contacto):(p.emailDirecto||p.phoneDirecto||p.email||p.phone?"":`<span style="color:var(--faint)">sin contacto</span>`)}
         ${(function(){ const pl=[];
