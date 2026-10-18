@@ -1085,7 +1085,10 @@ function renderProspeccion(){
     const url = p.web ? (String(p.web).startsWith("http")?p.web:"https://"+p.web) : "";
     const sub=[p.ciudad, p.prioridadMotivo].filter(Boolean).join(" · ");
     return `<tr id="pr-${p.id}"${hlProspId===p.id?' class="rowhl"':''}>
-      <td>${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="Prioridad ${esc(p.prioridad)}${p.prioridadMotivo?" — "+esc(p.prioridadMotivo):""}">${esc(p.prioridad)}</span>`:""}<b>${esc(p.empresa||"—")}</b>${sub?`<div class="bs" style="margin-top:5px;line-height:1.5">${esc(sub.slice(0,90))}</div>`:""}</td>
+      <td><div style="display:flex;align-items:flex-start">
+        ${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="Prioridad ${esc(p.prioridad)}${p.prioridadMotivo?" — "+esc(p.prioridadMotivo):""}">${esc(p.prioridad)}</span>`:""}
+        <div style="min-width:0"><b>${esc(p.empresa||"—")}</b>${sub?`<div class="bs" style="margin-top:5px;line-height:1.5;max-width:230px">${esc(sub.slice(0,90))}</div>`:""}</div>
+      </div></td>
       <td style="font-size:12.5px">${p.contacto?esc(p.contacto):(p.emailDirecto||p.phoneDirecto||p.email||p.phone?"":`<span style="color:var(--faint)">sin contacto</span>`)}
         ${(function(){ const pl=[];
           if(p.emailDirecto) pl.push(`<a class="cpill dir" href="mailto:${esc(p.emailDirecto)}" title="Contacto directo — ${esc(p.emailDirecto)}">★ ${esc(p.emailDirecto)}</a>`);
