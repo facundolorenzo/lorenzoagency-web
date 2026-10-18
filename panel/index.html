@@ -343,6 +343,31 @@ let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
 let openProspId = null, hlProspId = null, fbAsk = null;
+
+/* Ficha del negocio ordenada: etiquetas en mono, datos aparte, "Entrar por" resaltado */
+function fichaNegocioHtml(msg){
+  const L=`font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:3px`;
+  const fila=(k,v,extra)=>`<div style="margin:0 0 13px"><span style="${L}">${esc(k)}</span><span style="font-size:14.5px;${extra||""}">${esc(v)}</span></div>`;
+  const lineas=String(msg||"").split("\n").map(x=>x.trim()).filter(Boolean);
+  let fuente="", out=[], puntos=[], enPasando=false;
+  const cerrarPuntos=()=>{ if(puntos.length){ out.push(`<div style="margin:0 0 13px"><span style="${L}">Qué está pasando</span>${puntos.map(pt=>`<div style="font-size:14.5px;line-height:1.65;padding-left:2px">• ${esc(pt)}</div>`).join("")}</div>`); puntos=[]; } };
+  for(const ln of lineas){
+    const m=ln.match(/^Captado en la búsqueda\s*\((.*)\)/i);
+    if(m){ fuente=m[1]; continue; }
+    if(/^QUÉ ESTÁ PASANDO/i.test(ln)){ enPasando=true; continue; }
+    if(/^[•\-]/.test(ln)&&enPasando){ puntos.push(ln.replace(/^[•\-]\s*/,"")); continue; }
+    enPasando=false; cerrarPuntos();
+    const kv=ln.match(/^(Contacto|Entrar por|Web|web|IG|Instagram|Notas?)\s*:\s*(.+)$/i);
+    if(kv){
+      const k=kv[1].toLowerCase();
+      if(k==="entrar por") out.push(fila("Entrar por",kv[2],"color:var(--accent);font-weight:700"));
+      else if(k==="web") out.push(k==="web"&&/vieja|decente|sin web/i.test(kv[2])?fila("Estado de la web",kv[2]):fila("Web",kv[2]));
+      else out.push(fila(kv[1][0].toUpperCase()+kv[1].slice(1).toLowerCase(),kv[2]));
+    } else out.push(fila("Dato",ln));
+  }
+  cerrarPuntos();
+  return `<div class="lmsg" style="line-height:1.6">${fuente?`<div style="${L};margin-bottom:14px">Captado en la búsqueda · ${esc(fuente)}</div>`:""}${out.join("")}</div>`;
+}
 let leadFilter = "todos";
 let leadCollapsed = {};
 let touches = [];
@@ -1594,7 +1619,7 @@ function leadModalHtml(){
 
     <div class="ftabc" data-ftabc="email" style="display:${fichaTab==="email"?"block":"none"}">
       <div class="sect" style="margin-top:0">${/^Captado en la búsqueda/.test(String(l.message||""))?"Ficha del negocio":"Lo que escribió"}</div>
-      <div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>
+      ${/^Captado en la búsqueda/.test(String(l.message||""))?fichaNegocioHtml(l.message):`<div class="lmsg">${esc(l.message||"(sin mensaje)")}</div>`}
       ${l.ultimaRespuesta?`<div class="lreplied"><div class="lreplied-h">↩ Su última respuesta</div><div class="lreplied-b">${esc(l.ultimaRespuesta)}</div></div>`:""}
       <div class="sect">${/^Captado en la búsqueda/.test(String(l.message||""))?"Primer contacto":"Tu respuesta"}</div>
       <div class="lreplywrap" style="margin-top:0;border-top:none;padding-top:0">
