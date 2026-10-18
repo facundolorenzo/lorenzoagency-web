@@ -343,6 +343,17 @@ let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
 let openProspId = null, hlProspId = null, fbAsk = null;
+let plantAsunto = "", plantCuerpo = "", tandaEdit = false, tandaPrev = null, tandaEnviando = false;
+
+/* Candidatos de la tanda del día (misma regla que la card) */
+function tandaCandidatos(){
+  const CUOTA=10; const h0=new Date(); h0.setHours(0,0,0,0);
+  const mailsHoy=touches.filter(x=>x.tipo==="mail"&&new Date(x.createdAt)>=h0).length;
+  const ordQ={A:0,B:1,C:2};
+  return prospectos.filter(p=>!p.leadId&&(p.email||p.emailDirecto)&&!["enviado","respondio","descartado"].includes(p.status))
+    .sort((a,b)=>(((a.prioridad in ordQ)?ordQ[a.prioridad]:3)-((b.prioridad in ordQ)?ordQ[b.prioridad]:3))||(new Date(b.createdAt)-new Date(a.createdAt)))
+    .slice(0,Math.max(0,CUOTA-mailsHoy));
+}
 
 /* Ficha del negocio ordenada: etiquetas en mono, datos aparte, "Entrar por" resaltado */
 function fichaNegocioHtml(msg){
@@ -556,6 +567,8 @@ async function loadAll(){
     leads    = (ld.data||[]).map(FROM.leads);
     goal = st.data ? Number(st.data.monthly_goal)||0 : 0;
     metaCont = st.data ? Number(st.data.meta_contactos)||0 : 0;
+    plantAsunto = (st.data && st.data.plantilla_asunto) || "";
+    plantCuerpo = (st.data && st.data.plantilla_cuerpo) || "";
     touches = (tc && !tc.error && tc.data) ? tc.data.map(FROM.touches) : [];
     prospectos = (pz && !pz.error && pz.data) ? pz.data.map(FROM.prospectos) : [];
     busquedas = (bq && !bq.error && bq.data) ? bq.data.map(FROM.busquedas) : [];
@@ -1211,6 +1224,31 @@ function renderProspeccion(){
         : `<div style="margin-top:10px">${cand.map(p=>`<div class="brow"><span>${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")} <span class="bs">· ${esc((p.emailDirecto||p.email||"").slice(0,40))}</span></span>
             <button class="btn sm ghost" data-prospmail="${p.id}">✉ Preparar mail</button></div>`).join("")}
           <div class="bs" style="margin-top:10px">Prioridad A primero. "Preparar mail" lo pasa a Leads y abre la ficha con el borrador del agente listo para enviar.</div></div>`}
+      ${canWrite?`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">
+        <button class="btn sm ghost" data-plantedit="1">📝 ${plantCuerpo?"Editar plantilla":"Escribir plantilla de entrada"}</button>
+        ${plantCuerpo&&cand.length&&mailsHoy<CUOTA&&!tandaEnviando?`<button class="btn sm" data-tandaprev="1">✉ Mandar tanda (${cand.length})</button>`:""}
+        ${tandaEnviando?`<span class="bs">✉ Enviando con goteo… dejá esta pestaña abierta.</span>`:""}</div>`:""}
+      ${tandaEdit?`<div style="margin-top:12px;border:1px solid var(--hair2);border-radius:14px;padding:16px">
+        <div class="bs" style="margin-bottom:10px">La escribís UNA vez. En cada envío se reemplazan solos: <b style="color:var(--accent)">{{nombre}}</b> (la persona, o la empresa si no hay) · <b style="color:var(--accent)">{{empresa}}</b> · <b style="color:var(--accent)">{{entrada}}</b> (qué está pasando en ESE negocio — lo que hace que no parezca masivo)</div>
+        <label><span class="fl">Asunto</span><input id="plantasunto" value="${esc(plantAsunto)}" placeholder="Una idea para {{empresa}}" style="width:100%"></label>
+        <label style="display:block;margin-top:10px"><span class="fl">Mail</span><textarea id="plantcuerpo" rows="9" style="width:100%" placeholder="Hola {{nombre}},
+
+{{entrada}}
+
+...">${esc(plantCuerpo)}</textarea></label>
+        <div style="display:flex;gap:10px;margin-top:12px"><button class="btn sm" data-plantsave="1">Guardar plantilla</button><button class="linkbtn" data-plantcancel="1">Cancelar</button></div>
+      </div>`:""}
+      ${tandaPrev?`<div style="margin-top:12px;border:1px solid var(--accent);border-radius:14px;padding:16px">
+        <div class="bt" style="font-size:14.5px">Revisá los ${tandaPrev.length} mails — retocá el que quieras antes de mandar</div>
+        ${tandaPrev.map((m,i)=>`<div style="margin-top:12px;border:1px solid var(--hair2);border-radius:12px;padding:12px">
+          <div class="bs" style="margin-bottom:8px">${i+1} · <b style="color:#fff">${esc(m.empresa)}</b> → ${esc(m.to)}</div>
+          <input id="tp-s-${i}" value="${esc(m.asunto)}" style="width:100%;margin-bottom:8px">
+          <textarea id="tp-b-${i}" rows="6" style="width:100%">${esc(m.cuerpo)}</textarea></div>`).join("")}
+        <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
+          <button class="btn sm" data-tandasend="1">🚀 Enviar todos</button>
+          <button class="linkbtn" data-tandacancel="1">Cancelar</button>
+          <span class="bs">Salen de a uno, con ~1 min entre cada uno (goteo anti-spam). Dejá la pestaña abierta.</span></div>
+      </div>`:""}
     </div>`; })()}
   ${busquedas.length?`<div class="bcard" style="margin-bottom:18px">
     <div class="bhead" style="margin-bottom:10px"><span class="bt">Búsquedas</span></div>
@@ -1900,6 +1938,48 @@ document.addEventListener("click", async e=>{
     if(error){ note("No se pudo tildar: "+error.message); return; }
     note("✓ Completada — "+(l.name||l.email||""));
     await loadAll(); return;
+  }
+  if(t.dataset.plantedit){ tandaEdit=!tandaEdit; tandaPrev=null; renderApp(); return; }
+  if(t.dataset.plantcancel){ tandaEdit=false; renderApp(); return; }
+  if(t.dataset.plantsave){
+    const a=document.getElementById("plantasunto"), c=document.getElementById("plantcuerpo");
+    plantAsunto=((a&&a.value)||"").trim(); plantCuerpo=((c&&c.value)||"").trim();
+    const {error}=await sb.from("settings").upsert({key:"goal",monthly_goal:goal||null,meta_contactos:metaCont||null,plantilla_asunto:plantAsunto||null,plantilla_cuerpo:plantCuerpo||null,updated_at:new Date().toISOString()});
+    if(error){ note("No pude guardar: "+error.message); return; }
+    tandaEdit=false; note("📝 Plantilla guardada."); renderApp(); return;
+  }
+  if(t.dataset.tandaprev){
+    const cand=tandaCandidatos(); if(!cand.length){ note("No hay candidatos con email hoy."); return; }
+    tandaPrev=cand.map(p=>{
+      const nombre=((p.contacto||"").split(/[—(,]|\s-\s/)[0].trim().split(" ")[0])||p.empresa||"";
+      const fill=x=>String(x||"").replaceAll("{{nombre}}",nombre).replaceAll("{{empresa}}",p.empresa||"").replaceAll("{{entrada}}",String(p.entrada||"").trim());
+      return {pid:p.id,empresa:p.empresa,to:p.emailDirecto||p.email,asunto:fill(plantAsunto)||("Una idea para "+(p.empresa||"tu negocio")),cuerpo:fill(plantCuerpo)};
+    });
+    tandaEdit=false; renderApp(); return;
+  }
+  if(t.dataset.tandacancel){ tandaPrev=null; renderApp(); return; }
+  if(t.dataset.tandasend){
+    if(tandaEnviando||!tandaPrev||!tandaPrev.length) return;
+    const items=tandaPrev.map((m,i)=>{ const si=document.getElementById("tp-s-"+i), bi=document.getElementById("tp-b-"+i);
+      return {...m, asunto:((si?si.value:m.asunto)||"").trim(), cuerpo:((bi?bi.value:m.cuerpo)||"").trim()}; });
+    tandaEnviando=true; tandaPrev=null; renderApp();
+    let okc=0;
+    for(let i=0;i<items.length;i++){
+      const m=items[i]; const p=prospectos.find(x=>x.id===m.pid);
+      if(!p||!m.to||!m.cuerpo) continue;
+      note("✉ Enviando "+(i+1)+"/"+items.length+" — "+m.empresa+"…");
+      try{
+        const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.contacto?("Contacto: "+p.contacto):"",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.notas||""].filter(Boolean).join("\n");
+        const {data:nl,error}=await sb.from("leads").insert({name:p.empresa||p.contacto,email:m.to,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"captación",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
+        if(error) throw error;
+        await sb.from("prospectos").update({lead_id:nl.id,status:"enviado",updated_at:new Date().toISOString()}).eq("id",p.id);
+        await callFn("enviar",{lead_id:nl.id,to:m.to,subject:m.asunto,body:m.cuerpo,suggestion:""});
+        try{ await sb.from("touches").insert({lead_id:nl.id,tipo:"mail",texto:m.cuerpo}); }catch(e){}
+        okc++;
+      }catch(err){ note("No salió el de "+m.empresa+": "+err.message); }
+      if(i<items.length-1) await new Promise(r=>setTimeout(r,45000+Math.floor(Math.random()*45000)));
+    }
+    tandaEnviando=false; note("🚀 Tanda enviada: "+okc+"/"+items.length+" mails."); await loadAll(); return;
   }
   if(t.dataset.fbok){
     const p=prospectos.find(x=>x.id===t.dataset.fbok); if(!p) return;
