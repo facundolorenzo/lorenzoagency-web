@@ -342,7 +342,7 @@ let isAdmin = false, canWrite = false, goal = 0, sessionEmail = "";
 let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
-let openProspId = null, hlProspId = null;
+let openProspId = null, hlProspId = null, fbAsk = null;
 let leadFilter = "todos";
 let leadCollapsed = {};
 let touches = [];
@@ -497,7 +497,7 @@ const FROM = {
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
-                  busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,entrada:r.entrada||null,
+                  busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
 };
 const TO = {
@@ -1127,7 +1127,7 @@ function renderProspeccion(){
   const row = p=>{
     const url = p.web ? (String(p.web).startsWith("http")?p.web:"https://"+p.web) : "";
     const sub=[p.ciudad, p.prioridadMotivo].filter(Boolean).join(" · ");
-    return `<tr id="pr-${p.id}"${hlProspId===p.id?' class="rowhl"':''}>
+    return `<tr id="pr-${p.id}"${hlProspId===p.id?' class="rowhl"':''}${p.feedback==="no"?' style="opacity:.45" title="Descartado'+(p.feedbackMotivo?": "+esc(p.feedbackMotivo):"")+'"':''}>
       <td><div style="display:flex;align-items:flex-start">
         ${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="Prioridad ${esc(p.prioridad)}${p.prioridadMotivo?" — "+esc(p.prioridadMotivo):""}">${esc(p.prioridad)}</span>`:""}
         <div style="min-width:0"><b>${esc(p.empresa||"—")}</b>${sub?`<div class="bs" style="margin-top:5px;line-height:1.5;max-width:230px">${esc(sub.slice(0,90))}</div>`:""}</div>
@@ -1142,10 +1142,14 @@ function renderProspeccion(){
       <td style="font-size:12px">${esc(p.nicho||"—")}</td>
       <td style="font-size:12px;color:var(--muted)">${esc(p.fuente||"—")}</td>
       <td><select class="lsel" data-prstatus="${p.id}">${PR_STATES.map(st=>`<option value="${st}" ${p.status===st?"selected":""}>${esc(PR_LABELS[st])}</option>`).join("")}</select></td>
-      <td class="r" style="white-space:nowrap">${url?`<a class="linkbtn" href="${esc(url)}" target="_blank" rel="noopener">↗ web</a> `:""}${p.leadId?`<button class="linkbtn" data-openlead="${p.leadId}">En Leads →</button>`:`<button class="btn sm ghost" data-prosplead="${p.id}" title="Crea el lead y lo sigue el Agente 1">→ Lead</button>`}
+      <td class="r" style="white-space:nowrap"><button class="btn sm ghost" data-fbok="${p.id}" title="Sirve — el buscador aprende y trae más de estos" style="${p.feedback==="ok"?"color:var(--ok);border-color:var(--ok);":""}">✓</button>
+        <button class="btn sm ghost" data-fbno="${p.id}" title="No sirve — el buscador deja de traer de estos" style="${p.feedback==="no"?"color:var(--bad);border-color:var(--bad);":""}margin-right:8px">✗</button>
+        ${url?`<a class="linkbtn" href="${esc(url)}" target="_blank" rel="noopener">↗ web</a> `:""}${p.leadId?`<button class="linkbtn" data-openlead="${p.leadId}">En Leads →</button>`:`<button class="btn sm ghost" data-prosplead="${p.id}" title="Crea el lead y lo sigue el Agente 1">→ Lead</button>`}
         <button class="btn sm ghost" data-edit="prospectos:${p.id}">Editar</button>
         <button class="btn sm ghost btn-del" data-del="prospectos:${p.id}" title="Borrar">${ICON_TRASH}</button></td>
-    </tr>`;};
+    </tr>${fbAsk===p.id?`<tr><td colspan="6" style="padding:4px 18px 16px"><span class="bs" style="margin-right:10px">¿Por qué no sirve? (el buscador aprende de esto)</span>
+      ${["Cadena grande","Muy chico","No es el target","Mala zona","Otro"].map(m=>`<button class="btn sm ghost" data-fbmotivo="${p.id}|${esc(m)}" style="margin-right:6px">${esc(m)}</button>`).join("")}
+      <button class="linkbtn" data-fbcancel="1" style="margin-left:6px;color:var(--faint)">Cancelar</button></td></tr>`:""}`;};
   const tablas = Object.entries(grupos).map(([k,arr])=>`
     ${k?`<div class="sect">${esc(k)} <span style="font-weight:600;color:var(--faint);font-size:12.5px">· ${arr.length}</span></div>`:""}
     <div class="tablewrap" style="padding:10px 20px 14px"><table class="captable">
@@ -1870,6 +1874,23 @@ document.addEventListener("click", async e=>{
     note("✓ Completada — "+(l.name||l.email||""));
     await loadAll(); return;
   }
+  if(t.dataset.fbok){
+    const p=prospectos.find(x=>x.id===t.dataset.fbok); if(!p) return;
+    const val=p.feedback==="ok"?null:"ok";
+    await sb.from("prospectos").update({feedback:val,feedback_motivo:null,updated_at:new Date().toISOString()}).eq("id",p.id);
+    if(val) note("✓ Anotado — más de estos."); fbAsk=null; await loadAll(); return;
+  }
+  if(t.dataset.fbno){
+    const p=prospectos.find(x=>x.id===t.dataset.fbno); if(!p) return;
+    if(p.feedback==="no"){ await sb.from("prospectos").update({feedback:null,feedback_motivo:null,updated_at:new Date().toISOString()}).eq("id",p.id); await loadAll(); return; }
+    fbAsk=(fbAsk===p.id)?null:p.id; renderApp(); return;
+  }
+  if(t.dataset.fbmotivo){
+    const [fid,fm]=t.dataset.fbmotivo.split("|");
+    await sb.from("prospectos").update({feedback:"no",feedback_motivo:fm,status:"descartado",updated_at:new Date().toISOString()}).eq("id",fid);
+    fbAsk=null; note("✗ Anotado — el buscador deja de traer de estos."); await loadAll(); return;
+  }
+  if(t.dataset.fbcancel){ fbAsk=null; renderApp(); return; }
   if(t.dataset.renovar){
     const b=busquedas.find(x=>x.id===t.dataset.renovar); if(!b) return;
     const {error}=await sb.from("busquedas").insert({rubro:b.rubro,zona:b.zona||null,target:b.target||null,detalles:b.detalles||null,lat:b.lat||null,lng:b.lng||null,radio_millas:b.radioMillas||null,status:"pendiente",created_at:new Date().toISOString()});
