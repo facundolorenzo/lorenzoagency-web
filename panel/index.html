@@ -494,7 +494,7 @@ const FROM = {
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
                   cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
-  busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),createdAt:r.created_at}),
+  busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,entrada:r.entrada||null,
@@ -1189,8 +1189,10 @@ function renderProspeccion(){
       const enc=prospectos.filter(enRubro).length;
       const gan=prospectos.filter(p=>{ if(!enRubro(p)||!p.leadId) return false; const l=leads.find(x=>x.id===p.leadId); return l&&l.status==="ganado"; }).length;
       const renovable=(Date.now()-new Date(b.createdAt).getTime())>120*24*3600*1000;
+      const minutos=ms=>Math.max(1,Math.round(ms/60000));
+      const timing=!b.inicio?"":(b.status==="buscando"?"⏱ "+minutos(Date.now()-new Date(b.inicio).getTime())+" min":(b.status==="lista"&&b.updatedAt?"tardó "+minutos(new Date(b.updatedAt).getTime()-new Date(b.inicio).getTime())+" min":""));
       return `<div class="brow"><span>🔎 <b>${esc(b.rubro)}</b>${b.zona?" — "+esc(b.zona):""}
-        <span class="bs" style="margin-left:6px">${esc(String(b.createdAt||"").slice(0,10))} · ${enc} encontrados · ${gan} ganados</span></span>
+        <span class="bs" style="margin-left:6px">${esc(String(b.createdAt||"").slice(0,10))} · ${enc} encontrados · ${gan} ganados${timing?" · "+timing:""}</span></span>
       <span style="display:flex;gap:10px;align-items:center">
         ${renovable?`<button class="btn sm ghost" data-renovar="${b.id}" title="Pasaron 4+ meses — repetir para captar empresas nuevas">↻ Renovar</button>`:""}
         ${b.status==="buscando"?`<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:84px;height:6px;border-radius:4px;background:var(--hair2);overflow:hidden">
