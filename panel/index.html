@@ -536,20 +536,34 @@ async function loadAll(){
     busquedas = (bq && !bq.error && bq.data) ? bq.data.map(FROM.busquedas) : [];
   }
   renderApp();
+  pollFirma = firmaDatos();
   pollBusquedas();
 }
 
-/* Mientras una búsqueda está pendiente o corriendo, el panel se refresca solo cada 20s
-   (los negocios y el % van apareciendo sin tocar nada). No refresca si estás escribiendo. */
-let pollTimer=null;
+/* Mientras una búsqueda está pendiente o corriendo, el panel mira la base cada 20s en silencio.
+   Solo redibuja si HAY negocios o avance nuevo, nunca mientras estás escribiendo o con algo
+   abierto (ficha, subpantalla, formulario, mapa), y mantiene el scroll donde estaba. */
+let pollTimer=null, pollFirma="";
+const firmaDatos=()=>JSON.stringify([busquedas.map(b=>b.id+"|"+b.status+"|"+(b.progreso==null?"":b.progreso)),prospectos.map(x=>x.id+"|"+x.status)]);
 function pollBusquedas(){
   if(pollTimer){ clearTimeout(pollTimer); pollTimer=null; }
   if(!busquedas.some(b=>b.status==="buscando"||b.status==="pendiente")) return;
   pollTimer=setTimeout(async()=>{
-    const el=document.activeElement;
-    const escribiendo=el&&["INPUT","TEXTAREA","SELECT"].includes(el.tagName);
-    if(escribiendo||formOpen||document.getElementById("mapamodal")){ pollBusquedas(); return; }
-    await loadAll();
+    try{
+      const [bq,pz]=await Promise.all([
+        sb.from("busquedas").select("*").order("created_at",{ascending:false}),
+        sb.from("prospectos").select("*").order("created_at",{ascending:false}),
+      ]);
+      if(bq&&!bq.error&&bq.data) busquedas=bq.data.map(FROM.busquedas);
+      if(pz&&!pz.error&&pz.data) prospectos=pz.data.map(FROM.prospectos);
+      const firma=firmaDatos();
+      if(firma!==pollFirma){
+        const el=document.activeElement;
+        const ocupado=(el&&["INPUT","TEXTAREA","SELECT"].includes(el.tagName))||formOpen||editing||openLeadId||openProspId||confirmDel||document.getElementById("mapamodal");
+        if(!ocupado){ const y=window.scrollY; renderApp(); window.scrollTo(0,y); pollFirma=firma; }
+      }
+    }catch(e){}
+    pollBusquedas();
   },20000);
 }
 
