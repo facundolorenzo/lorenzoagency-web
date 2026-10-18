@@ -494,7 +494,7 @@ const FROM = {
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
                   cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
-  busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",createdAt:r.created_at}),
+  busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,entrada:r.entrada||null,
@@ -536,6 +536,21 @@ async function loadAll(){
     busquedas = (bq && !bq.error && bq.data) ? bq.data.map(FROM.busquedas) : [];
   }
   renderApp();
+  pollBusquedas();
+}
+
+/* Mientras una búsqueda está pendiente o corriendo, el panel se refresca solo cada 20s
+   (los negocios y el % van apareciendo sin tocar nada). No refresca si estás escribiendo. */
+let pollTimer=null;
+function pollBusquedas(){
+  if(pollTimer){ clearTimeout(pollTimer); pollTimer=null; }
+  if(!busquedas.some(b=>b.status==="buscando"||b.status==="pendiente")) return;
+  pollTimer=setTimeout(async()=>{
+    const el=document.activeElement;
+    const escribiendo=el&&["INPUT","TEXTAREA","SELECT"].includes(el.tagName);
+    if(escribiendo||formOpen||document.getElementById("mapamodal")){ pollBusquedas(); return; }
+    await loadAll();
+  },20000);
 }
 
 /* ---------- llamar a las Edge Functions (agente) ---------- */
@@ -1164,7 +1179,10 @@ function renderProspeccion(){
         <span class="bs" style="margin-left:6px">${esc(String(b.createdAt||"").slice(0,10))} · ${enc} encontrados · ${gan} ganados</span></span>
       <span style="display:flex;gap:10px;align-items:center">
         ${renovable?`<button class="btn sm ghost" data-renovar="${b.id}" title="Pasaron 4+ meses — repetir para captar empresas nuevas">↻ Renovar</button>`:""}
-        <b style="color:${b.status==="lista"?"var(--ok)":"var(--warn)"};font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase">${esc(b.status)}</b>
+        ${b.status==="buscando"?`<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:84px;height:6px;border-radius:4px;background:var(--hair2);overflow:hidden">
+          <span style="display:block;height:100%;width:${Math.max(4,Math.min(100,Number(b.progreso)||0))}%;background:var(--accent);border-radius:4px;transition:width .6s"></span></span>
+          <b style="color:var(--accent);font-family:var(--mono);font-size:10px;letter-spacing:.12em">${b.progreso!=null?b.progreso+"%":"BUSCANDO"}</b></span>`
+        :`<b style="color:${b.status==="lista"?"var(--ok)":"var(--warn)"};font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase">${esc(b.status)}</b>`}
         <button class="btn-trash" data-del="busquedas:${b.id}" title="Cancelar la búsqueda">${ICON_TRASH}</button></span></div>`;}).join("")}
     <div class="bs" style="margin-top:10px">Cada nicho + zona queda guardado y no se repite hasta los 4 meses — ahí aparece ↻ Renovar para captar las empresas nuevas que abrieron.</div>
   </div>`:""}
