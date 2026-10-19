@@ -343,7 +343,7 @@ let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
 let openProspId = null, hlProspId = null, fbAsk = null;
-let plantAsunto = "", plantCuerpo = "", tandaEdit = false, tandaPrev = null, tandaEnviando = false;
+let plantillas = [], plantSel = null, tandaEdit = false, tandaPrev = null, tandaEnviando = false;
 
 /* Candidatos de la tanda del día (misma regla que la card) */
 function tandaCandidatos(){
@@ -553,7 +553,7 @@ async function loadAll(){
   const pr = await sb.from("proposals").select("*").order("created_at",{ascending:false});
   proposals = (pr.data||[]).map(FROM.proposals);
   if(isAdmin){
-    const [inv, cl, ld, st, tc, pz, bq] = await Promise.all([
+    const [inv, cl, ld, st, tc, pz, bq, pl] = await Promise.all([
       sb.from("invoices").select("*").order("created_at",{ascending:false}),
       sb.from("clients").select("*").order("created_at",{ascending:false}),
       sb.from("leads").select("*").order("created_at",{ascending:false}),
@@ -561,17 +561,17 @@ async function loadAll(){
       sb.from("touches").select("*").order("created_at",{ascending:false}),
       sb.from("prospectos").select("*").order("created_at",{ascending:false}),
       sb.from("busquedas").select("*").order("created_at",{ascending:false}),
+      sb.from("plantillas").select("*").order("created_at",{ascending:true}),
     ]);
     invoices = (inv.data||[]).map(FROM.invoices);
     clients  = (cl.data||[]).map(FROM.clients);
     leads    = (ld.data||[]).map(FROM.leads);
     goal = st.data ? Number(st.data.monthly_goal)||0 : 0;
     metaCont = st.data ? Number(st.data.meta_contactos)||0 : 0;
-    plantAsunto = (st.data && st.data.plantilla_asunto) || "";
-    plantCuerpo = (st.data && st.data.plantilla_cuerpo) || "";
     touches = (tc && !tc.error && tc.data) ? tc.data.map(FROM.touches) : [];
     prospectos = (pz && !pz.error && pz.data) ? pz.data.map(FROM.prospectos) : [];
     busquedas = (bq && !bq.error && bq.data) ? bq.data.map(FROM.busquedas) : [];
+    plantillas = (pl && !pl.error && pl.data) ? pl.data : [];
   }
   renderApp();
   pollFirma = firmaDatos();
@@ -1225,23 +1225,24 @@ function renderProspeccion(){
             <button class="btn sm ghost" data-prospmail="${p.id}">✉ Preparar mail</button></div>`).join("")}
           <div class="bs" style="margin-top:10px">Prioridad A primero. "Preparar mail" lo pasa a Leads y abre la ficha con el borrador del agente listo para enviar.</div></div>`}
       ${canWrite?`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">
-        <button class="btn sm ghost" data-plantedit="1">📝 ${plantCuerpo?"Editar plantilla":"Escribir plantilla de entrada"}</button>
-        ${plantCuerpo&&cand.length&&mailsHoy<CUOTA&&!tandaEnviando?`<button class="btn sm" data-tandaprev="1">✉ Mandar tanda (${cand.length})</button>`:""}
+        <button class="btn sm ghost" data-plantedit="1">📝 Plantillas por nicho${plantillas.length?" ("+plantillas.length+")":""}</button>
+        ${plantillas.length&&cand.length&&mailsHoy<CUOTA&&!tandaEnviando?`<button class="btn sm" data-tandaprev="1">✉ Mandar tanda (${cand.length})</button>`:""}
         ${tandaEnviando?`<span class="bs">✉ Enviando con goteo… dejá esta pestaña abierta.</span>`:""}</div>`:""}
-      ${tandaEdit?`<div style="margin-top:12px;border:1px solid var(--hair2);border-radius:14px;padding:16px">
-        <div class="bs" style="margin-bottom:10px">La escribís UNA vez. En cada envío se reemplazan solos: <b style="color:var(--accent)">{{nombre}}</b> (la persona, o la empresa si no hay) · <b style="color:var(--accent)">{{empresa}}</b> · <b style="color:var(--accent)">{{entrada}}</b> (qué está pasando en ESE negocio — lo que hace que no parezca masivo)</div>
-        <label><span class="fl">Asunto</span><input id="plantasunto" value="${esc(plantAsunto)}" placeholder="Una idea para {{empresa}}" style="width:100%"></label>
-        <label style="display:block;margin-top:10px"><span class="fl">Mail</span><textarea id="plantcuerpo" rows="9" style="width:100%" placeholder="Hola {{nombre}},
-
-{{entrada}}
-
-...">${esc(plantCuerpo)}</textarea></label>
-        <div style="display:flex;gap:10px;margin-top:12px"><button class="btn sm" data-plantsave="1">Guardar plantilla</button><button class="linkbtn" data-plantcancel="1">Cancelar</button></div>
-      </div>`:""}
+      ${tandaEdit?(function(){
+        const sel=plantSel?plantillas.find(x=>x.id===plantSel):null;
+        return `<div style="margin-top:12px;border:1px solid var(--hair2);border-radius:14px;padding:16px">
+        ${plantillas.length?`<div style="margin-bottom:12px">${plantillas.map(tp=>`<div class="brow"><span>📝 <b>${tp.nicho?esc(tp.nicho):"General (respaldo)"}</b> <span class="bs">· ${esc(String(tp.asunto||"").slice(0,50))}</span></span>
+          <span style="display:flex;gap:8px"><button class="btn sm ghost" data-plantsel="${tp.id}">Editar</button><button class="btn sm ghost btn-del" data-plantdel="${tp.id}">${ICON_TRASH}</button></span></div>`).join("")}</div>`:""}
+        <div class="bs" style="margin-bottom:10px">${sel?("Editando: <b>"+(sel.nicho?esc(sel.nicho):"General")+"</b>"):"Plantilla nueva"} — una por nicho; al mandar la tanda, cada negocio usa sola la de su nicho (o la General). Variables que se reemplazan solas: <b style="color:var(--accent)">{{nombre}}</b> · <b style="color:var(--accent)">{{empresa}}</b> · <b style="color:var(--accent)">{{entrada}}</b></div>
+        <label><span class="fl">Nicho</span><input id="plantnicho" value="${sel?esc(sel.nicho||""):""}" placeholder="bares · gimnasios · lounges… (vacío = General, el respaldo)" style="width:100%"></label>
+        <label style="display:block;margin-top:10px"><span class="fl">Asunto</span><input id="plantasunto" value="${sel?esc(sel.asunto||""):""}" placeholder="Una idea para {{empresa}}" style="width:100%"></label>
+        <label style="display:block;margin-top:10px"><span class="fl">Mail</span><textarea id="plantcuerpo" rows="9" style="width:100%" placeholder="Hola {{nombre}}, …  (usá {{entrada}} donde va lo que está pasando en su negocio)">${sel?esc(sel.cuerpo||""):""}</textarea></label>
+        <div style="display:flex;gap:10px;margin-top:12px"><button class="btn sm" data-plantsave="1">${sel?"Guardar cambios":"Guardar plantilla"}</button>${sel?`<button class="linkbtn" data-plantnew="1">+ Nueva</button>`:""}<button class="linkbtn" data-plantcancel="1">Cerrar</button></div>
+      </div>`; })():""}
       ${tandaPrev?`<div style="margin-top:12px;border:1px solid var(--accent);border-radius:14px;padding:16px">
         <div class="bt" style="font-size:14.5px">Revisá los ${tandaPrev.length} mails — retocá el que quieras antes de mandar</div>
         ${tandaPrev.map((m,i)=>`<div style="margin-top:12px;border:1px solid var(--hair2);border-radius:12px;padding:12px">
-          <div class="bs" style="margin-bottom:8px">${i+1} · <b style="color:#fff">${esc(m.empresa)}</b> → ${esc(m.to)}</div>
+          <div class="bs" style="margin-bottom:8px">${i+1} · <b style="color:#fff">${esc(m.empresa)}</b> → ${esc(m.to)} <span style="margin-left:8px;color:var(--accent)">plantilla: ${esc(m.tplNombre||"")}</span></div>
           <input id="tp-s-${i}" value="${esc(m.asunto)}" style="width:100%;margin-bottom:8px">
           <textarea id="tp-b-${i}" rows="6" style="width:100%">${esc(m.cuerpo)}</textarea></div>`).join("")}
         <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
@@ -1939,22 +1940,41 @@ document.addEventListener("click", async e=>{
     note("✓ Completada — "+(l.name||l.email||""));
     await loadAll(); return;
   }
-  if(t.dataset.plantedit){ tandaEdit=!tandaEdit; tandaPrev=null; renderApp(); return; }
-  if(t.dataset.plantcancel){ tandaEdit=false; renderApp(); return; }
+  if(t.dataset.plantedit){ tandaEdit=!tandaEdit; tandaPrev=null; plantSel=null; renderApp(); return; }
+  if(t.dataset.plantcancel){ tandaEdit=false; plantSel=null; renderApp(); return; }
+  if(t.dataset.plantsel){ plantSel=t.dataset.plantsel; tandaEdit=true; renderApp(); return; }
+  if(t.dataset.plantnew){ plantSel=null; renderApp(); return; }
+  if(t.dataset.plantdel){
+    await sb.from("plantillas").delete().eq("id",t.dataset.plantdel);
+    if(plantSel===t.dataset.plantdel) plantSel=null;
+    note("Plantilla borrada."); await loadAll(); tandaEdit=true; renderApp(); return;
+  }
   if(t.dataset.plantsave){
-    const a=document.getElementById("plantasunto"), c=document.getElementById("plantcuerpo");
-    plantAsunto=((a&&a.value)||"").trim(); plantCuerpo=((c&&c.value)||"").trim();
-    const {error}=await sb.from("settings").upsert({key:"goal",monthly_goal:goal||null,meta_contactos:metaCont||null,plantilla_asunto:plantAsunto||null,plantilla_cuerpo:plantCuerpo||null,updated_at:new Date().toISOString()});
+    const n=document.getElementById("plantnicho"), a=document.getElementById("plantasunto"), c=document.getElementById("plantcuerpo");
+    const nicho=((n&&n.value)||"").trim()||null, asunto=((a&&a.value)||"").trim(), cuerpo=((c&&c.value)||"").trim();
+    if(!cuerpo){ note("Escribí el mail antes de guardar."); return; }
+    const row={nicho,asunto:asunto||null,cuerpo,updated_at:new Date().toISOString()};
+    const {error}=plantSel? await sb.from("plantillas").update(row).eq("id",plantSel)
+                          : await sb.from("plantillas").insert({...row,created_at:new Date().toISOString()});
     if(error){ note("No pude guardar: "+error.message); return; }
-    tandaEdit=false; note("📝 Plantilla guardada."); renderApp(); return;
+    plantSel=null; note("📝 Plantilla guardada."); await loadAll(); tandaEdit=true; renderApp(); return;
   }
   if(t.dataset.tandaprev){
     const cand=tandaCandidatos(); if(!cand.length){ note("No hay candidatos con email hoy."); return; }
+    const elegir=p=>{
+      const n=String(p.nicho||"").toLowerCase();
+      return plantillas.find(x=>x.nicho&&n&&(n.includes(String(x.nicho).toLowerCase())||String(x.nicho).toLowerCase().includes(n)))
+          || plantillas.find(x=>!x.nicho) || null;
+    };
+    let sinPlantilla=0;
     tandaPrev=cand.map(p=>{
+      const tpl=elegir(p); if(!tpl){ sinPlantilla++; return null; }
       const nombre=((p.contacto||"").split(/[—(,]|\s-\s/)[0].trim().split(" ")[0])||p.empresa||"";
       const fill=x=>String(x||"").replaceAll("{{nombre}}",nombre).replaceAll("{{empresa}}",p.empresa||"").replaceAll("{{entrada}}",String(p.entrada||"").trim());
-      return {pid:p.id,empresa:p.empresa,to:p.emailDirecto||p.email,asunto:fill(plantAsunto)||("Una idea para "+(p.empresa||"tu negocio")),cuerpo:fill(plantCuerpo)};
-    });
+      return {pid:p.id,empresa:p.empresa,tplNombre:tpl.nicho||"General",to:p.emailDirecto||p.email,asunto:fill(tpl.asunto)||("Una idea para "+(p.empresa||"tu negocio")),cuerpo:fill(tpl.cuerpo)};
+    }).filter(Boolean);
+    if(sinPlantilla) note(sinPlantilla+" negocio(s) sin plantilla para su nicho (y no hay General) — quedaron afuera.");
+    if(!tandaPrev.length){ tandaPrev=null; renderApp(); return; }
     tandaEdit=false; renderApp(); return;
   }
   if(t.dataset.tandacancel){ tandaPrev=null; renderApp(); return; }
