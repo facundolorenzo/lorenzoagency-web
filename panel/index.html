@@ -692,7 +692,7 @@ function renderApp(){
   const el = document.getElementById("root");
   el.innerHTML = `<div class="wrap">
     <header>
-      <span class="wordmark" style="display:inline-flex;align-items:center"><img src="/email/firma-bigote.png" alt="" style="height:13px;width:auto;margin-right:12px"><b>LORENZO</b><span>AGENCY · PANEL</span></span>
+      <span class="wordmark" style="display:inline-flex;align-items:center"><span aria-hidden="true" style="display:inline-block;height:14px;width:46px;margin-right:12px;background:var(--accent);-webkit-mask:url(/email/firma-bigote.png) center/contain no-repeat;mask:url(/email/firma-bigote.png) center/contain no-repeat"></span><b>LORENZO</b><span>AGENCY · PANEL</span></span>
       <div style="display:flex;gap:10px;align-items:center">
         <span style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--faint)">${esc(sessionEmail)}</span>
         <button class="btn ghost sm" id="logout">Salir</button>
@@ -2098,7 +2098,7 @@ document.addEventListener("click", async e=>{
 </style></head><body>
 <button class="noprint" onclick="window.print()">Guardar PDF</button>
 <header>
-  <div class="wm"><b>LORENZO</b><span>AGENCY</span><img src="https://lorenzoagency.tech/email/firma-bigote.png" alt=""></div>
+  <div class="wm"><b>LORENZO</b><span>AGENCY</span><span aria-hidden="true" style="display:inline-block;height:14px;width:46px;background:var(--accent);-webkit-mask:url(https://lorenzoagency.tech/email/firma-bigote.png) center/contain no-repeat;mask:url(https://lorenzoagency.tech/email/firma-bigote.png) center/contain no-repeat"></span></div>
   <div class="doc"><div class="t">FACTURA</div><div class="n">${esc(i.number)}</div>
     <div class="f">Emitida: ${esc(i.issued||"—")}<br>Vence: ${esc(i.due||"—")}</div>
     <div class="badge ${pag?"pag":"pen"}">${pag?"PAGADA":"PENDIENTE"}</div></div>
