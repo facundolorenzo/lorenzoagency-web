@@ -491,6 +491,8 @@ function avanzarCadencia(paso){
   return { cadencia_paso:next, next_action_at:d.toISOString(), next_action_tipo:CAD_TIPO[next], seguimiento_activo:true };
 }
 const touchesOf = id => touches.filter(t=>t.leadId===id);
+// Prioridad (A/B/C) de un lead: viene del prospecto de captación vinculado.
+const prioridadLead = l => { const p=prospectos.find(x=>x.leadId===l.id); return p?p.prioridad:null; };
 
 const P_STATES = ["borrador","enviada","aprobada","rechazada"];
 const I_STATES = ["pendiente","pagada","vencida"];
@@ -1926,27 +1928,31 @@ function renderLeads(){
   $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Embudo de leads</h2></div>${repartoBarHtml()}${bands}`;
 }
 
-/* Barra de reparto masivo: darle N leads sin dueño a un vendedor de una */
+/* Barra de reparto: darle una mezcla (N de prioridad A + M de B) a un vendedor */
 function repartoBarHtml(){
   const activos = vendedores.filter(v=>v.activo && v.email);
-  const sinDueno = leads.filter(l=>!l.vendedorId && !['ganado','perdido'].includes(l.status)).length;
   if(!activos.length) return `<div style="border:1px dashed var(--hair2);border-radius:14px;padding:12px 16px;margin-bottom:16px;font-size:12.5px;color:var(--muted)">Cargá vendedores (con email) en <b>Comisiones</b> para poder repartirles clientes.</div>`;
+  const libre = l => !l.vendedorId && !['ganado','perdido'].includes(l.status);
+  const dispA = leads.filter(l=>libre(l) && prioridadLead(l)==='A').length;
+  const dispB = leads.filter(l=>libre(l) && prioridadLead(l)==='B').length;
   const selV = activos.find(v=>v.id===repVendId) || activos[0];
+  const stepper = (id,val)=>`<div class="stepper">
+    <button data-repn="-:${id}" title="menos">−</button>
+    <input id="rep_${id}" type="number" min="0" value="${val}" readonly>
+    <button data-repn="+:${id}" title="más">+</button></div>`;
   return `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--accent);border-radius:14px;padding:12px 16px;margin-bottom:16px;background:rgba(221,125,71,.05)">
     <span style="font-family:var(--disp);font-weight:800;font-size:14px">Repartir clientes</span>
     <span style="font-size:13px;color:var(--muted)">Darle</span>
-    <div class="stepper">
-      <button data-repn="-" title="menos">−</button>
-      <input id="rep_n" type="number" min="1" value="10" readonly>
-      <button data-repn="+" title="más">+</button>
-    </div>
-    <span style="font-size:13px;color:var(--muted)">leads a</span>
+    ${stepper('a',6)}<span style="font-size:12px;color:var(--muted)">prioridad <b style="color:var(--accent)">A</b></span>
+    <span style="color:var(--faint)">+</span>
+    ${stepper('b',4)}<span style="font-size:12px;color:var(--muted)">prioridad <b>B</b></span>
+    <span style="font-size:13px;color:var(--muted)">a</span>
     <div class="mdrop ${repDropOpen?'open':''}">
       <button class="mdrop-btn" data-repdroptoggle="1">${esc(selV?selV.nombre:'elegí')}<span class="car">▾</span></button>
       ${repDropOpen?`<div class="mdrop-menu">${activos.map(v=>`<button class="mdrop-item ${v.id===(selV&&selV.id)?'sel':''}" data-reppick="${esc(v.id)}">${esc(v.nombre)}</button>`).join("")}</div>`:''}
     </div>
     <button class="btn sm" data-repartir="1">Asignar</button>
-    <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)">${sinDueno} sin dueño</span>
+    <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)">disponibles: ${dispA} A · ${dispB} B</span>
   </div>`;
 }
 
@@ -2215,27 +2221,31 @@ document.addEventListener("click", async e=>{
     return;
   }
   if(t.dataset.repn){
-    const nEl=document.getElementById("rep_n"); if(!nEl) return;
-    let v=Number(nEl.value)||10; v += (t.dataset.repn==='+'?1:-1); if(v<1)v=1;
-    nEl.value=v; return;
+    const [dir,which]=t.dataset.repn.split(":");
+    const el=document.getElementById("rep_"+which); if(!el) return;
+    let v=Number(el.value)||0; v += (dir==='+'?1:-1); if(v<0)v=0;
+    el.value=v; return;
   }
   if(t.dataset.repdroptoggle){ repDropOpen=!repDropOpen; renderApp(); return; }
   if(t.dataset.reppick){ repVendId=t.dataset.reppick; repDropOpen=false; renderApp(); return; }
   if(repDropOpen && !(t.closest && t.closest(".mdrop"))){ repDropOpen=false; renderApp(); return; }
   if(t.dataset.repartir){
-    const nEl=document.getElementById("rep_n");
-    const n=Math.max(1, Number(nEl&&nEl.value)||10);
+    const aEl=document.getElementById("rep_a"), bEl=document.getElementById("rep_b");
+    const na=Math.max(0,Number(aEl&&aEl.value)||0), nb=Math.max(0,Number(bEl&&bEl.value)||0);
     const activos=vendedores.filter(v=>v.activo && v.email);
     const vid = repVendId || (activos[0]&&activos[0].id);
     if(!vid){ note("Elegí un vendedor."); return; }
-    // leads sin dueño, abiertos; primero los nuevos, después por fecha (más viejos primero)
-    const cola = leads.filter(l=>!l.vendedorId && !['ganado','perdido'].includes(l.status))
-      .sort((a,b)=> (a.status==='nuevo'?0:1)-(b.status==='nuevo'?0:1) || (new Date(a.createdAt)-new Date(b.createdAt)));
-    const ids = cola.slice(0,n).map(l=>l.id);
-    if(!ids.length){ note("No hay leads sin asignar."); return; }
+    if(na+nb===0){ note("Poné cuántos A y B dar."); return; }
+    const libre = l => !l.vendedorId && !['ganado','perdido'].includes(l.status);
+    const porFecha = (a,b)=> new Date(a.createdAt)-new Date(b.createdAt);
+    const poolA = leads.filter(l=>libre(l) && prioridadLead(l)==='A').sort(porFecha);
+    const poolB = leads.filter(l=>libre(l) && prioridadLead(l)==='B').sort(porFecha);
+    const ids = [...poolA.slice(0,na), ...poolB.slice(0,nb)].map(l=>l.id);
+    if(!ids.length){ note("No hay leads A/B sin asignar."); return; }
     const { error } = await sb.from("leads").update({ vendedor_id: vid }).in("id", ids);
     const nombre=(vendedores.find(v=>v.id===vid)||{}).nombre||"el vendedor";
-    if(error) note("No se pudo repartir: "+error.message); else { note(`${ids.length} cliente(s) asignado(s) a ${nombre} ✓`); await loadAll(); }
+    const tomoA=Math.min(na,poolA.length), tomoB=Math.min(nb,poolB.length);
+    if(error) note("No se pudo repartir: "+error.message); else { note(`${ids.length} a ${nombre} (${tomoA} A · ${tomoB} B) ✓`); await loadAll(); }
     return;
   }
   if(t.dataset.togglelang){
