@@ -384,6 +384,8 @@ let leadCollapsed = {};
 let touches = [];
 let metaCont = 0;
 let prospectos = [];
+let vendedores = [];
+let comisionMes = null; // 'YYYY-MM' seleccionado en la sección Comisiones (null = mes actual)
 let busquedas = [];
 let callLeadId = null, closeLeadId = null;
 let callLang = null; // idioma del micrófono en la llamada (es/en); por defecto, el del lead
@@ -476,6 +478,71 @@ const PR_STATES = ["encontrado","contactable","enviado","respondio","descartado"
 const PR_LABELS = {encontrado:"Encontrado",contactable:"Con email ✓",enviado:"Enviado",respondio:"Respondió 🔥",descartado:"Descartado"};
 const L_LABELS = {nuevo:"Nuevos",enviado:"Enviados",respondio:"Respondieron",sin_respuesta:"Sin respuesta",ganado:"Ganado",perdido:"Perdido"};
 
+/* ============================ COMISIONES ============================
+   Escalera por volumen MENSUAL (se resetea cada mes). MARGINAL: cada
+   tramo cobra su %, no se recalcula hacia atrás.
+   Para cambiar los números, editá COMISION_TRAMOS y COMISION_CORONA acá.
+   La comisión es INTERNA (va metida en el precio; el cliente no la ve). */
+const COMISION_TRAMOS = [
+  { desde: 0,     hasta: 6000,     pct: 0.07 },  // $0 – $6.000 → 7%
+  { desde: 6000,  hasta: 12000,    pct: 0.10 },  // $6.000 – $12.000 → 10%
+  { desde: 12000, hasta: Infinity, pct: 0.12 },  // +$12.000 → 12%
+];
+// Corona del mes: el #1 del ranking, si vendió más que el piso, cobra
+// pctPlano sobre TODO su volumen del mes (reemplaza la escalera) + premio.
+const COMISION_CORONA = { piso: 15000, pctPlano: 0.15 };
+
+// Calcula la comisión base (escalera marginal) para un volumen mensual.
+function comisionEscalera(volumen){
+  let com = 0;
+  for(const tr of COMISION_TRAMOS){
+    if(volumen <= tr.desde) break;
+    const enTramo = Math.min(volumen, tr.hasta) - tr.desde;
+    if(enTramo > 0) com += enTramo * tr.pct;
+  }
+  return com;
+}
+// % del tramo más alto que alcanzó ese volumen (para mostrar "escalón actual").
+function escalonActual(volumen){
+  let pct = 0;
+  for(const tr of COMISION_TRAMOS){ if(volumen > tr.desde) pct = tr.pct; }
+  return pct;
+}
+// Clave 'YYYY-MM' de una fecha.
+const mesClave = d => { const x=new Date(d); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0"); };
+// Mes seleccionado (o el actual).
+const mesVigente = () => comisionMes || mesClave(new Date());
+// Etiqueta linda del mes 'YYYY-MM'.
+function mesLabel(clave){
+  const [y,m]=clave.split("-").map(Number);
+  return new Date(y,m-1,1).toLocaleDateString("es-AR",{month:"long",year:"numeric"});
+}
+// Ventas ganadas de un vendedor en un mes (usa fecha_cierre; si falta, created_at del lead).
+function ventasDelMes(vendedorId, clave){
+  return leads.filter(l=> l.status==="ganado"
+    && l.vendedorId===vendedorId
+    && Number(l.montoVenta)>0
+    && mesClave(l.fechaCierre || l.createdAt)===clave );
+}
+// Ranking del mes: [{vendedor, volumen, ventas, comisionBase, esCorona, comisionFinal, pctEfectivo}]
+function rankingMes(clave){
+  const filas = vendedores.map(v=>{
+    const vs = ventasDelMes(v.id, clave);
+    const volumen = vs.reduce((a,l)=>a+Number(l.montoVenta||0),0);
+    return { vendedor:v, volumen, ventas:vs.length, comisionBase:comisionEscalera(volumen) };
+  }).sort((a,b)=> b.volumen - a.volumen);
+  // Corona: el #1 con volumen > piso cobra pctPlano sobre todo.
+  const lider = filas[0];
+  const coronaActiva = lider && lider.volumen > COMISION_CORONA.piso;
+  return filas.map((f,i)=>{
+    const esCorona = coronaActiva && i===0;
+    const comisionFinal = esCorona ? f.volumen * COMISION_CORONA.pctPlano : f.comisionBase;
+    const pctEfectivo = f.volumen>0 ? comisionFinal/f.volumen : 0;
+    return { ...f, esCorona, comisionFinal, pctEfectivo };
+  });
+}
+const vendedorNombre = id => (vendedores.find(v=>v.id===id)||{}).nombre || "—";
+
 const money = n => "$" + (Number(n)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const today = () => new Date().toISOString().slice(0,10);
@@ -528,7 +595,9 @@ const FROM = {
                   segActivo:r.seguimiento_activo!==false, cierreMotivo:r.cierre_motivo, cierreFalto:r.cierre_falto, cierreObs:r.cierre_obs,
                   idioma:r.idioma||null,
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
-                  cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null}),
+                  cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null,
+                  vendedorId:r.vendedor_id||null, montoVenta:(r.monto_venta==null?null:Number(r.monto_venta)), fechaCierre:r.fecha_cierre||null}),
+  vendedores:r=>({id:r.id,nombre:r.nombre,activo:r.activo!==false,createdAt:r.created_at}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
@@ -553,7 +622,7 @@ async function loadAll(){
   const pr = await sb.from("proposals").select("*").order("created_at",{ascending:false});
   proposals = (pr.data||[]).map(FROM.proposals);
   if(isAdmin){
-    const [inv, cl, ld, st, tc, pz, bq, pl] = await Promise.all([
+    const [inv, cl, ld, st, tc, pz, bq, pl, vd] = await Promise.all([
       sb.from("invoices").select("*").order("created_at",{ascending:false}),
       sb.from("clients").select("*").order("created_at",{ascending:false}),
       sb.from("leads").select("*").order("created_at",{ascending:false}),
@@ -562,6 +631,7 @@ async function loadAll(){
       sb.from("prospectos").select("*").order("created_at",{ascending:false}),
       sb.from("busquedas").select("*").order("created_at",{ascending:false}),
       sb.from("plantillas").select("*").order("created_at",{ascending:true}),
+      sb.from("vendedores").select("*").order("created_at",{ascending:true}),
     ]);
     invoices = (inv.data||[]).map(FROM.invoices);
     clients  = (cl.data||[]).map(FROM.clients);
@@ -572,6 +642,7 @@ async function loadAll(){
     prospectos = (pz && !pz.error && pz.data) ? pz.data.map(FROM.prospectos) : [];
     busquedas = (bq && !bq.error && bq.data) ? bq.data.map(FROM.busquedas) : [];
     plantillas = (pl && !pl.error && pl.data) ? pl.data : [];
+    vendedores = (vd && !vd.error && vd.data) ? vd.data.map(FROM.vendedores) : [];
   }
   renderApp();
   pollFirma = firmaDatos();
@@ -644,7 +715,7 @@ async function runDraft(id, isRehacer){
 
 /* ============================ RENDER ============================ */
 function tabsHtml(){
-  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"]]
+  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["comisiones","COMISIONES"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"]]
                     : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
   const nuevos = leads.filter(x=>x.status==='nuevo').length;
   const hoyN = isAdmin ? leadsHoy().length : 0;
@@ -688,6 +759,103 @@ function renderLlamadas(){
     ${body}`;
 }
 
+/* ---------- COMISIONES (ranking mensual + gestión de vendedores) ---------- */
+function renderComisiones(){
+  const clave = mesVigente();
+  const rank = rankingMes(clave);
+  const totalVol = rank.reduce((a,r)=>a+r.volumen,0);
+  const totalCom = rank.reduce((a,r)=>a+r.comisionFinal,0);
+  const money = n => "$"+Math.round(n).toLocaleString("en-US");
+  const money2 = n => "$"+(Math.round(n*100)/100).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2});
+
+  // lista de meses con actividad, para el selector
+  const mesesSet = new Set([mesClave(new Date())]);
+  leads.forEach(l=>{ if(l.status==="ganado" && Number(l.montoVenta)>0) mesesSet.add(mesClave(l.fechaCierre||l.createdAt)); });
+  const meses = [...mesesSet].sort().reverse();
+
+  const tile=(lbl,val,sub)=>`<div style="flex:1;min-width:150px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px">
+    <div style="font-family:var(--disp);font-size:14.5px;font-weight:800;color:#fff">${lbl}</div>
+    <div style="font-size:26px;margin-top:4px">${val}</div>
+    ${sub?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${sub}</div>`:""}</div>`;
+
+  const medalla = i => i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}º`;
+  const pct = p => (Math.round(p*1000)/10).toString().replace(".0","")+"%";
+
+  const filas = rank.filter(r=>r.volumen>0 || r.vendedor.activo).map((r,i)=>{
+    const corona = r.esCorona ? `<span title="Líder del mes — 15% + premio" style="margin-left:6px">👑</span>` : "";
+    const escBadge = r.volumen>0
+      ? `<span style="font-family:var(--mono);font-size:10px;color:${r.esCorona?'var(--accent)':'var(--muted)'}">${pct(r.pctEfectivo)}${r.esCorona?' CORONA':''}</span>`
+      : `<span style="font-family:var(--mono);font-size:10px;color:var(--faint)">—</span>`;
+    return `<tr${r.esCorona?' style="background:rgba(221,125,71,.07)"':''}>
+      <td style="font-family:var(--disp);font-weight:800;width:40px">${r.volumen>0?medalla(i):'·'}</td>
+      <td><b>${esc(r.vendedor.nombre)}</b>${corona}${!r.vendedor.activo?' <span style="font-size:10px;color:var(--faint)">(inactivo)</span>':''}</td>
+      <td style="text-align:right;font-family:var(--mono)">${money(r.volumen)}</td>
+      <td style="text-align:center;font-size:12px">${r.ventas}</td>
+      <td style="text-align:right">${escBadge}</td>
+      <td style="text-align:right;font-family:var(--disp);font-weight:800;color:${r.esCorona?'var(--accent)':'var(--ok)'}">${money2(r.comisionFinal)}</td>
+    </tr>`;
+  }).join("");
+
+  const lider = rank[0];
+  const hayCorona = lider && lider.esCorona;
+  const coronaMsg = hayCorona
+    ? `<b style="color:var(--accent)">👑 ${esc(lider.vendedor.nombre)}</b> lidera con ${money(lider.volumen)} → cobra <b>15% + premio + reconocimiento</b>.`
+    : (lider && lider.volumen>0
+        ? `Nadie superó el piso de ${money(COMISION_CORONA.piso)} este mes → <b>no hay corona</b>. El puntero va ${money(lider.volumen)}.`
+        : `Sin ventas cargadas este mes todavía.`);
+
+  // gestión de vendedores
+  const vendList = vendedores.length
+    ? vendedores.map(v=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair)">
+        <span style="flex:1">${esc(v.nombre)} ${v.activo?'':'<span style="font-size:10px;color:var(--faint)">(inactivo)</span>'}</span>
+        <button class="btn ghost sm" data-vendtoggle="${esc(v.id)}">${v.activo?'Desactivar':'Reactivar'}</button>
+      </div>`).join("")
+    : `<div style="color:var(--muted);font-size:13px">Todavía no cargaste vendedores. Agregá el primero arriba.</div>`;
+
+  const tramosTxt = COMISION_TRAMOS.map((tr,i)=>{
+    const rango = tr.hasta===Infinity ? `+${money(tr.desde)}` : `${money(tr.desde)} – ${money(tr.hasta)}`;
+    return `${rango} → <b>${pct(tr.pct)}</b>`;
+  }).join(" &nbsp;·&nbsp; ");
+
+  $app().innerHTML = `
+  <div class="bar"><h2><span class="tick"></span>Comisiones</h2>
+    <select id="comes" class="lsel" style="margin-left:auto">
+      ${meses.map(m=>`<option value="${m}" ${m===clave?"selected":""}>${esc(mesLabel(m))}</option>`).join("")}
+    </select>
+  </div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    ${tile("Vendido el mes", money(totalVol), `${rank.filter(r=>r.volumen>0).length} vendedor(es) con ventas`)}
+    ${tile("Comisiones a pagar", money2(totalCom), "interno — ya va en el precio")}
+    ${tile("Ventas cerradas", rank.reduce((a,r)=>a+r.ventas,0), "deals ganados este mes")}
+  </div>
+
+  <div style="border:1px solid var(--hair2);border-radius:16px;padding:14px 16px;margin-bottom:18px;background:rgba(221,125,71,.04)">
+    ${coronaMsg}
+  </div>
+
+  ${rank.some(r=>r.volumen>0) ? `<div class="tablewrap"><table>
+    <tr><th style="width:40px"></th><th>Vendedor</th><th style="text-align:right">Vendido</th><th style="text-align:center">Ventas</th><th style="text-align:right">% efect.</th><th style="text-align:right">Comisión</th></tr>
+    ${filas}
+  </table></div>`
+  : `<div class="empty"><b>Sin ventas cargadas en ${esc(mesLabel(clave))}.</b><br>Cuando marques un lead como <b>Ganado</b> con su monto y vendedor, aparece acá el ranking y la comisión.</div>`}
+
+  <div style="margin-top:22px;border:1px solid var(--hair2);border-radius:16px;padding:16px 18px">
+    <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:4px">Escalera (mensual, se resetea cada mes)</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${tramosTxt}</div>
+    <div style="font-size:12px;color:var(--faint)">Marginal: cada tramo cobra su %, no se recalcula hacia atrás. &nbsp;·&nbsp; Corona: el 1º del mes, si pasa ${money(COMISION_CORONA.piso)}, cobra 15% plano + premio.</div>
+  </div>
+
+  <div style="margin-top:18px;border:1px solid var(--hair2);border-radius:16px;padding:16px 18px">
+    <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:12px">Vendedores</div>
+    <div style="display:flex;gap:8px;margin-bottom:6px">
+      <input id="vendnuevo" placeholder="nombre del vendedor" style="flex:1">
+      <button class="btn sm" data-vendadd="1">Agregar</button>
+    </div>
+    <div style="margin-top:8px">${vendList}</div>
+  </div>`;
+}
+
 function renderApp(){
   const el = document.getElementById("root");
   el.innerHTML = `<div class="wrap">
@@ -716,6 +884,7 @@ function renderBody(){
   else if(tab==="resumen") renderResumen();
   else if(tab==="analisis") renderAnalisis();
   else if(tab==="llamadas") renderLlamadas();
+  else if(tab==="comisiones") renderComisiones();
   else if(tab==="propuestas") renderProposals();
   else if(tab==="facturas") renderInvoices();
   else if(tab==="clientes") renderClients();
@@ -1606,6 +1775,14 @@ function closeModalHtml(){
   return `<div class="cpop-bg" data-closecierre="1"><div class="cpop" style="max-width:440px">
     <div class="cpop-t">${perdido?'❌ Marcar como Perdido':'✅ Marcar como Ganado'} — ${esc(l.name||'')}</div>
     <div class="cpop-s">${perdido?'¿Por qué no cerró? Esto alimenta el análisis.':'¿Qué lo convenció? (opcional)'}</div>
+    ${!perdido?`<div style="margin-bottom:12px"><label style="${flbl}">Monto de la venta (USD) *</label>
+      <input id="ci_monto" type="number" min="0" step="1" placeholder="total que paga el cliente, ej: 3000"></div>
+    <div style="margin-bottom:12px"><label style="${flbl}">Vendedor</label>
+      <select id="ci_vendedor">
+        <option value="">— sin asignar —</option>
+        ${vendedores.filter(v=>v.activo).map(v=>`<option value="${esc(v.id)}">${esc(v.nombre)}</option>`).join('')}
+      </select>
+      ${vendedores.filter(v=>v.activo).length? '' : '<div style="font-size:11px;color:var(--muted);margin-top:5px">No hay vendedores cargados. Agregalos en la sección Comisiones.</div>'}</div>`:''}
     ${perdido?`<div style="margin-bottom:12px"><label style="${flbl}">Motivo</label>
       <select id="ci_motivo">${CIERRE_MOTIVOS.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select></div>
     <div style="margin-bottom:12px"><label style="${flbl}">Qué faltó</label><input id="ci_falto" placeholder="qué hubiera cambiado el resultado"></div>`:''}
@@ -1780,6 +1957,19 @@ document.addEventListener("click", async e=>{
   const fr = t.closest && t.closest("[data-franja]");
   if(fr){ const s=fr.dataset.franja; leadCollapsed[s]=!leadCollapsed[s]; renderApp(); return; }
   if(t.dataset.leadfilter){ leadFilter=t.dataset.leadfilter; renderApp(); return; }
+  if(t.dataset.vendadd){
+    const inp=document.getElementById("vendnuevo"); const nombre=(inp&&inp.value.trim())||"";
+    if(!nombre){ note("Escribí el nombre del vendedor."); return; }
+    const { error } = await sb.from("vendedores").insert({ nombre });
+    if(error) note("No se pudo agregar: "+error.message); else await loadAll();
+    return;
+  }
+  if(t.dataset.vendtoggle){
+    const v=vendedores.find(x=>x.id===t.dataset.vendtoggle); if(!v) return;
+    const { error } = await sb.from("vendedores").update({ activo: !v.activo }).eq("id", v.id);
+    if(error) note("No se pudo cambiar: "+error.message); else await loadAll();
+    return;
+  }
   if(t.dataset.togglelang){
     const id=t.dataset.togglelang; const l=leads.find(x=>x.id===id); if(!l) return;
     const next = langOf(l)==="es" ? "en" : "es";
@@ -2186,10 +2376,18 @@ document.addEventListener("click", async e=>{
     if(!closeLeadId){ renderApp(); return; }
     const {id,outcome}=closeLeadId;
     const motivo=document.getElementById("ci_motivo"), falto=document.getElementById("ci_falto"), obs=document.getElementById("ci_obs");
+    const montoEl=document.getElementById("ci_monto"), vendEl=document.getElementById("ci_vendedor");
     const patch={ status:outcome, seguimiento_activo:false, next_action_at:null, next_action_tipo:null,
       cierre_motivo: outcome==='ganado' ? 'ganado' : (motivo?motivo.value:null),
       cierre_falto: falto?falto.value.trim()||null:null,
       cierre_obs: obs?obs.value.trim()||null:null };
+    if(outcome==='ganado'){
+      const monto = montoEl ? Number(montoEl.value) : 0;
+      if(!monto || monto<=0){ note("Poné el monto de la venta para registrar la comisión."); return; }
+      patch.monto_venta = monto;
+      patch.vendedor_id = (vendEl && vendEl.value) ? vendEl.value : null;
+      patch.fecha_cierre = new Date().toISOString();
+    }
     const {error}=await sb.from("leads").update(patch).eq("id",id);
     if(error){ note("No se pudo guardar: "+error.message); return; }
     try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:(outcome==='ganado'?'Ganado. ':'Perdido. ')+(patch.cierre_obs||'')}); }catch(e){}
@@ -2361,6 +2559,7 @@ document.addEventListener("input", e=>{ if(e.target && e.target.id==="lreply") a
 // cambio de estado del lead (dropdown)
 document.addEventListener("change", async e=>{
   const t = e.target;
+  if(t.id==="comes"){ comisionMes = t.value; renderApp(); return; }
   if(t.dataset && t.dataset.prstatus){
     const { error } = await sb.from("prospectos").update({ status: t.value, updated_at:new Date().toISOString() }).eq("id", t.dataset.prstatus);
     if(error) note("No se pudo cambiar el estado: "+error.message); else await loadAll();
