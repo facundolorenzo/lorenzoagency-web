@@ -1703,6 +1703,23 @@ function rutaMapsUrl(lista){
   return "https://www.google.com/maps/dir/?api=1&destination="+dest+(way?"&waypoints="+way:"")+"&travelmode=driving";
 }
 const VISITA_RES=["No estaba el dueño","Hablé con el encargado","Dueño interesado","Dejé material","Agendó reunión","No me atendieron"];
+function gcalUrl(p){
+  const tz="America/New_York"; let dates="";
+  if(p.visitaDia && p.visitaHora){
+    const [Y,M,D]=p.visitaDia.split("-"); const [h,mi]=p.visitaHora.split(":");
+    const start=Y+M+D+"T"+h+mi+"00";
+    let eh=parseInt(h,10), em=parseInt(mi,10)+45; if(em>=60){eh++;em-=60;}
+    const end=Y+M+D+"T"+String(eh).padStart(2,"0")+String(em).padStart(2,"0")+"00";
+    dates=start+"/"+end;
+  } else if(p.visitaDia){
+    const d=p.visitaDia.replace(/-/g,""); const nx=new Date(p.visitaDia+"T12:00:00"); nx.setDate(nx.getDate()+1);
+    dates=d+"/"+nx.toISOString().slice(0,10).replace(/-/g,"");
+  }
+  const text=encodeURIComponent("Visita — "+(p.empresa||"negocio"));
+  const loc=encodeURIComponent(p.direccion||p.ciudad||"");
+  const det=encodeURIComponent([p.puntoFlojo?("Punto flojo: "+p.puntoFlojo):"",p.contacto?("Contacto: "+p.contacto):"",p.entrada||"","Ir a presentar LORENZO Agency"].filter(Boolean).join("\n"));
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+text+(dates?"&dates="+dates:"")+"&location="+loc+"&details="+det+"&ctz="+tz;
+}
 function visitaFila(p, idx){
   const info=[p.direccion||p.ciudad||"", p.horario?String(p.horario).slice(0,46):""].filter(Boolean).join(" · ");
   const dist=(idx!=null && p._desde!=null)?`<span style="color:var(--accent);font-weight:700">${p._desde<1?"<1":Math.round(p._desde)} mi</span> · `:"";
@@ -1721,7 +1738,7 @@ function visitaFila(p, idx){
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center">
       <a class="btn sm ghost" style="${B};text-decoration:none" href="${mapsUrl}" target="_blank" rel="noopener">📍 Cómo llegar</a>
       ${p.visitaDia
-        ? `<span class="bs" style="padding:0 4px">📅 ${esc(p.visitaDia)}</span><span class="bs">Hora:</span><select data-visitahora="${p.id}" class="lsel" style="height:38px;font-size:13px">${(function(){ let o=`<option value="">— elegir —</option>`; for(let h=9;h<=21;h++){ for(const m of ["00","30"]){ const v=(h<10?"0"+h:""+h)+":"+m; const et=(h<=12?h:h-12)+":"+m+(h<12?"am":"pm"); o+=`<option value="${v}" ${p.visitaHora===v?"selected":""}>${et}</option>`; } } return o; })()}</select><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|">Cambiar día</button>`
+        ? `<span class="bs" style="padding:0 4px">📅 ${esc(p.visitaDia)}</span><span class="bs">Hora:</span><select data-visitahora="${p.id}" class="lsel" style="height:38px;font-size:13px">${(function(){ let o=`<option value="">— elegir —</option>`; for(let h=9;h<=21;h++){ for(const m of ["00","30"]){ const v=(h<10?"0"+h:""+h)+":"+m; const et=(h<=12?h:h-12)+":"+m+(h<12?"am":"pm"); o+=`<option value="${v}" ${p.visitaHora===v?"selected":""}>${et}</option>`; } } return o; })()}</select><a class="btn sm" style="${B};text-decoration:none" href="${gcalUrl(p)}" target="_blank" rel="noopener" title="Crear el evento en tu Google Calendar">📆 Agendar</a><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|">Cambiar día</button>`
         : `<span class="bs">Ir el:</span><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|${iso(d1)}">Hoy</button><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|${iso(d2)}">Mañana</button><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|${iso(d3)}">Pasado</button><input type="date" data-visitafecha="${p.id}" style="height:38px;font-size:13px;padding:0 10px">`}
       <span style="flex:1;min-width:20px"></span>
       <button class="btn sm" style="${B}" data-visitareg="${p.id}">✓ Ya fui</button>
