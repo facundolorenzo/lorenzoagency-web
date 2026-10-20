@@ -849,14 +849,6 @@ function renderComisiones(target){
         : `Sin ventas cargadas este mes todavía.`);
 
   // gestión de vendedores
-  const vendList = vendedores.length
-    ? vendedores.map(v=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair);flex-wrap:wrap">
-        <span style="flex:1;min-width:140px">${esc(v.nombre)} ${v.activo?'':'<span style="font-size:10px;color:var(--faint)">(inactivo)</span>'}${v.email?`<br><span style="font-family:var(--mono);font-size:10px;color:var(--faint)">${esc(v.email)}</span>`:'<br><span style="font-size:10px;color:var(--warn)">sin email — no puede entrar</span>'}</span>
-        <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px">meta $<input type="number" min="0" value="${v.meta||''}" placeholder="0" data-vendmeta="${esc(v.id)}" style="width:84px"></label>
-        <button class="btn ghost sm" data-vendtoggle="${esc(v.id)}">${v.activo?'Desactivar':'Reactivar'}</button>
-      </div>`).join("")
-    : `<div style="color:var(--muted);font-size:13px">Todavía no cargaste vendedores. Agregá el primero arriba.</div>`;
-
   // Gráfico de barras con glow (incluye la corona como 4ª barra)
   const moneyK = n => "$"+(n/1000)+"k";  // formato corto para que el rango entre en una línea
   const barras = COMISION_TRAMOS.map(tr=>({
@@ -907,17 +899,6 @@ function renderComisiones(target){
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Mensual · se resetea cada mes · más vendés, más alto el %</div>
     ${escaleraGrafico}
     <div style="font-size:11.5px;color:var(--faint);margin-top:14px;border-top:1px solid var(--hair);padding-top:12px">Al pasar un escalón, <b style="color:var(--muted)">todo el volumen del mes</b> cobra ese %. &nbsp;·&nbsp; 👑 Corona: el 1º del mes, si pasa ${money(COMISION_CORONA.piso)}, cobra 15% + premio.</div>
-  </div>
-
-  <div style="margin-top:18px;border:1px solid var(--hair2);border-radius:16px;padding:16px 18px">
-    <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:12px">Vendedores</div>
-    <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap">
-      <input id="vendnuevo" placeholder="nombre del vendedor" style="flex:1;min-width:140px">
-      <input id="vendemail" type="email" placeholder="email (para que entre al panel)" style="flex:1;min-width:160px">
-      <button class="btn sm" data-vendadd="1">Agregar</button>
-    </div>
-    <div style="font-size:11px;color:var(--faint);margin-bottom:4px">El email es con el que el vendedor entra al panel y ve solo lo suyo.</div>
-    <div style="margin-top:8px">${vendList}</div>
   </div>`;
 }
 
@@ -998,13 +979,33 @@ function renderEquipo(target){
   const totPendHoy = activos.reduce((a,v)=>a+leads.filter(l=>l.vendedorId===v.id&&accionHoy(l)).length,0);
   const tile=(lbl,val,sub)=>`<div style="flex:1;min-width:140px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px"><div style="font-family:var(--disp);font-size:14px;font-weight:800">${lbl}</div><div style="font-size:26px;margin-top:4px">${val}</div>${sub?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${sub}</div>`:''}</div>`;
 
+  // gestión de vendedores (agregar / meta / activar)
+  const vendList = vendedores.length
+    ? vendedores.map(v=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair);flex-wrap:wrap">
+        <span style="flex:1;min-width:140px">${esc(v.nombre)} ${v.activo?'':'<span style="font-size:10px;color:var(--faint)">(inactivo)</span>'}${v.email?`<br><span style="font-family:var(--mono);font-size:10px;color:var(--faint)">${esc(v.email)}</span>`:'<br><span style="font-size:10px;color:var(--warn)">sin email — no puede entrar</span>'}</span>
+        <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px">meta $<input type="number" min="0" value="${v.meta||''}" placeholder="0" data-vendmeta="${esc(v.id)}" style="width:84px"></label>
+        <button class="btn ghost sm" data-vendtoggle="${esc(v.id)}">${v.activo?'Desactivar':'Reactivar'}</button>
+      </div>`).join("")
+    : `<div style="color:var(--muted);font-size:13px">Todavía no cargaste vendedores. Agregá el primero arriba.</div>`;
+
   dest.innerHTML = `
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
       ${tile("Vendedores activos", activos.length)}
       ${tile("Llamadas hoy (equipo)", totLlamHoy)}
       ${tile("Pendientes hoy", totPendHoy, totPendHoy===0?'todos al día ✓':'acciones sin hacer')}
     </div>
-    <div style="display:flex;flex-direction:column;gap:12px">${cards}</div>`;
+    <div style="display:flex;flex-direction:column;gap:12px">${cards}</div>
+
+    <div style="margin-top:22px;border:1px solid var(--hair2);border-radius:16px;padding:16px 18px">
+      <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:12px">Agregar / gestionar vendedores</div>
+      <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+        <input id="vendnuevo" placeholder="nombre del vendedor" style="flex:1;min-width:140px">
+        <input id="vendemail" type="email" placeholder="email (para que entre al panel)" style="flex:1;min-width:160px">
+        <button class="btn sm" data-vendadd="1">Agregar</button>
+      </div>
+      <div style="font-size:11px;color:var(--faint);margin-bottom:4px">El email es con el que el vendedor entra al panel y ve solo lo suyo.</div>
+      <div style="margin-top:8px">${vendList}</div>
+    </div>`;
 }
 
 /* ================= VISTA DEL VENDEDOR (ve solo lo suyo) ================= */
