@@ -339,6 +339,8 @@ if(configured){ sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE
 
 const YEAR = new Date().getFullYear();
 let isAdmin = false, canWrite = false, goal = 0, sessionEmail = "";
+let esVendedor = false, miVendedorId = null; // rol vendedor (ve solo lo suyo)
+let rankingPublico = []; // ranking del mes para la vista del vendedor (via RPC, sin comisiones ajenas)
 let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
@@ -592,7 +594,7 @@ const FROM = {
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
                   cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null,
                   vendedorId:r.vendedor_id||null, montoVenta:(r.monto_venta==null?null:Number(r.monto_venta)), fechaCierre:r.fecha_cierre||null}),
-  vendedores:r=>({id:r.id,nombre:r.nombre,activo:r.activo!==false,createdAt:r.created_at}),
+  vendedores:r=>({id:r.id,nombre:r.nombre,email:r.email||null,activo:r.activo!==false,createdAt:r.created_at}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
@@ -638,6 +640,18 @@ async function loadAll(){
     busquedas = (bq && !bq.error && bq.data) ? bq.data.map(FROM.busquedas) : [];
     plantillas = (pl && !pl.error && pl.data) ? pl.data : [];
     vendedores = (vd && !vd.error && vd.data) ? vd.data.map(FROM.vendedores) : [];
+  } else if(esVendedor){
+    // Vendedor: solo lo suyo. La RLS filtra leads/touches a los asignados a él.
+    const [ld, tc, vd, rk] = await Promise.all([
+      sb.from("leads").select("*").order("created_at",{ascending:false}),
+      sb.from("touches").select("*").order("created_at",{ascending:false}),
+      sb.from("vendedores").select("*"),
+      sb.rpc("ranking_mes", { mes: mesVigente() }),
+    ]);
+    leads    = (ld.data||[]).map(FROM.leads);
+    touches  = (tc && !tc.error && tc.data) ? tc.data.map(FROM.touches) : [];
+    vendedores = (vd && !vd.error && vd.data) ? vd.data.map(FROM.vendedores) : [];
+    rankingPublico = (rk && !rk.error && rk.data) ? rk.data.map(r=>({id:r.vendedor_id,nombre:r.nombre,volumen:Number(r.volumen)||0,ventas:Number(r.ventas)||0})) : [];
   }
   renderApp();
   pollFirma = firmaDatos();
@@ -711,11 +725,12 @@ async function runDraft(id, isRehacer){
 /* ============================ RENDER ============================ */
 function tabsHtml(){
   const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["comisiones","COMISIONES"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"]]
-                    : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
+            : esVendedor ? [["miresumen","MI RESUMEN"],["misclientes","MIS CLIENTES"],["miranking","RANKING"]]
+            : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
   const nuevos = leads.filter(x=>x.status==='nuevo').length;
   const hoyN = isAdmin ? leadsHoy().length : 0;
   return `<nav id="tabs">${t.map(([k,l])=>{
-    let b=''; if(k==='leads'&&nuevos) b=`<span class="nbadge">${nuevos}</span>`; if(k==='hoy'&&hoyN) b=`<span class="nbadge">${hoyN}</span>`;
+    let b=''; if((k==='leads'||k==='misclientes')&&nuevos) b=`<span class="nbadge">${nuevos}</span>`; if(k==='hoy'&&hoyN) b=`<span class="nbadge">${hoyN}</span>`;
     return `<button data-t="${k}" class="${tab===k?'on':''}">${l}${b}</button>`;
   }).join("")}</nav>`;
 }
@@ -811,7 +826,7 @@ function renderComisiones(){
   // gestión de vendedores
   const vendList = vendedores.length
     ? vendedores.map(v=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair)">
-        <span style="flex:1">${esc(v.nombre)} ${v.activo?'':'<span style="font-size:10px;color:var(--faint)">(inactivo)</span>'}</span>
+        <span style="flex:1">${esc(v.nombre)} ${v.activo?'':'<span style="font-size:10px;color:var(--faint)">(inactivo)</span>'}${v.email?`<br><span style="font-family:var(--mono);font-size:10px;color:var(--faint)">${esc(v.email)}</span>`:'<br><span style="font-size:10px;color:var(--warn)">sin email — no puede entrar</span>'}</span>
         <button class="btn ghost sm" data-vendtoggle="${esc(v.id)}">${v.activo?'Desactivar':'Reactivar'}</button>
       </div>`).join("")
     : `<div style="color:var(--muted);font-size:13px">Todavía no cargaste vendedores. Agregá el primero arriba.</div>`;
@@ -870,12 +885,115 @@ function renderComisiones(){
 
   <div style="margin-top:18px;border:1px solid var(--hair2);border-radius:16px;padding:16px 18px">
     <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:12px">Vendedores</div>
-    <div style="display:flex;gap:8px;margin-bottom:6px">
-      <input id="vendnuevo" placeholder="nombre del vendedor" style="flex:1">
+    <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+      <input id="vendnuevo" placeholder="nombre del vendedor" style="flex:1;min-width:140px">
+      <input id="vendemail" type="email" placeholder="email (para que entre al panel)" style="flex:1;min-width:160px">
       <button class="btn sm" data-vendadd="1">Agregar</button>
     </div>
+    <div style="font-size:11px;color:var(--faint);margin-bottom:4px">El email es con el que el vendedor entra al panel y ve solo lo suyo.</div>
     <div style="margin-top:8px">${vendList}</div>
   </div>`;
+}
+
+/* ================= VISTA DEL VENDEDOR (ve solo lo suyo) ================= */
+const vMoney  = n => "$"+Math.round(n).toLocaleString("en-US");
+const vMoney2 = n => "$"+(Math.round(n*100)/100).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2});
+const vPct    = p => (Math.round(p*1000)/10).toString().replace(".0","")+"%";
+// Mi posición en el ranking del mes (desde rankingPublico, ordenado por volumen).
+function miPuesto(){ const i=rankingPublico.findIndex(r=>r.id===miVendedorId); return i<0?null:i+1; }
+function soyCorona(){ return rankingPublico.length && rankingPublico[0].id===miVendedorId && rankingPublico[0].volumen>COMISION_CORONA.piso; }
+
+function renderMiResumen(){
+  const clave = mesVigente();
+  const mias = ventasDelMes(miVendedorId, clave);
+  const vol = mias.reduce((a,l)=>a+Number(l.montoVenta||0),0);
+  const corona = soyCorona();
+  const comision = corona ? vol*COMISION_CORONA.pctPlano : comisionEscalera(vol);
+  const puesto = miPuesto();
+  const ticket = mias.length ? vMoney(vol/mias.length) : "—";
+  const yo = (vendedores.find(v=>v.id===miVendedorId)||{}).nombre || sessionEmail;
+  // ¿cuánto falta para el próximo escalón?
+  const miEsc = escalonActual(vol);
+  const next = COMISION_TRAMOS.find(t=>t.desde>vol);
+  const faltaMsg = corona ? `Vas 1º 👑 — cobrás 15% + premio este mes.`
+    : next ? `Te faltan <b style="color:var(--accent)">${vMoney(next.desde-vol)}</b> para saltar a <b>${vPct(next.pct)}</b>.`
+    : `Estás en el escalón más alto (${vPct(miEsc)}). Si salís 1º y pasás ${vMoney(COMISION_CORONA.piso)}, cobrás 15% + premio.`;
+
+  const tile=(lbl,val,sub,col)=>`<div style="flex:1;min-width:150px;border:1px solid var(--hair2);border-radius:16px;padding:16px 18px">
+    <div style="font-family:var(--disp);font-size:14px;font-weight:800;color:#fff">${lbl}</div>
+    <div style="font-size:28px;margin-top:4px;color:${col||'#fff'}">${val}</div>
+    ${sub?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${sub}</div>`:""}</div>`;
+
+  $app().innerHTML = `
+  <div class="bar"><h2><span class="tick"></span>Hola, ${esc(yo)}</h2>
+    <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">${esc(mesLabel(clave))}</span>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    ${tile("Vendiste este mes", vMoney(vol), `${mias.length} venta${mias.length===1?'':'s'}`)}
+    ${tile("Tu comisión", vMoney2(comision), corona?'corona 👑 · 15%':`escalón ${vPct(miEsc)}`, corona?'var(--accent)':'var(--ok)')}
+    ${tile("Tu puesto", puesto?`${puesto}º`:'—', puesto===1?'1º del equipo 🔥':'en el ranking')}
+    ${tile("Ticket promedio", ticket, "por venta")}
+  </div>
+  <div style="border:1px solid var(--hair2);border-radius:16px;padding:16px 18px;background:rgba(221,125,71,.05)">
+    ${faltaMsg}
+  </div>
+  <div style="margin-top:14px"><button class="linkbtn" data-gotab="misclientes" style="font-size:13px">Ver mis clientes →</button></div>`;
+}
+
+function renderMisClientes(){
+  const orden = {nuevo:0,respondio:1,enviado:2,sin_respuesta:3,ganado:4,perdido:5};
+  const mis = [...leads].sort((a,b)=>(orden[a.status]??9)-(orden[b.status]??9));
+  const fila = l => `<div style="display:flex;align-items:center;gap:12px;border:1px solid var(--hair2);border-radius:14px;padding:13px 16px">
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--disp);font-weight:700;font-size:15px;color:#fff">${esc(l.name||l.email||"—")}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px">${esc(L_LABELS[l.status]||l.status)}${l.service?` · ${esc(l.service)}`:''}${l.mailsEnviados?` · ${l.mailsEnviados} mail(s)`:''}</div>
+      </div>
+      ${interestBar(l.respuestas)}
+      <button class="btn sm ghost" data-openlead="${l.id}">Abrir</button>
+    </div>`;
+  const body = mis.length
+    ? `<div style="display:flex;flex-direction:column;gap:9px">${mis.map(fila).join("")}</div>`
+    : `<div class="empty"><b>Todavía no tenés clientes asignados.</b><br>Cuando te asignen uno, aparece acá para que lo trabajes.</div>`;
+  $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Mis clientes</h2>
+    <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">${mis.length} en total</span></div>
+    ${body}`;
+}
+
+function renderMiRanking(){
+  const clave = mesVigente();
+  const medalla = i => i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}º`;
+  const coronaAct = rankingPublico.length && rankingPublico[0].volumen>COMISION_CORONA.piso;
+  // mi comisión (solo la mía se muestra)
+  const miVol = (rankingPublico.find(r=>r.id===miVendedorId)||{}).volumen||0;
+  const miCom = soyCorona()? miVol*COMISION_CORONA.pctPlano : comisionEscalera(miVol);
+  const filas = rankingPublico.map((r,i)=>{
+    const yo = r.id===miVendedorId;
+    const esCorona = coronaAct && i===0;
+    const ticket = r.ventas>0 ? vMoney(r.volumen/r.ventas) : "—";
+    const borde = esCorona ? 'border:1.5px solid var(--accent);box-shadow:0 0 0 3px rgba(221,125,71,.1)'
+                 : yo ? 'border:1.5px solid rgba(106,165,232,.6)' : '1px solid var(--hair2)';
+    const bg = esCorona ? 'background:rgba(221,125,71,.06)' : yo ? 'background:rgba(106,165,232,.06)' : '';
+    const sub = esCorona ? 'CORONA 👑' : (r.volumen>0?`${i+1}º puesto`:'sin ventas');
+    const m = (val,lbl,col)=>`<div style="text-align:right;min-width:78px"><div style="font-family:var(--mono);font-size:15px;color:${col||'#fff'}">${val}</div><div style="font-size:10px;color:var(--faint);margin-top:2px;letter-spacing:.06em;text-transform:uppercase">${lbl}</div></div>`;
+    return `<div style="display:flex;align-items:center;gap:14px;border:${borde};${bg};border-radius:16px;padding:16px 18px;flex-wrap:wrap;${r.volumen>0?'':'opacity:.6'}">
+      <div style="font-family:var(--disp);font-weight:800;font-size:26px;min-width:40px;text-align:center">${r.volumen>0?medalla(i):'·'}</div>
+      <div style="flex:1;min-width:110px">
+        <div style="font-family:var(--disp);font-weight:800;font-size:17px;color:#fff">${esc(r.nombre)}${yo?' <span style="font-size:11px;color:var(--info);font-weight:600">· VOS</span>':''}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:${esCorona?'var(--accent)':'var(--muted)'};margin-top:3px">${sub}</div>
+      </div>
+      ${m(vMoney(r.volumen),'vendido')}
+      ${m(r.ventas,'ventas')}
+      ${m(ticket,'ticket')}
+      ${yo?`<div style="width:1px;align-self:stretch;background:var(--hair2)"></div>${m(vMoney2(miCom),'tu comisión',esCorona?'var(--accent)':'var(--ok)')}`:''}
+    </div>`;
+  }).join("");
+  const lider = rankingPublico[0];
+  const msg = coronaAct ? `<b style="color:var(--accent)">👑 ${esc(lider.nombre)}</b> va 1º con ${vMoney(lider.volumen)}.`
+    : (lider&&lider.volumen>0 ? `Nadie pasó ${vMoney(COMISION_CORONA.piso)} todavía — la corona está vacante.` : `Sin ventas este mes todavía.`);
+  $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Ranking del equipo</h2>
+    <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">${esc(mesLabel(clave))}</span></div>
+    <div style="border:1px solid var(--hair2);border-radius:16px;padding:14px 16px;margin-bottom:16px;background:rgba(221,125,71,.04)">${msg}</div>
+    ${rankingPublico.some(r=>r.volumen>0)?`<div style="display:flex;flex-direction:column;gap:10px">${filas}</div>`:`<div class="empty"><b>Sin ventas cargadas este mes.</b><br>Cerrá tu primer cliente para entrar al ranking.</div>`}`;
 }
 
 function renderApp(){
@@ -912,6 +1030,9 @@ function renderBody(){
   else if(tab==="clientes") renderClients();
   else if(tab==="leads") renderLeads();
   else if(tab==="prospeccion") renderProspeccion();
+  else if(tab==="miresumen") renderMiResumen();
+  else if(tab==="misclientes") renderMisClientes();
+  else if(tab==="miranking") renderMiRanking();
 }
 const $app = () => document.getElementById("app");
 
@@ -1799,12 +1920,13 @@ function closeModalHtml(){
     <div class="cpop-s">${perdido?'¿Por qué no cerró? Esto alimenta el análisis.':'¿Qué lo convenció? (opcional)'}</div>
     ${!perdido?`<div style="margin-bottom:12px"><label style="${flbl}">Monto de la venta (USD) *</label>
       <input id="ci_monto" type="number" min="0" step="1" placeholder="total que paga el cliente, ej: 3000"></div>
-    <div style="margin-bottom:12px"><label style="${flbl}">Vendedor</label>
+    ${isAdmin?`<div style="margin-bottom:12px"><label style="${flbl}">Vendedor</label>
       <select id="ci_vendedor">
-        <option value="">— sin asignar —</option>
-        ${vendedores.filter(v=>v.activo).map(v=>`<option value="${esc(v.id)}">${esc(v.nombre)}</option>`).join('')}
+        <option value="${esc(l.vendedorId||'')}" selected>${l.vendedorId?esc(vendedorNombre(l.vendedorId)):'— sin asignar —'}</option>
+        ${!l.vendedorId?'':'<option value="">— sin asignar —</option>'}
+        ${vendedores.filter(v=>v.activo && v.id!==l.vendedorId).map(v=>`<option value="${esc(v.id)}">${esc(v.nombre)}</option>`).join('')}
       </select>
-      ${vendedores.filter(v=>v.activo).length? '' : '<div style="font-size:11px;color:var(--muted);margin-top:5px">No hay vendedores cargados. Agregalos en la sección Comisiones.</div>'}</div>`:''}
+      ${vendedores.filter(v=>v.activo).length? '' : '<div style="font-size:11px;color:var(--muted);margin-top:5px">No hay vendedores cargados. Agregalos en la sección Comisiones.</div>'}</div>`:''}`:''}
     ${perdido?`<div style="margin-bottom:12px"><label style="${flbl}">Motivo</label>
       <select id="ci_motivo">${CIERRE_MOTIVOS.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select></div>
     <div style="margin-bottom:12px"><label style="${flbl}">Qué faltó</label><input id="ci_falto" placeholder="qué hubiera cambiado el resultado"></div>`:''}
@@ -1841,6 +1963,7 @@ function leadModalHtml(){
       ${l.phone?`<button class="btn ghost sm" data-calllead="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">${ICON_PHONE} Llamar</button>`:``}
       ${l.email?`<button class="btn-reply" data-replymail="${esc(l.email)}">Webmail</button>`:``}
       <select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select>
+      ${isAdmin?`<select class="lsel" data-assignvend="${l.id}" title="Asignar a un vendedor"><option value="">— vendedor —</option>${vendedores.filter(v=>v.activo).map(v=>`<option value="${esc(v.id)}" ${l.vendedorId===v.id?"selected":""}>${esc(v.nombre)}</option>`).join("")}</select>`:''}
       <span style="margin-left:auto;display:flex;gap:8px;align-items:center">
         <button class="btn ghost sm" data-ganado="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">✓ Ganado</button>
         <button class="btn ghost sm" data-perdido="${l.id}" style="color:var(--bad);border-color:rgba(229,96,76,.4)">✕ Perdido</button>
@@ -1981,8 +2104,9 @@ document.addEventListener("click", async e=>{
   if(t.dataset.leadfilter){ leadFilter=t.dataset.leadfilter; renderApp(); return; }
   if(t.dataset.vendadd){
     const inp=document.getElementById("vendnuevo"); const nombre=(inp&&inp.value.trim())||"";
+    const em=document.getElementById("vendemail"); const email=(em&&em.value.trim().toLowerCase())||"";
     if(!nombre){ note("Escribí el nombre del vendedor."); return; }
-    const { error } = await sb.from("vendedores").insert({ nombre });
+    const { error } = await sb.from("vendedores").insert({ nombre, email: email||null });
     if(error) note("No se pudo agregar: "+error.message); else await loadAll();
     return;
   }
@@ -2407,7 +2531,8 @@ document.addEventListener("click", async e=>{
       const monto = montoEl ? Number(montoEl.value) : 0;
       if(!monto || monto<=0){ note("Poné el monto de la venta para registrar la comisión."); return; }
       patch.monto_venta = monto;
-      patch.vendedor_id = (vendEl && vendEl.value) ? vendEl.value : null;
+      // vendedor: si es vendedor logueado, siempre él; si es admin, lo que eligió (o lo ya asignado)
+      patch.vendedor_id = esVendedor ? miVendedorId : ((vendEl && vendEl.value) ? vendEl.value : (l.vendedorId||null));
       patch.fecha_cierre = new Date().toISOString();
     }
     const {error}=await sb.from("leads").update(patch).eq("id",id);
@@ -2591,6 +2716,10 @@ document.addEventListener("change", async e=>{
     const { error } = await sb.from("leads").update({ status: t.value }).eq("id", t.dataset.lstatus);
     if(error) note("No se pudo cambiar el estado: "+error.message); else await loadAll();
   }
+  if(t.dataset && t.dataset.assignvend){
+    const { error } = await sb.from("leads").update({ vendedor_id: t.value||null }).eq("id", t.dataset.assignvend);
+    if(error) note("No se pudo asignar: "+error.message); else { note(t.value?"Asignado ✓":"Sin asignar"); await loadAll(); }
+  }
 });
 
 /* ---------- login ---------- */
@@ -2625,7 +2754,12 @@ async function boot(){
   sessionEmail = session.user.email||"";
   const {data:adm}=await sb.rpc("is_admin");
   isAdmin=!!adm; canWrite=isAdmin;
-  if(!isAdmin) tab="propuestas";
+  if(!isAdmin){
+    // ¿es vendedor? (ve solo lo suyo)
+    try{ const {data:vid}=await sb.rpc("mi_vendedor_id"); miVendedorId=vid||null; }catch(e){ miVendedorId=null; }
+    esVendedor=!!miVendedorId;
+    tab = esVendedor ? "miresumen" : "propuestas";
+  }
   await loadAll();
   // realtime: sincroniza entre dispositivos
   sb.channel("panel-rt").on("postgres_changes",{event:"*",schema:"public"},()=>loadAll()).subscribe();
