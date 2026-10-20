@@ -951,10 +951,11 @@ function renderEquipo(target){
 
   const dest = target ? document.getElementById(target) : $app();
   if(!dest) return;
-  if(!activos.length){
-    dest.innerHTML = `<div class="empty"><b>No hay vendedores cargados.</b><br>Agregalos en <b>Comisiones</b> (nombre + email + meta).</div>`;
-    return;
-  }
+  // OJO: aunque no haya activos, el bloque de gestión SIEMPRE se muestra
+  // (si no, desactivás al último y no podés reactivarlo).
+  const avisoVacio = !activos.length
+    ? `<div class="empty" style="margin-bottom:16px"><b>${vendedores.length?'No hay vendedores activos.':'No hay vendedores cargados.'}</b><br>${vendedores.length?'Reactivá uno abajo o agregá otro.':'Agregá el primero acá abajo (nombre + email + meta).'}</div>`
+    : '';
 
   const metric = (val,lbl,col)=>`<div style="text-align:center;min-width:76px"><div style="font-family:var(--disp);font-weight:800;font-size:19px;line-height:1.2;color:${col||'#fff'}">${val}</div><div style="font-size:10px;color:var(--faint);margin-top:9px;letter-spacing:.05em;text-transform:uppercase">${lbl}</div></div>`;
 
@@ -1026,12 +1027,13 @@ function renderEquipo(target){
     : `<div style="color:var(--muted);font-size:13px">Todavía no cargaste vendedores. Agregá el primero arriba.</div>`;
 
   dest.innerHTML = `
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    ${avisoVacio}
+    ${activos.length?`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
       ${tile("Vendedores activos", activos.length)}
       ${tile("Llamadas hoy (equipo)", totLlamHoy)}
       ${tile("Pendientes hoy", totPendHoy, totPendHoy===0?'todos al día ✓':'acciones sin hacer')}
     </div>
-    <div style="display:flex;flex-direction:column;gap:12px">${cards}</div>
+    <div style="display:flex;flex-direction:column;gap:12px">${cards}</div>`:''}
 
     <div style="margin-top:22px;border:1px solid var(--hair2);border-radius:16px;padding:20px">
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:16px">
