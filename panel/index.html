@@ -391,7 +391,7 @@ let rankingPublico = []; // ranking del mes para la vista del vendedor (via RPC,
 let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
-let openProspId = null, hlProspId = null, fbAsk = null, visitaReg = null;
+let openProspId = null, hlProspId = null, fbAsk = null, visitaReg = null, horaPicker = null;
 let plantillas = [], plantSel = null, tandaEdit = false, tandaPrev = null, tandaEnviando = false;
 
 /* Candidatos de la tanda del día (misma regla que la card) */
@@ -1703,6 +1703,8 @@ function rutaMapsUrl(lista){
   return "https://www.google.com/maps/dir/?api=1&destination="+dest+(way?"&waypoints="+way:"")+"&travelmode=driving";
 }
 const VISITA_RES=["No estaba el dueño","Hablé con el encargado","Dueño interesado","Dejé material","Agendó reunión","No me atendieron"];
+const HORAS=(function(){ const a=[]; for(let h=9;h<=21;h++){ for(const m of ["00","30"]) a.push((h<10?"0"+h:""+h)+":"+m); } return a; })();
+function fmtHora(v){ if(!v) return ""; const [h,m]=v.split(":"); const H=parseInt(h,10); return (H<=12?(H===0?12:H):H-12)+":"+m+(H<12?"am":"pm"); }
 function gcalUrl(p){
   const tz="America/New_York"; let dates="";
   if(p.visitaDia && p.visitaHora){
@@ -1738,7 +1740,15 @@ function visitaFila(p, idx){
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center">
       <a class="btn sm ghost" style="${B};text-decoration:none" href="${mapsUrl}" target="_blank" rel="noopener">📍 Cómo llegar</a>
       ${p.visitaDia
-        ? `<span class="bs" style="padding:0 4px">📅 ${esc(p.visitaDia)}</span><span class="bs">Hora:</span><select data-visitahora="${p.id}" class="lsel" style="height:38px;font-size:13px">${(function(){ let o=`<option value="">— elegir —</option>`; for(let h=9;h<=21;h++){ for(const m of ["00","30"]){ const v=(h<10?"0"+h:""+h)+":"+m; const et=(h<=12?h:h-12)+":"+m+(h<12?"am":"pm"); o+=`<option value="${v}" ${p.visitaHora===v?"selected":""}>${et}</option>`; } } return o; })()}</select><a class="btn sm" style="${B};text-decoration:none" href="${gcalUrl(p)}" target="_blank" rel="noopener" title="Crear el evento en tu Google Calendar">📆 Agendar</a><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|">Cambiar día</button>`
+        ? `<span class="bs" style="padding:0 4px">📅 ${esc(p.visitaDia)}</span><span class="bs">Hora:</span><span style="position:relative;display:inline-block">
+        <button class="btn sm ${p.visitaHora?"":"ghost"}" style="${B}" data-horapicker="${p.id}">${p.visitaHora?fmtHora(p.visitaHora):"Elegir"} ▾</button>
+        ${horaPicker===p.id?`<div style="position:absolute;z-index:60;top:44px;left:0;background:#15161a;border:1px solid var(--hair);border-radius:14px;padding:12px;box-shadow:0 14px 40px rgba(0,0,0,.55)">
+          <div style="display:grid;grid-template-columns:repeat(4,64px);gap:6px;max-height:230px;overflow:auto">
+            ${HORAS.map(v=>`<button class="btn sm ${p.visitaHora===v?"":"ghost"}" style="height:34px;font-size:12px;padding:0;justify-content:center" data-horaset="${p.id}|${v}">${fmtHora(v)}</button>`).join("")}
+          </div>
+          ${p.visitaHora?`<button class="linkbtn" style="margin-top:8px;color:var(--faint)" data-horaset="${p.id}|">Quitar hora</button>`:""}
+        </div>`:""}
+      </span><a class="btn sm" style="${B};text-decoration:none" href="${gcalUrl(p)}" target="_blank" rel="noopener" title="Crear el evento en tu Google Calendar">📆 Agendar</a><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|">Cambiar día</button>`
         : `<span class="bs">Ir el:</span><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|${iso(d1)}">Hoy</button><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|${iso(d2)}">Mañana</button><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|${iso(d3)}">Pasado</button><input type="date" data-visitafecha="${p.id}" style="height:38px;font-size:13px;padding:0 10px">`}
       <span style="flex:1;min-width:20px"></span>
       <button class="btn sm" style="${B}" data-visitareg="${p.id}">✓ Ya fui</button>
@@ -2749,6 +2759,8 @@ document.addEventListener("click", async e=>{
     note(dia?("📅 Asignado a "+dia):"Sacado del día — vuelve a Sin día asignado.");
     await loadAll(); return;
   }
+  if(t.dataset.horapicker){ horaPicker=(horaPicker===t.dataset.horapicker)?null:t.dataset.horapicker; renderApp(); return; }
+  if(t.dataset.horaset){ const [id,v]=t.dataset.horaset.split("|"); await sb.from("prospectos").update({visita_hora:v||null,updated_at:new Date().toISOString()}).eq("id",id); horaPicker=null; note(v?("🕒 Hora: "+fmtHora(v)):"Hora quitada"); await loadAll(); return; }
   if(t.dataset.visitareg){ visitaReg=(visitaReg===t.dataset.visitareg)?null:t.dataset.visitareg; renderApp(); return; }
   if(t.dataset.visitcancel){ visitaReg=null; renderApp(); return; }
   if(t.dataset.visitres){
