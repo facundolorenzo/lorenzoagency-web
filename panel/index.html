@@ -360,6 +360,7 @@ const YEAR = new Date().getFullYear();
 let isAdmin = false, canWrite = false, goal = 0, sessionEmail = "";
 let esVendedor = false, miVendedorId = null; // rol vendedor (ve solo lo suyo)
 let repVendId = null, repDropOpen = false; // dropdown custom del reparto
+let vendSub = "equipo"; // sub-sección dentro de VENDEDORES: equipo | comisiones
 let rankingPublico = []; // ranking del mes para la vista del vendedor (via RPC, sin comisiones ajenas)
 let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
@@ -746,7 +747,7 @@ async function runDraft(id, isRehacer){
 
 /* ============================ RENDER ============================ */
 function tabsHtml(){
-  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["equipo","EQUIPO"],["comisiones","COMISIONES"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"]]
+  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["vendedores","VENDEDORES"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"]]
             : esVendedor ? [["hoy","PARA HOY"],["miresumen","MI RESUMEN"],["misclientes","MIS CLIENTES"],["miranking","RANKING"]]
             : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
   const nuevos = leads.filter(x=>x.status==='nuevo').length;
@@ -792,7 +793,9 @@ function renderLlamadas(){
 }
 
 /* ---------- COMISIONES (ranking mensual + gestión de vendedores) ---------- */
-function renderComisiones(){
+function renderComisiones(target){
+  const dest = target ? document.getElementById(target) : $app();
+  if(!dest) return;
   const clave = mesVigente();
   const rank = rankingMes(clave);
   const totalVol = rank.reduce((a,r)=>a+r.volumen,0);
@@ -877,9 +880,9 @@ function renderComisiones(){
     }).join("")}
   </div>`;
 
-  $app().innerHTML = `
-  <div class="bar"><h2><span class="tick"></span>Comisiones</h2>
-    <select id="comes" class="lsel" style="margin-left:auto">
+  dest.innerHTML = `
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <select id="comes" class="lsel">
       ${meses.map(m=>`<option value="${m}" ${m===clave?"selected":""}>${esc(mesLabel(m))}</option>`).join("")}
     </select>
   </div>
@@ -918,8 +921,17 @@ function renderComisiones(){
   </div>`;
 }
 
+/* ================= VENDEDORES (contiene Equipo + Comisiones) ================= */
+function renderVendedores(){
+  const stab = (k,l)=>`<button data-vendsub="${k}" style="background:${vendSub===k?'var(--accent)':'none'};border:1px solid ${vendSub===k?'var(--accent)':'var(--hair2)'};color:${vendSub===k?'#fff':'var(--muted)'};font-family:var(--mono);font-size:11px;letter-spacing:.1em;padding:8px 16px;border-radius:999px;cursor:pointer;font-weight:${vendSub===k?'600':'400'}">${l}</button>`;
+  $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Vendedores</h2></div>
+    <div style="display:flex;gap:8px;margin:-6px 0 18px">${stab("equipo","EQUIPO")}${stab("comisiones","COMISIONES")}</div>
+    <div id="vbody"></div>`;
+  if(vendSub==="comisiones") renderComisiones("vbody"); else renderEquipo("vbody");
+}
+
 /* ================= EQUIPO (admin supervisa a los vendedores) ================= */
-function renderEquipo(){
+function renderEquipo(target){
   const clave = mesVigente();
   const money = n => "$"+Math.round(n).toLocaleString("en-US");
   const money2 = n => "$"+(Math.round(n*100)/100).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2});
@@ -930,9 +942,10 @@ function renderEquipo(){
   const puestoDe = id => { const i=rank.findIndex(r=>r.vendedor.id===id); return i<0?null:i+1; };
   const activos = vendedores.filter(v=>v.activo);
 
+  const dest = target ? document.getElementById(target) : $app();
+  if(!dest) return;
   if(!activos.length){
-    $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Equipo</h2></div>
-      <div class="empty"><b>No hay vendedores cargados.</b><br>Agregalos en <b>Comisiones</b> (nombre + email + meta).</div>`;
+    dest.innerHTML = `<div class="empty"><b>No hay vendedores cargados.</b><br>Agregalos en <b>Comisiones</b> (nombre + email + meta).</div>`;
     return;
   }
 
@@ -985,8 +998,7 @@ function renderEquipo(){
   const totPendHoy = activos.reduce((a,v)=>a+leads.filter(l=>l.vendedorId===v.id&&accionHoy(l)).length,0);
   const tile=(lbl,val,sub)=>`<div style="flex:1;min-width:140px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px"><div style="font-family:var(--disp);font-size:14px;font-weight:800">${lbl}</div><div style="font-size:26px;margin-top:4px">${val}</div>${sub?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${sub}</div>`:''}</div>`;
 
-  $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Equipo</h2>
-    <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">${esc(mesLabel(clave))}</span></div>
+  dest.innerHTML = `
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
       ${tile("Vendedores activos", activos.length)}
       ${tile("Llamadas hoy (equipo)", totLlamHoy)}
@@ -1177,8 +1189,7 @@ function renderBody(){
   else if(tab==="resumen") renderResumen();
   else if(tab==="analisis") renderAnalisis();
   else if(tab==="llamadas") renderLlamadas();
-  else if(tab==="equipo") renderEquipo();
-  else if(tab==="comisiones") renderComisiones();
+  else if(tab==="vendedores") renderVendedores();
   else if(tab==="propuestas") renderProposals();
   else if(tab==="facturas") renderInvoices();
   else if(tab==="clientes") renderClients();
@@ -2304,6 +2315,7 @@ document.addEventListener("click", async e=>{
     let v=Number(el.value)||0; v += (dir==='+'?1:-1); if(v<0)v=0;
     el.value=v; return;
   }
+  if(t.dataset.vendsub){ vendSub=t.dataset.vendsub; renderApp(); return; }
   if(t.dataset.repdroptoggle){ repDropOpen=!repDropOpen; renderApp(); return; }
   if(t.dataset.reppick){ repVendId=t.dataset.reppick; repDropOpen=false; renderApp(); return; }
   if(repDropOpen && !(t.closest && t.closest(".mdrop"))){ repDropOpen=false; renderApp(); return; }
