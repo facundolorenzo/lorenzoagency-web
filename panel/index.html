@@ -71,8 +71,13 @@ nav button.on{color:#fff;border-color:var(--accent);background:var(--accent);fon
 .vchip.off{color:var(--muted);border:1px solid var(--hair2)}
 .vmeta{display:flex;align-items:center;gap:0;border:1px solid var(--hair2);border-radius:10px;overflow:hidden}
 .vmeta span{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--faint);padding:0 9px;text-transform:uppercase;border-right:1px solid var(--hair2);align-self:stretch;display:flex;align-items:center;background:rgba(0,0,0,.25)}
-.vmeta input{width:88px;border:none;border-radius:0;background:transparent;padding:9px 11px;font-family:var(--mono);font-size:13px;text-align:right}
+.vmeta input{width:76px;border:none;border-radius:0;background:transparent;padding:9px 8px;font-family:var(--mono);font-size:13px;text-align:center;-moz-appearance:textfield}
+.vmeta input::-webkit-outer-spin-button,.vmeta input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .vmeta input:focus{outline:none}
+.vmeta button{background:var(--bg1);border:none;color:var(--fg);width:30px;align-self:stretch;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.vmeta button:hover{background:var(--accent);color:#fff}
+.vmeta button:first-of-type{border-left:1px solid var(--hair2);border-right:1px solid var(--hair2)}
+.vmeta button:last-of-type{border-left:1px solid var(--hair2)}
 .linkbtn{background:none;border:none;color:var(--accent);font-family:var(--disp);font-size:12.5px;text-align:left;
   cursor:pointer;padding:0;text-decoration:none}
 .linkbtn:hover{text-decoration:underline}
@@ -1015,7 +1020,7 @@ function renderEquipo(target){
           <div class="vm">${v.email?esc(v.email):'<span style="color:var(--warn)">sin email — no puede entrar al panel</span>'}</div>
         </div>
         <span class="vchip ${v.activo?'on':'off'}">${v.activo?'activo':'inactivo'}</span>
-        <div class="vmeta"><span>meta</span><input type="number" min="0" value="${v.meta||''}" placeholder="0" data-vendmeta="${esc(v.id)}"></div>
+        <div class="vmeta"><span>meta</span><button data-metastep="-:${esc(v.id)}" title="−$500">−</button><input type="number" min="0" value="${v.meta||''}" placeholder="0" data-vendmeta="${esc(v.id)}"><button data-metastep="+:${esc(v.id)}" title="+$500">+</button></div>
         <button class="btn ghost sm" data-vendtoggle="${esc(v.id)}">${v.activo?'Desactivar':'Reactivar'}</button>
       </div>`).join("")+`</div>`
     : `<div style="color:var(--muted);font-size:13px">Todavía no cargaste vendedores. Agregá el primero arriba.</div>`;
@@ -2355,6 +2360,15 @@ document.addEventListener("click", async e=>{
     el.value=v; return;
   }
   if(t.dataset.vendsub){ vendSub=t.dataset.vendsub; renderApp(); return; }
+  if(t.dataset.metastep){
+    const [dir,vid]=t.dataset.metastep.split(":");
+    const inp=document.querySelector(`input[data-vendmeta="${vid}"]`); if(!inp) return;
+    let val=Number(inp.value)||0; val += (dir==='+'?500:-500); if(val<0)val=0;
+    inp.value=val;
+    const { error } = await sb.from("vendedores").update({ meta_mensual: val }).eq("id", vid);
+    if(error) note("No se pudo guardar la meta: "+error.message);
+    return;
+  }
   if(t.dataset.repdroptoggle){ repDropOpen=!repDropOpen; renderApp(); return; }
   if(t.dataset.reppick){ repVendId=t.dataset.reppick; repDropOpen=false; renderApp(); return; }
   if(repDropOpen && !(t.closest && t.closest(".mdrop"))){ repDropOpen=false; renderApp(); return; }
