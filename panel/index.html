@@ -817,11 +817,12 @@ function renderComisiones(){
     : `<div style="color:var(--muted);font-size:13px">Todavía no cargaste vendedores. Agregá el primero arriba.</div>`;
 
   // Gráfico de barras con glow (incluye la corona como 4ª barra)
+  const moneyK = n => "$"+(n/1000)+"k";  // formato corto para que el rango entre en una línea
   const barras = COMISION_TRAMOS.map(tr=>({
-    rango: tr.hasta===Infinity ? `+${money(tr.desde)}` : `${money(tr.desde)}–${money(tr.hasta)}`,
+    rango: tr.hasta===Infinity ? `+${moneyK(tr.desde)}` : `${moneyK(tr.desde)}–${moneyK(tr.hasta)}`,
     pct: tr.pct, corona:false
   }));
-  barras.push({ rango:`1º · +${money(COMISION_CORONA.piso)}`, pct:COMISION_CORONA.pctPlano, corona:true });
+  barras.push({ rango:`1º · +${moneyK(COMISION_CORONA.piso)}`, pct:COMISION_CORONA.pctPlano, corona:true });
   const maxPct = Math.max(...barras.map(b=>b.pct));
   const H = 190;
   const escaleraGrafico = `<div style="display:flex;align-items:flex-end;gap:30px;height:${H+58}px;padding:30px 6px 0;justify-content:center">
@@ -833,7 +834,7 @@ function renderComisiones(){
       return `<div style="width:62px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
         <div style="font-family:var(--disp);font-weight:800;font-size:${b.corona?'24':'21'}px;color:#fff;margin-bottom:10px;text-shadow:0 0 18px rgba(221,125,71,.5)">${pct(b.pct)}${b.corona?'<div style="font-size:16px;margin-top:-2px">👑</div>':''}</div>
         <div style="width:100%;height:${h}px;border-radius:14px 14px 6px 6px;${glow}"></div>
-        <div style="font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:12px;text-align:center;letter-spacing:.03em">${b.rango}</div>
+        <div style="font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:12px;text-align:center;letter-spacing:.03em;white-space:nowrap">${b.rango}</div>
       </div>`;
     }).join("")}
   </div>`;
