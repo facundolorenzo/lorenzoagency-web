@@ -839,8 +839,8 @@ function renderComisiones(target){
 
   // Ranking en cuadros apilados (uno abajo del otro).
   const metric = (val,lbl,col)=>`<div style="text-align:right;min-width:82px">
-    <div style="font-family:var(--mono);font-size:15px;color:${col||'#fff'}">${val}</div>
-    <div style="font-size:10px;color:var(--faint);margin-top:2px;letter-spacing:.06em;text-transform:uppercase">${lbl}</div></div>`;
+    <div style="font-family:var(--mono);font-size:15px;line-height:1.2;color:${col||'#fff'}">${val}</div>
+    <div style="font-size:10px;color:var(--faint);margin-top:8px;letter-spacing:.06em;text-transform:uppercase">${lbl}</div></div>`;
   const filas = rank.filter(r=>r.volumen>0 || r.vendedor.activo).map((r,i)=>{
     const puesto = r.volumen>0 ? medalla(i) : '·';
     const ticket = r.ventas>0 ? money(r.volumen/r.ventas) : '—';
@@ -951,7 +951,7 @@ function renderEquipo(target){
     return;
   }
 
-  const metric = (val,lbl,col)=>`<div style="text-align:center;min-width:76px"><div style="font-family:var(--disp);font-weight:800;font-size:19px;color:${col||'#fff'}">${val}</div><div style="font-size:10px;color:var(--faint);margin-top:2px;letter-spacing:.05em;text-transform:uppercase">${lbl}</div></div>`;
+  const metric = (val,lbl,col)=>`<div style="text-align:center;min-width:76px"><div style="font-family:var(--disp);font-weight:800;font-size:19px;line-height:1.2;color:${col||'#fff'}">${val}</div><div style="font-size:10px;color:var(--faint);margin-top:9px;letter-spacing:.05em;text-transform:uppercase">${lbl}</div></div>`;
 
   const cards = activos.map(v=>{
     const misLeads = leads.filter(l=>l.vendedorId===v.id);
@@ -1087,9 +1087,9 @@ function renderMiResumen(){
   const ganadosTot = leads.filter(l=>l.status==='ganado').length;
   const tasaResp = contactados ? Math.round(respondieron/contactados*100) : 0;
   const tasaCierre = cerrados ? Math.round(ganadosTot/cerrados*100) : 0;
-  const act = (val,lbl)=>`<div style="flex:1;min-width:110px;text-align:center;border:1px solid var(--hair2);border-radius:14px;padding:14px 10px">
-    <div style="font-family:var(--disp);font-weight:800;font-size:22px">${val}</div>
-    <div style="font-size:10.5px;color:var(--muted);margin-top:3px;letter-spacing:.04em">${lbl}</div></div>`;
+  const act = (val,lbl)=>`<div style="flex:1;min-width:110px;text-align:center;border:1px solid var(--hair2);border-radius:14px;padding:16px 10px">
+    <div style="font-family:var(--disp);font-weight:800;font-size:22px;line-height:1.2">${val}</div>
+    <div style="font-size:10.5px;color:var(--muted);margin-top:9px;letter-spacing:.04em">${lbl}</div></div>`;
   const actBox = `<div style="margin-bottom:16px">
     <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:10px">Tu actividad del mes</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -1170,7 +1170,7 @@ function renderMiRanking(){
                  : yo ? 'border:1.5px solid rgba(106,165,232,.6)' : '1px solid var(--hair2)';
     const bg = esCorona ? 'background:rgba(221,125,71,.06)' : yo ? 'background:rgba(106,165,232,.06)' : '';
     const sub = esCorona ? 'CORONA 👑' : (r.volumen>0?`${i+1}º puesto`:'sin ventas');
-    const m = (val,lbl,col)=>`<div style="text-align:right;min-width:78px"><div style="font-family:var(--mono);font-size:15px;color:${col||'#fff'}">${val}</div><div style="font-size:10px;color:var(--faint);margin-top:2px;letter-spacing:.06em;text-transform:uppercase">${lbl}</div></div>`;
+    const m = (val,lbl,col)=>`<div style="text-align:right;min-width:78px"><div style="font-family:var(--mono);font-size:15px;line-height:1.2;color:${col||'#fff'}">${val}</div><div style="font-size:10px;color:var(--faint);margin-top:8px;letter-spacing:.06em;text-transform:uppercase">${lbl}</div></div>`;
     return `<div style="display:flex;align-items:center;gap:14px;border:${borde};${bg};border-radius:16px;padding:16px 18px;flex-wrap:wrap;${r.volumen>0?'':'opacity:.6'}">
       <div style="font-family:var(--disp);font-weight:800;font-size:26px;min-width:40px;text-align:center">${r.volumen>0?medalla(i):'·'}</div>
       <div style="flex:1;min-width:110px">
