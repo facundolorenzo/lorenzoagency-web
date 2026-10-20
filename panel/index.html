@@ -824,10 +824,10 @@ function renderComisiones(){
   }));
   barras.push({ rango:`1º · +${moneyK(COMISION_CORONA.piso)}`, pct:COMISION_CORONA.pctPlano, corona:true });
   const maxPct = Math.max(...barras.map(b=>b.pct));
-  const H = 190;
+  const H = 210;
   const escaleraGrafico = `<div style="display:flex;align-items:flex-end;gap:30px;height:${H+58}px;padding:30px 6px 0;justify-content:center">
     ${barras.map((b,i)=>{
-      const h = Math.round(b.pct/maxPct*H);
+      const h = Math.round(Math.pow(b.pct/maxPct, 1.8) * H); // exagera el salto: el 15% se despega del 12%
       const glow = b.corona
         ? "background:linear-gradient(180deg,rgba(242,160,110,.35) 0%,rgba(221,125,71,.85) 55%,#DD7D47 100%);box-shadow:0 0 55px -4px rgba(221,125,71,.75),inset 0 0 26px rgba(255,200,160,.4)"
         : `background:linear-gradient(180deg,rgba(221,125,71,.10) 0%,rgba(221,125,71,${(0.30+i*0.14).toFixed(2)}) 55%,rgba(221,125,71,${(0.55+i*0.14).toFixed(2)}) 100%);box-shadow:0 0 38px -8px rgba(221,125,71,${(0.35+i*0.12).toFixed(2)}),inset 0 0 20px rgba(255,190,150,.18)`;
