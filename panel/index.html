@@ -391,7 +391,7 @@ let rankingPublico = []; // ranking del mes para la vista del vendedor (via RPC,
 let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
-let openProspId = null, hlProspId = null, fbAsk = null;
+let openProspId = null, hlProspId = null, fbAsk = null, visitaReg = null;
 let plantillas = [], plantSel = null, tandaEdit = false, tandaPrev = null, tandaEnviando = false;
 
 /* Candidatos de la tanda del día (misma regla que la card) */
@@ -656,7 +656,7 @@ const FROM = {
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
-                  nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,idioma:r.idioma||null,visitaDia:r.visita_dia||null,
+                  nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,idioma:r.idioma||null,visitaDia:r.visita_dia||null,visitado:r.visitado===true,visitadoFecha:r.visitado_fecha||null,visitaNota:r.visita_nota||null,
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,puntoFlojo:r.punto_flojo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
 };
@@ -1702,29 +1702,47 @@ function rutaMapsUrl(lista){
   const dest=pts[pts.length-1], way=pts.slice(0,-1).join("|");
   return "https://www.google.com/maps/dir/?api=1&destination="+dest+(way?"&waypoints="+way:"")+"&travelmode=driving";
 }
+const VISITA_RES=["No estaba el dueño","Hablé con el encargado","Dueño interesado","Dejé material","Agendó reunión","No me atendieron"];
 function visitaFila(p, idx){
   const info=[p.direccion||p.ciudad||"", p.horario?String(p.horario).slice(0,46):""].filter(Boolean).join(" · ");
   const dist=(idx!=null && p._desde!=null)?`<span class="bs" style="color:var(--accent)">${p._desde<1?"<1":Math.round(p._desde)} mi</span> · `:"";
   const hoy=new Date(); const d1=new Date(hoy); const d2=new Date(hoy); d2.setDate(d2.getDate()+1);
   const iso=x=>x.toISOString().slice(0,10);
+  const mapsUrl=(p.lat&&p.lng)?("https://www.google.com/maps/dir/?api=1&destination="+p.lat+","+p.lng+"&travelmode=driving"):("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([p.empresa,p.ciudad].filter(Boolean).join(", ")));
+  if(p.visitado){
+    return `<div class="brow" style="align-items:flex-start;opacity:.6">
+      <span style="min-width:0">✓ <b>${esc(p.empresa||"—")}</b> <span class="bs">· visitado ${esc(p.visitadoFecha||"")}</span>
+        ${p.visitaNota?`<div class="bs" style="margin-top:4px;color:var(--fg)">${esc(p.visitaNota)}</div>`:""}</span>
+      <button class="btn sm ghost" data-visitreabrir="${p.id}" title="Marcar como no visitado">↩</button></div>`;
+  }
   return `<div class="brow" style="align-items:flex-start">
     <span style="min-width:0">${idx!=null?`<b style="color:var(--accent);font-family:var(--mono)">${idx+1}</b>&nbsp;&nbsp;`:""}<b>${esc(p.empresa||"—")}</b>${p.puntoFlojo?" "+pfTag(p.puntoFlojo):""}${idiomaTag(p.idioma)}
       <div class="bs" style="margin-top:4px">${dist}${esc(info)}</div></span>
     <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+      <a class="btn sm ghost" style="text-decoration:none" href="${mapsUrl}" target="_blank" rel="noopener" title="Cómo llegar">📍</a>
       ${p.visitaDia?`<span class="bs">${esc(p.visitaDia)}</span><button class="btn sm ghost" data-visitadia="${p.id}|" title="Sacar del día">↩</button>`
         :`<button class="btn sm ghost" data-visitadia="${p.id}|${iso(d1)}">Hoy</button><button class="btn sm ghost" data-visitadia="${p.id}|${iso(d2)}">Mañana</button><input type="date" data-visitafecha="${p.id}" style="height:28px;font-size:12px">`}
+      <button class="btn sm" data-visitareg="${p.id}" title="Registrar que fuiste">✓ Visité</button>
       <button class="btn sm ghost btn-del" data-visitar="${p.id}" title="Sacar de visitas">${ICON_TRASH}</button></span>
+    ${visitaReg===p.id?`<div style="flex-basis:100%;margin-top:10px;border:1px solid var(--accent);border-radius:12px;padding:12px">
+      <div class="bs" style="margin-bottom:8px">¿Cómo te fue en ${esc(p.empresa||"la visita")}?</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${VISITA_RES.map(r=>`<button class="btn sm ghost" data-visitres="${p.id}|${esc(r)}">${esc(r)}</button>`).join("")}</div>
+      <textarea id="visitanota-${p.id}" rows="2" style="width:100%" placeholder="Nota libre (opcional): con quién hablaste, qué dijo, próximo paso..."></textarea>
+      <div style="display:flex;gap:10px;margin-top:8px"><button class="btn sm" data-visitguardar="${p.id}">Guardar visita</button><button class="linkbtn" data-visitcancel="1">Cancelar</button></div>
+    </div>`:""}
   </div>`;
 }
 function renderVisitas(){
-  const vis=prospectos.filter(p=>p.visitar && p.status!=="descartado" && p.feedback!=="no");
+  const todos=prospectos.filter(p=>p.visitar && p.status!=="descartado" && p.feedback!=="no");
+  const vis=todos.filter(p=>!p.visitado);
+  const yaVis=todos.filter(p=>p.visitado).sort((a,b)=>String(b.visitadoFecha||"").localeCompare(String(a.visitadoFecha||"")));
   const sinDia=vis.filter(p=>!p.visitaDia);
   const porDia={}; vis.filter(p=>p.visitaDia).forEach(p=>{ (porDia[p.visitaDia]=porDia[p.visitaDia]||[]).push(p); });
   const dias=Object.keys(porDia).sort();
   const fmtDia=iso=>{ try{ const d=new Date(iso+"T12:00:00"); return d.toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"}); }catch{ return iso; } };
   $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Visitas — ir a vender en persona</h2></div>
   <div class="wrap">
-    ${!vis.length?`<div class="empty"><b>Todavía no marcaste negocios para visitar.</b><br>En CAPTACIÓN CLIENTES tocá 👤 en los negocios donde quieras ir en persona (los <b>sin web</b> son la entrada más fácil). Acá armás la hoja de ruta por día.</div>`:`
+    ${!todos.length?`<div class="empty"><b>Todavía no marcaste negocios para visitar.</b><br>En CAPTACIÓN CLIENTES tocá 👤 en los negocios donde quieras ir en persona (los <b>sin web</b> son la entrada más fácil). Acá armás la hoja de ruta por día.</div>`:`
     ${dias.map(d=>{ const ord=ordenarCercania(porDia[d]); const url=rutaMapsUrl(ord);
       return `<div class="bcard" style="margin-bottom:18px">
         <div class="bhead" style="margin-bottom:10px;flex-wrap:wrap;gap:8px"><span class="bt" style="text-transform:capitalize">${esc(fmtDia(d))} · ${ord.length}</span>
@@ -1735,6 +1753,10 @@ function renderVisitas(){
       <div class="bhead" style="margin-bottom:10px"><span class="bt">Sin día asignado · ${sinDia.length}</span></div>
       <div class="bs" style="margin-bottom:12px">Asigná cada uno a un día para armar tus jornadas de campo. Tip: agrupá por zona para no cruzar la ciudad.</div>
       ${ordenarCercania(sinDia).map(p=>visitaFila(p,null)).join("")}
+    </div>`:""}
+    ${yaVis.length?`<div class="bcard" style="margin-bottom:18px">
+      <div class="bhead" style="margin-bottom:10px"><span class="bt">✓ Visitados · ${yaVis.length}</span></div>
+      ${yaVis.map(p=>visitaFila(p,null)).join("")}
     </div>`:""}`}
   </div>`;
 }
@@ -2718,6 +2740,26 @@ document.addEventListener("click", async e=>{
     const [id,dia]=t.dataset.visitadia.split("|");
     await sb.from("prospectos").update({visita_dia:dia||null,visitar:true,updated_at:new Date().toISOString()}).eq("id",id);
     note(dia?("📅 Asignado a "+dia):"Sacado del día — vuelve a Sin día asignado.");
+    await loadAll(); return;
+  }
+  if(t.dataset.visitareg){ visitaReg=(visitaReg===t.dataset.visitareg)?null:t.dataset.visitareg; renderApp(); return; }
+  if(t.dataset.visitcancel){ visitaReg=null; renderApp(); return; }
+  if(t.dataset.visitres){
+    const [id,res]=t.dataset.visitres.split("|");
+    const ta=document.getElementById("visitanota-"+id);
+    if(ta){ ta.value=(ta.value?ta.value+" — ":"")+res; ta.focus(); }
+    return;
+  }
+  if(t.dataset.visitguardar){
+    const id=t.dataset.visitguardar; const p=prospectos.find(x=>x.id===id);
+    const ta=document.getElementById("visitanota-"+id); const nota=((ta&&ta.value)||"").trim();
+    const hoy=new Date().toISOString().slice(0,10);
+    await sb.from("prospectos").update({visitado:true,visitado_fecha:hoy,visita_nota:nota||"Visitado",updated_at:new Date().toISOString()}).eq("id",id);
+    if(p&&p.leadId){ try{ await sb.from("touches").insert({lead_id:p.leadId,tipo:"visita",texto:nota||"Visita en persona"}); }catch(e){} }
+    visitaReg=null; note("✓ Visita registrada — queda en el historial del negocio."); await loadAll(); return;
+  }
+  if(t.dataset.visitreabrir){
+    await sb.from("prospectos").update({visitado:false,visitado_fecha:null,updated_at:new Date().toISOString()}).eq("id",t.dataset.visitreabrir);
     await loadAll(); return;
   }
   if(t.dataset.fbok){
