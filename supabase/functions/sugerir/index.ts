@@ -228,7 +228,21 @@ Ante la duda, respondé NO.`,
     const MODEL = Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-5-5";
     console.log("sugerir: autorizado, llamando a Claude con modelo", MODEL, "key?", ANTHROPIC_KEY ? "sí" : "NO");
 
-    const sys = PERFIL + ejemplosTxt + `
+    // ¿Es un PRIMER CONTACTO EN FRÍO (outbound)? El lead viene de captación: nadie nos escribió,
+    // salimos nosotros. El message trae el contexto del negocio y la ENTRADA DE VENTA.
+    const esFrio = /^Captado en la búsqueda/i.test(String(message).trim());
+
+    const sys = PERFIL + ejemplosTxt + (esFrio ? `
+
+TAREA: redactá SOLO el cuerpo de un email de PRIMER CONTACTO EN FRÍO a este negocio. NOSOTROS salimos a buscarlo — él NO nos escribió, así que NUNCA agradezcas por escribir ni por el interés. Reglas:
+- Abrí con algo específico y real de SU negocio (lo que viene en "QUÉ ESTÁ PASANDO" / "Entrar por"): una observación concreta, no un halago genérico. Así se nota que no es un mail masivo.
+- De ahí conectá, en una frase, con cómo LORENZO Agency lo resuelve. Sin lista de servicios.
+- Cerrá con UN próximo paso bajo y concreto (una llamada corta de 10 min, o pasar a mostrarle algo).
+- Muy breve: 4 a 6 líneas. Cálido, de igual a igual, nada de vendedor desesperado.
+- Idioma: inglés si el negocio es de EE.UU. (lo normal acá), salvo señal clara de que prefieren español.
+- Usá el nombre de la persona si está; si no, abrí sin saludo con corchetes.
+- No inventes datos: usá solo lo que está en el contexto de abajo.
+- Cerrá firmando como LORENZO Agency. Devolvé ÚNICAMENTE el texto del email, sin asunto ni comentarios.` : `
 
 TAREA: redactá SOLO el cuerpo del email de respuesta a la consulta. Reglas:
 - Tono humano y profesional de la marca (nunca robótico ni exagerado).
@@ -237,9 +251,11 @@ TAREA: redactá SOLO el cuerpo del email de respuesta a la consulta. Reglas:
 - Idioma: el MISMO de la consulta.
 - Si no sabés el nombre, no uses saludo genérico con corchetes.
 - Cerrá firmando como LORENZO Agency.
-- Devolvé ÚNICAMENTE el texto del email, sin asunto ni comentarios.`;
+- Devolvé ÚNICAMENTE el texto del email, sin asunto ni comentarios.`);
 
-    const user = `Consulta entrante${name ? ` de ${name}` : ""}${service ? ` (rubro: ${service})` : ""}:\n\n${message}${variar}`;
+    const user = esFrio
+      ? `Negocio captado para primer contacto${name ? ` de ${name}` : ""}${service ? ` (rubro: ${service})` : ""}.\nContexto y señales de este negocio (de acá sacás el gancho real, no inventes nada):\n\n${message}${variar}`
+      : `Consulta entrante${name ? ` de ${name}` : ""}${service ? ` (rubro: ${service})` : ""}:\n\n${message}${variar}`;
 
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
