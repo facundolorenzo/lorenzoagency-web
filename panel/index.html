@@ -1792,7 +1792,7 @@ function renderProspeccion(){
       const renovable=(Date.now()-new Date(b.createdAt).getTime())>120*24*3600*1000;
       const minutos=ms=>Math.max(1,Math.round(ms/60000));
       const timing=!b.inicio?"":(b.status==="buscando"?"⏱ "+minutos(Date.now()-new Date(b.inicio).getTime())+" min":(b.status==="lista"&&b.updatedAt?"tardó "+minutos(new Date(b.updatedAt).getTime()-new Date(b.inicio).getTime())+" min":""));
-      return `<div class="brow"><span>🔎 <b>${esc(b.rubro)}</b>${b.zona?" — "+esc(b.zona):""}
+      return `<div class="brow" data-busqrow="${b.id}"><span>🔎 <b>${esc(b.rubro)}</b>${b.zona?" — "+esc(b.zona):""}
         <span class="bs" style="margin-left:6px">${esc(String(b.createdAt||"").slice(0,10))} · ${enc} encontrados · ${gan} ganados${timing?" · "+timing:""}</span></span>
       <span style="display:flex;gap:10px;align-items:center">
         ${renovable?`<button class="btn sm ghost" data-renovar="${b.id}" title="Pasaron 4+ meses — repetir para captar empresas nuevas">↻ Renovar</button>`:""}
@@ -2978,6 +2978,13 @@ document.addEventListener("submit", async e=>{
     if(editing && editing.col===col){ ({error}=await sb.from(col).update(row).eq("id",editing.id)); }
     else { row.created_at=new Date().toISOString(); ({error}=await sb.from(col).insert(row)); }
     if(error){ note("No se pudo guardar: "+error.message); return; }
+    if(col==="busquedas" && !(editing&&editing.col==="busquedas")){
+      formOpen=null; editing=null; await loadAll();
+      note("✓ Búsqueda pedida — quedó PENDIENTE. El buscador la agarra en ~1 min (dejá abierta la ventana del motor).");
+      const nueva=[...busquedas].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
+      setTimeout(()=>{ const el=document.querySelector('[data-busqrow]'); if(el){ el.scrollIntoView({behavior:"smooth",block:"center"}); el.style.transition="background .5s"; el.style.background="rgba(221,125,71,.18)"; setTimeout(()=>{el.style.background="";},2200); } },150);
+      return;
+    }
     if(col==="proposals" && data.status==="aprobada"){
       const prev = editing ? proposals.find(x=>x.id===editing.id) : null;
       if(!prev || prev.status!=="aprobada") await autoFactura({ number:data.number, clientId:data.clientId||null, title:data.title, amount:data.amount });
