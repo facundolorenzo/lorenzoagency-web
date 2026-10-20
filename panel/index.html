@@ -492,21 +492,16 @@ const COMISION_TRAMOS = [
 // pctPlano sobre TODO su volumen del mes (reemplaza la escalera) + premio.
 const COMISION_CORONA = { piso: 15000, pctPlano: 0.15 };
 
-// Calcula la comisión base (escalera marginal) para un volumen mensual.
-function comisionEscalera(volumen){
-  let com = 0;
-  for(const tr of COMISION_TRAMOS){
-    if(volumen <= tr.desde) break;
-    const enTramo = Math.min(volumen, tr.hasta) - tr.desde;
-    if(enTramo > 0) com += enTramo * tr.pct;
-  }
-  return com;
-}
-// % del tramo más alto que alcanzó ese volumen (para mostrar "escalón actual").
+// % del tramo más alto que alcanzó ese volumen.
 function escalonActual(volumen){
   let pct = 0;
   for(const tr of COMISION_TRAMOS){ if(volumen > tr.desde) pct = tr.pct; }
   return pct;
+}
+// Comisión PLANA: todo el volumen del mes cobra el % del escalón alcanzado.
+// (Al pasar un umbral, TODO salta a ese %, no se divide por tramos.)
+function comisionEscalera(volumen){
+  return volumen * escalonActual(volumen);
 }
 // Clave 'YYYY-MM' de una fecha.
 const mesClave = d => { const x=new Date(d); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0"); };
@@ -781,25 +776,27 @@ function renderComisiones(){
   const medalla = i => i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}º`;
   const pct = p => (Math.round(p*1000)/10).toString().replace(".0","")+"%";
 
-  // Ranking en cuadros apilados (uno abajo del otro). Muestra VENTAS, no comisión.
-  const metric = (val,lbl)=>`<div style="text-align:right;min-width:86px">
-    <div style="font-family:var(--mono);font-size:15px;color:#fff">${val}</div>
+  // Ranking en cuadros apilados (uno abajo del otro).
+  const metric = (val,lbl,col)=>`<div style="text-align:right;min-width:82px">
+    <div style="font-family:var(--mono);font-size:15px;color:${col||'#fff'}">${val}</div>
     <div style="font-size:10px;color:var(--faint);margin-top:2px;letter-spacing:.06em;text-transform:uppercase">${lbl}</div></div>`;
   const filas = rank.filter(r=>r.volumen>0 || r.vendedor.activo).map((r,i)=>{
     const puesto = r.volumen>0 ? medalla(i) : '·';
     const ticket = r.ventas>0 ? money(r.volumen/r.ventas) : '—';
-    const sub = r.esCorona ? 'CORONA 👑 · 1º del mes' : (r.volumen>0 ? `${i+1}º puesto` : 'sin ventas');
+    const sub = r.esCorona ? `CORONA 👑 · cobra ${pct(COMISION_CORONA.pctPlano)}` : (r.volumen>0 ? `${i+1}º · escalón ${pct(escalonActual(r.volumen))}` : 'sin ventas');
     const borde = r.esCorona ? 'border:1.5px solid var(--accent);box-shadow:0 0 0 3px rgba(221,125,71,.1)' : '1px solid var(--hair2)';
     const bg = r.esCorona ? 'background:rgba(221,125,71,.06)' : '';
-    return `<div style="display:flex;align-items:center;gap:16px;border:${borde};${bg};border-radius:16px;padding:16px 18px;${r.volumen>0?'':'opacity:.6'}">
-      <div style="font-family:var(--disp);font-weight:800;font-size:26px;min-width:44px;text-align:center">${puesto}</div>
-      <div style="flex:1;min-width:0">
+    return `<div style="display:flex;align-items:center;gap:14px;border:${borde};${bg};border-radius:16px;padding:16px 18px;flex-wrap:wrap;${r.volumen>0?'':'opacity:.6'}">
+      <div style="font-family:var(--disp);font-weight:800;font-size:26px;min-width:40px;text-align:center">${puesto}</div>
+      <div style="flex:1;min-width:120px">
         <div style="font-family:var(--disp);font-weight:800;font-size:17px;color:#fff">${esc(r.vendedor.nombre)}${!r.vendedor.activo?' <span style="font-size:10px;color:var(--faint);font-weight:400">(inactivo)</span>':''}</div>
         <div style="font-family:var(--mono);font-size:11px;color:${r.esCorona?'var(--accent)':'var(--muted)'};margin-top:3px;letter-spacing:.04em">${esc(sub)}</div>
       </div>
       ${metric(money(r.volumen),'vendido')}
       ${metric(r.ventas,'ventas')}
       ${metric(ticket,'ticket prom.')}
+      <div style="width:1px;align-self:stretch;background:var(--hair2)"></div>
+      ${metric(money2(r.comisionFinal),'comisión', r.esCorona?'var(--accent)':'var(--ok)')}
     </div>`;
   }).join("");
 
@@ -866,7 +863,7 @@ function renderComisiones(){
     <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:2px">Escalera de comisiones</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Mensual · se resetea cada mes · más vendés, más alto el %</div>
     ${escaleraGrafico}
-    <div style="font-size:11.5px;color:var(--faint);margin-top:14px;border-top:1px solid var(--hair);padding-top:12px">Marginal: cada tramo cobra su %, no se recalcula hacia atrás. &nbsp;·&nbsp; 👑 Corona: el 1º del mes, si pasa ${money(COMISION_CORONA.piso)}, cobra 15% plano sobre todo + premio.</div>
+    <div style="font-size:11.5px;color:var(--faint);margin-top:14px;border-top:1px solid var(--hair);padding-top:12px">Al pasar un escalón, <b style="color:var(--muted)">todo el volumen del mes</b> cobra ese %. &nbsp;·&nbsp; 👑 Corona: el 1º del mes, si pasa ${money(COMISION_CORONA.piso)}, cobra 15% + premio.</div>
   </div>
 
   <div style="margin-top:18px;border:1px solid var(--hair2);border-radius:16px;padding:16px 18px">
