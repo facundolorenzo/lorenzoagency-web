@@ -781,27 +781,25 @@ function renderComisiones(){
   const medalla = i => i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}º`;
   const pct = p => (Math.round(p*1000)/10).toString().replace(".0","")+"%";
 
-  // Ranking en cuadros apilados (uno abajo del otro)
+  // Ranking en cuadros apilados (uno abajo del otro). Muestra VENTAS, no comisión.
+  const metric = (val,lbl)=>`<div style="text-align:right;min-width:86px">
+    <div style="font-family:var(--mono);font-size:15px;color:#fff">${val}</div>
+    <div style="font-size:10px;color:var(--faint);margin-top:2px;letter-spacing:.06em;text-transform:uppercase">${lbl}</div></div>`;
   const filas = rank.filter(r=>r.volumen>0 || r.vendedor.activo).map((r,i)=>{
     const puesto = r.volumen>0 ? medalla(i) : '·';
-    const pctTxt = r.volumen>0 ? `${pct(r.pctEfectivo)}${r.esCorona?' · CORONA 👑':''}` : 'sin ventas';
+    const ticket = r.ventas>0 ? money(r.volumen/r.ventas) : '—';
+    const sub = r.esCorona ? 'CORONA 👑 · 1º del mes' : (r.volumen>0 ? `${i+1}º puesto` : 'sin ventas');
     const borde = r.esCorona ? 'border:1.5px solid var(--accent);box-shadow:0 0 0 3px rgba(221,125,71,.1)' : '1px solid var(--hair2)';
     const bg = r.esCorona ? 'background:rgba(221,125,71,.06)' : '';
-    return `<div style="display:flex;align-items:center;gap:16px;border:${borde};${bg};border-radius:16px;padding:16px 18px">
+    return `<div style="display:flex;align-items:center;gap:16px;border:${borde};${bg};border-radius:16px;padding:16px 18px;${r.volumen>0?'':'opacity:.6'}">
       <div style="font-family:var(--disp);font-weight:800;font-size:26px;min-width:44px;text-align:center">${puesto}</div>
       <div style="flex:1;min-width:0">
         <div style="font-family:var(--disp);font-weight:800;font-size:17px;color:#fff">${esc(r.vendedor.nombre)}${!r.vendedor.activo?' <span style="font-size:10px;color:var(--faint);font-weight:400">(inactivo)</span>':''}</div>
-        <div style="font-family:var(--mono);font-size:11px;color:${r.esCorona?'var(--accent)':'var(--muted)'};margin-top:3px;letter-spacing:.04em">${esc(pctTxt)}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:${r.esCorona?'var(--accent)':'var(--muted)'};margin-top:3px;letter-spacing:.04em">${esc(sub)}</div>
       </div>
-      <div style="text-align:right;min-width:92px">
-        <div style="font-family:var(--mono);font-size:14px;color:#fff">${money(r.volumen)}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${r.ventas} venta${r.ventas===1?'':'s'}</div>
-      </div>
-      <div style="width:1px;align-self:stretch;background:var(--hair2)"></div>
-      <div style="text-align:right;min-width:92px">
-        <div style="font-family:var(--disp);font-weight:800;font-size:19px;color:${r.esCorona?'var(--accent)':'var(--ok)'}">${money2(r.comisionFinal)}</div>
-        <div style="font-size:10px;color:var(--faint);margin-top:2px;letter-spacing:.06em;text-transform:uppercase">comisión</div>
-      </div>
+      ${metric(money(r.volumen),'vendido')}
+      ${metric(r.ventas,'ventas')}
+      ${metric(ticket,'ticket prom.')}
     </div>`;
   }).join("");
 
