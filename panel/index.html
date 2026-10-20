@@ -656,7 +656,7 @@ const FROM = {
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
-                  nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
+                  nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,puntoFlojo:r.punto_flojo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
 };
@@ -1712,7 +1712,7 @@ function renderProspeccion(){
       <td style="font-size:12px">${esc(p.nicho||"—")}</td>
       <td style="font-size:12px;color:var(--muted)">${esc(p.fuente||"—")}</td>
       <td><select class="lsel" data-prstatus="${p.id}">${PR_STATES.map(st=>`<option value="${st}" ${p.status===st?"selected":""}>${esc(PR_LABELS[st])}</option>`).join("")}</select></td>
-      <td class="r" style="white-space:nowrap"><button class="btn sm ghost" data-fbok="${p.id}" title="Sirve — el buscador aprende y trae más de estos" style="${p.feedback==="ok"?"color:var(--ok);border-color:var(--ok);":""}">✓</button>
+      <td class="r" style="white-space:nowrap"><button class="btn sm ghost" data-visitar="${p.id}" title="Marcar para ir a visitar en persona" style="${p.visitar?"color:var(--accent);border-color:var(--accent);":""}margin-right:8px">📍</button><button class="btn sm ghost" data-fbok="${p.id}" title="Sirve — el buscador aprende y trae más de estos" style="${p.feedback==="ok"?"color:var(--ok);border-color:var(--ok);":""}">✓</button>
         <button class="btn sm ghost" data-fbno="${p.id}" title="No sirve — el buscador deja de traer de estos" style="${p.feedback==="no"?"color:var(--bad);border-color:var(--bad);":""}margin-right:8px">✗</button>
         <a class="linkbtn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([p.empresa,p.ciudad].filter(Boolean).join(" "))}" target="_blank" rel="noopener" title="Ver el lugar en Google Maps (fotos, reseñas, ubicación)">📍 Maps</a>
         ${url?`<a class="linkbtn" href="${esc(url)}" target="_blank" rel="noopener">↗ web</a> `:""}${p.leadId?`<button class="linkbtn" data-openlead="${p.leadId}">En Leads →</button>`:`<button class="btn sm ghost" data-prosplead="${p.id}" title="Crea el lead y lo sigue el Agente 1">→ Lead</button>`}
@@ -1782,6 +1782,28 @@ function renderProspeccion(){
           <button class="linkbtn" data-tandacancel="1">Cancelar</button>
           <span class="bs">Salen de a uno, con ~1 min entre cada uno (goteo anti-spam). Dejá la pestaña abierta.</span></div>
       </div>`:""}
+    </div>`; })()}
+  ${(function(){
+    const vis=prospectos.filter(p=>p.visitar && p.status!=="descartado" && p.feedback!=="no");
+    if(!vis.length) return "";
+    const PARTIDA={lat:25.93,lng:-80.17}; // North Miami
+    const R=x=>x*Math.PI/180, hav=(a,b)=>{const dl=R(b.lat-a.lat),dg=R(b.lng-a.lng);const s=Math.sin(dl/2)**2+Math.cos(R(a.lat))*Math.cos(R(b.lat))*Math.sin(dg/2)**2;return 2*3959*Math.asin(Math.sqrt(s));};
+    const conGeo=vis.filter(p=>p.lat&&p.lng);
+    let orden;
+    if(conGeo.length===vis.length && vis.length>1){
+      const rest=[...vis]; orden=[]; let cur=PARTIDA;
+      while(rest.length){ let bi=0,bd=Infinity; rest.forEach((p,i)=>{const d=hav(cur,p); if(d<bd){bd=d;bi=i;}}); const n=rest.splice(bi,1)[0]; orden.push(n); cur=n; }
+    } else { orden=[...vis].sort((a,b)=>String(a.ciudad||"").localeCompare(String(b.ciudad||""))); }
+    const pt=p=>(p.lat&&p.lng)?(p.lat+","+p.lng):encodeURIComponent([p.empresa,p.ciudad].filter(Boolean).join(", "));
+    const pts=orden.slice(0,10).map(pt);
+    const dest=pts[pts.length-1], way=pts.slice(0,-1).join("|");
+    const url="https://www.google.com/maps/dir/?api=1&destination="+dest+(way?"&waypoints="+way:"")+"&travelmode=driving";
+    return `<div class="bcard" style="margin-bottom:18px">
+      <div class="bhead" style="margin-bottom:10px;flex-wrap:wrap;gap:8px"><span class="bt">🚗 Ruta de visitas — ${orden.length}</span>
+        <a class="btn sm" style="text-decoration:none" href="${url}" target="_blank" rel="noopener">Abrir ruta en Google Maps${orden.length>10?" (primeras 10)":""}</a></div>
+      <div class="bs" style="margin-bottom:12px">${conGeo.length===vis.length&&vis.length>1?"Ordenados por cercanía desde North Miami — para rendir la salida a la calle.":"Agrupados por zona (las búsquedas nuevas traen ubicación exacta y se ordenan por cercanía)."} Para visitar en persona conviene horario de día, cuando está el dueño.</div>
+      ${orden.map((p,i)=>`<div class="brow"><span><b style="color:var(--accent);font-family:var(--mono)">${i+1}</b>&nbsp;&nbsp;<b>${esc(p.empresa||"—")}</b>${p.puntoFlojo?" "+pfTag(p.puntoFlojo):""}<div class="bs" style="margin-top:4px">${esc(p.direccion||p.ciudad||"")}${p.horario?" · "+esc(String(p.horario).slice(0,46)):""}</div></span>
+        <button class="btn sm ghost" data-visitar="${p.id}" title="Sacar de la ruta">✕</button></div>`).join("")}
     </div>`; })()}
   ${busquedas.length?`<div class="bcard" style="margin-bottom:18px">
     <div class="bhead" style="margin-bottom:10px"><span class="bt">Búsquedas</span></div>
@@ -2622,6 +2644,13 @@ document.addEventListener("click", async e=>{
       if(i<items.length-1) await new Promise(r=>setTimeout(r,90000+Math.floor(Math.random()*90000)));
     }
     tandaEnviando=false; note("🚀 Tanda enviada: "+okc+"/"+items.length+" mails."); await loadAll(); return;
+  }
+  if(t.dataset.visitar){
+    const p=prospectos.find(x=>x.id===t.dataset.visitar); if(!p) return;
+    const val=!p.visitar;
+    await sb.from("prospectos").update({visitar:val,updated_at:new Date().toISOString()}).eq("id",p.id);
+    note(val?"📍 Marcado para visitar — mirá la Ruta de visitas arriba.":"Sacado de la ruta de visitas.");
+    await loadAll(); return;
   }
   if(t.dataset.fbok){
     const p=prospectos.find(x=>x.id===t.dataset.fbok); if(!p) return;
