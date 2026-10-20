@@ -407,7 +407,7 @@ let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
 let openProspId = null, hlProspId = null, fbAsk = null, visitaReg = null, horaPicker = null;
-let agendaPick=null, agendaMonth=0, agendaDay=null;
+let agendaPick=null, agendaMonth=0, agendaDay=null, agendaHora=null;
 let plantillas = [], plantSel = null, tandaEdit = false, tandaPrev = null, tandaEnviando = false;
 
 /* Candidatos de la tanda del día (misma regla que la card) */
@@ -1735,7 +1735,9 @@ function agendaPanel(p){
     const di=isoLocal(d), past=d<today, isSel=di===sel;
     return '<button class="daychip '+(isSel?"daysel":"")+'" '+(past?"disabled":"")+' data-agday="'+p.id+'|'+di+'">'+d.getDate()+'</button>';
   }).join("");
-  const horas=HORAS.map(v=>'<button class="hslot '+(p.visitaHora===v?"hsel":"")+'" '+(sel?"":"disabled")+' data-agset="'+p.id+'|'+v+'">'+fmtHora(v)+'</button>').join("");
+  const selH=agendaHora||p.visitaHora||null;
+  const horas=HORAS.map(v=>'<button class="hslot '+(selH===v?"hsel":"")+'" '+(sel?"":"disabled")+' data-aghora="'+p.id+'|'+v+'">'+fmtHora(v)+'</button>').join("");
+  const listo=!!(sel&&selH);
   return '<div class="agenda-pop"><div style="display:flex;gap:18px">'
     +'<div style="min-width:272px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
@@ -1752,7 +1754,12 @@ function agendaPanel(p){
       +'<div class="dowc" style="margin-bottom:10px;text-transform:'+(sel?"capitalize":"none")+';color:'+(sel?"var(--accent)":"var(--faint)")+'">'+(sel?esc(fmtDia(sel)):"ELEGÍ UN DÍA")+'</div>'
       +'<div style="display:flex;flex-direction:column;gap:6px;max-height:252px;overflow:auto;padding-right:2px">'+horas+'</div>'
     +'</div>'
-  +'</div></div>';
+  +'</div>'
+  +'<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid var(--hair)">'
+    +'<span class="bs" style="font-size:12px">'+(listo?('<span style="color:var(--fg)">Visita: </span><span style="color:var(--accent);font-weight:700;text-transform:capitalize">'+esc(fmtDia(sel))+' · '+fmtHora(selH)+'</span>'):(sel?'Elegí la hora':'Elegí día y hora'))+'</span>'
+    +'<button class="btn" style="height:40px;padding:0 22px;font-weight:700'+(listo?'':';opacity:.4;pointer-events:none')+'" data-agok="'+p.id+'">Confirmar</button>'
+  +'</div>'
+  +'</div>';
 }
 function gcalUrl(p){
   const tz="America/New_York"; let dates="";
@@ -2513,7 +2520,7 @@ function note(msg){
 document.addEventListener("click", async e=>{
   const t = e.target;
   if(!sb) return;
-  if(agendaPick && t.closest && !t.closest(".agenda-pop") && !(t.dataset&&(t.dataset.agopen||t.dataset.agclose))){ agendaPick=null; agendaDay=null; renderApp(); return; }
+  if(agendaPick && t.closest && !t.closest(".agenda-pop") && !(t.dataset&&(t.dataset.agopen||t.dataset.agclose))){ agendaPick=null; agendaDay=null; agendaHora=null; renderApp(); return; }
   const fr = t.closest && t.closest("[data-franja]");
   if(fr){ const s=fr.dataset.franja; leadCollapsed[s]=!leadCollapsed[s]; renderApp(); return; }
   if(t.dataset.leadfilter){ leadFilter=t.dataset.leadfilter; renderApp(); return; }
@@ -2805,11 +2812,12 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.horapicker){ horaPicker=(horaPicker===t.dataset.horapicker)?null:t.dataset.horapicker; renderApp(); return; }
   if(t.dataset.horaset){ const [id,v]=t.dataset.horaset.split("|"); await sb.from("prospectos").update({visita_hora:v||null,updated_at:new Date().toISOString()}).eq("id",id); horaPicker=null; note(v?("🕒 Hora: "+fmtHora(v)):"Hora quitada"); await loadAll(); return; }
-  if(t.dataset.agopen){ const id=t.dataset.agopen; const pr=prospectos.find(x=>x.id===id); agendaPick=id; agendaMonth=0; agendaDay=(pr&&pr.visitaDia)||null; renderApp(); return; }
-  if(t.dataset.agclose){ agendaPick=null; agendaDay=null; renderApp(); return; }
+  if(t.dataset.agopen){ const id=t.dataset.agopen; const pr=prospectos.find(x=>x.id===id); agendaPick=id; agendaMonth=0; agendaDay=(pr&&pr.visitaDia)||null; agendaHora=(pr&&pr.visitaHora)||null; renderApp(); return; }
+  if(t.dataset.agclose){ agendaPick=null; agendaDay=null; agendaHora=null; renderApp(); return; }
   if(t.dataset.agmo){ agendaMonth+=Number(t.dataset.agmo); renderApp(); return; }
   if(t.dataset.agday){ agendaDay=t.dataset.agday.split("|")[1]; renderApp(); return; }
-  if(t.dataset.agset){ const [id,v]=t.dataset.agset.split("|"); const pr=prospectos.find(x=>x.id===id); const dia=agendaDay||(pr&&pr.visitaDia); if(!dia){ return; } await sb.from("prospectos").update({visita_dia:dia,visita_hora:v,visitar:true,updated_at:new Date().toISOString()}).eq("id",id); agendaPick=null; agendaDay=null; note("📅 "+fmtDia(dia)+" · "+fmtHora(v)); await loadAll(); return; }
+  if(t.dataset.aghora){ agendaHora=t.dataset.aghora.split("|")[1]; renderApp(); return; }
+  if(t.dataset.agok){ const id=t.dataset.agok; const pr=prospectos.find(x=>x.id===id); const dia=agendaDay||(pr&&pr.visitaDia); const v=agendaHora||(pr&&pr.visitaHora); if(!dia||!v){ return; } await sb.from("prospectos").update({visita_dia:dia,visita_hora:v,visitar:true,updated_at:new Date().toISOString()}).eq("id",id); agendaPick=null; agendaDay=null; agendaHora=null; note("📅 "+fmtDia(dia)+" · "+fmtHora(v)); await loadAll(); return; }
   if(t.dataset.visitareg){ visitaReg=(visitaReg===t.dataset.visitareg)?null:t.dataset.visitareg; renderApp(); return; }
   if(t.dataset.visitcancel){ visitaReg=null; renderApp(); return; }
   if(t.dataset.visitres){
