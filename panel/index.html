@@ -594,7 +594,7 @@ const FROM = {
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
                   cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null,
                   vendedorId:r.vendedor_id||null, montoVenta:(r.monto_venta==null?null:Number(r.monto_venta)), fechaCierre:r.fecha_cierre||null}),
-  vendedores:r=>({id:r.id,nombre:r.nombre,email:r.email||null,activo:r.activo!==false,createdAt:r.created_at}),
+  vendedores:r=>({id:r.id,nombre:r.nombre,email:r.email||null,meta:Number(r.meta_mensual)||0,activo:r.activo!==false,createdAt:r.created_at}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
@@ -725,10 +725,10 @@ async function runDraft(id, isRehacer){
 /* ============================ RENDER ============================ */
 function tabsHtml(){
   const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["comisiones","COMISIONES"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"]]
-            : esVendedor ? [["miresumen","MI RESUMEN"],["misclientes","MIS CLIENTES"],["miranking","RANKING"]]
+            : esVendedor ? [["hoy","PARA HOY"],["miresumen","MI RESUMEN"],["misclientes","MIS CLIENTES"],["miranking","RANKING"]]
             : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
   const nuevos = leads.filter(x=>x.status==='nuevo').length;
-  const hoyN = isAdmin ? leadsHoy().length : 0;
+  const hoyN = (isAdmin||esVendedor) ? leadsHoy().length : 0;
   return `<nav id="tabs">${t.map(([k,l])=>{
     let b=''; if((k==='leads'||k==='misclientes')&&nuevos) b=`<span class="nbadge">${nuevos}</span>`; if(k==='hoy'&&hoyN) b=`<span class="nbadge">${hoyN}</span>`;
     return `<button data-t="${k}" class="${tab===k?'on':''}">${l}${b}</button>`;
@@ -825,8 +825,9 @@ function renderComisiones(){
 
   // gestión de vendedores
   const vendList = vendedores.length
-    ? vendedores.map(v=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair)">
-        <span style="flex:1">${esc(v.nombre)} ${v.activo?'':'<span style="font-size:10px;color:var(--faint)">(inactivo)</span>'}${v.email?`<br><span style="font-family:var(--mono);font-size:10px;color:var(--faint)">${esc(v.email)}</span>`:'<br><span style="font-size:10px;color:var(--warn)">sin email — no puede entrar</span>'}</span>
+    ? vendedores.map(v=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair);flex-wrap:wrap">
+        <span style="flex:1;min-width:140px">${esc(v.nombre)} ${v.activo?'':'<span style="font-size:10px;color:var(--faint)">(inactivo)</span>'}${v.email?`<br><span style="font-family:var(--mono);font-size:10px;color:var(--faint)">${esc(v.email)}</span>`:'<br><span style="font-size:10px;color:var(--warn)">sin email — no puede entrar</span>'}</span>
+        <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px">meta $<input type="number" min="0" value="${v.meta||''}" placeholder="0" data-vendmeta="${esc(v.id)}" style="width:84px"></label>
         <button class="btn ghost sm" data-vendtoggle="${esc(v.id)}">${v.activo?'Desactivar':'Reactivar'}</button>
       </div>`).join("")
     : `<div style="color:var(--muted);font-size:13px">Todavía no cargaste vendedores. Agregá el primero arriba.</div>`;
@@ -905,19 +906,69 @@ function soyCorona(){ return rankingPublico.length && rankingPublico[0].id===miV
 
 function renderMiResumen(){
   const clave = mesVigente();
+  const miV = vendedores.find(v=>v.id===miVendedorId) || {};
+  const yo = miV.nombre || sessionEmail;
   const mias = ventasDelMes(miVendedorId, clave);
   const vol = mias.reduce((a,l)=>a+Number(l.montoVenta||0),0);
   const corona = soyCorona();
   const comision = corona ? vol*COMISION_CORONA.pctPlano : comisionEscalera(vol);
   const puesto = miPuesto();
   const ticket = mias.length ? vMoney(vol/mias.length) : "—";
-  const yo = (vendedores.find(v=>v.id===miVendedorId)||{}).nombre || sessionEmail;
-  // ¿cuánto falta para el próximo escalón?
   const miEsc = escalonActual(vol);
   const next = COMISION_TRAMOS.find(t=>t.desde>vol);
   const faltaMsg = corona ? `Vas 1º 👑 — cobrás 15% + premio este mes.`
     : next ? `Te faltan <b style="color:var(--accent)">${vMoney(next.desde-vol)}</b> para saltar a <b>${vPct(next.pct)}</b>.`
     : `Estás en el escalón más alto (${vPct(miEsc)}). Si salís 1º y pasás ${vMoney(COMISION_CORONA.piso)}, cobrás 15% + premio.`;
+
+  // --- B) Meta + progreso ---
+  const meta = Number(miV.meta)||0;
+  const pctMeta = meta>0 ? Math.min(100, Math.round(vol/meta*100)) : 0;
+  const metaBox = meta>0 ? `
+    <div style="border:1px solid var(--hair2);border-radius:16px;padding:16px 18px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+        <span style="font-family:var(--disp);font-weight:800;font-size:15px">Tu meta del mes</span>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${vMoney(vol)} / ${vMoney(meta)}</span>
+      </div>
+      <div style="height:14px;border-radius:999px;background:var(--hair2);overflow:hidden">
+        <div style="height:100%;width:${pctMeta}%;border-radius:999px;background:linear-gradient(90deg,rgba(221,125,71,.6),var(--accent));box-shadow:0 0 16px -2px rgba(221,125,71,.6)"></div>
+      </div>
+      <div style="font-size:12px;color:${pctMeta>=100?'var(--ok)':'var(--muted)'};margin-top:8px">${pctMeta>=100?'¡Meta cumplida! 🎉':`Vas ${pctMeta}% — te faltan <b style="color:var(--accent)">${vMoney(Math.max(0,meta-vol))}</b>`}</div>
+    </div>` : '';
+
+  // --- C) Actividad (de mis leads/touches, ya filtrados a lo mío) ---
+  const misTouches = touches; // RLS ya los limita a mis leads
+  const mails = misTouches.filter(t=>t.tipo==='mail').length || leads.reduce((a,l)=>a+(Number(l.mailsEnviados)||0),0);
+  const llamadas = misTouches.filter(t=>t.tipo==='llamada').length;
+  const contactados = leads.filter(l=>Number(l.mailsEnviados)>0 || ['enviado','sin_respuesta','respondio','ganado','perdido'].includes(l.status)).length;
+  const respondieron = leads.filter(l=>Number(l.respuestas)>0 || l.status==='respondio' || ['ganado','perdido'].includes(l.status)).length;
+  const cerrados = leads.filter(l=>['ganado','perdido'].includes(l.status)).length;
+  const ganadosTot = leads.filter(l=>l.status==='ganado').length;
+  const tasaResp = contactados ? Math.round(respondieron/contactados*100) : 0;
+  const tasaCierre = cerrados ? Math.round(ganadosTot/cerrados*100) : 0;
+  const act = (val,lbl)=>`<div style="flex:1;min-width:110px;text-align:center;border:1px solid var(--hair2);border-radius:14px;padding:14px 10px">
+    <div style="font-family:var(--disp);font-weight:800;font-size:22px">${val}</div>
+    <div style="font-size:10.5px;color:var(--muted);margin-top:3px;letter-spacing:.04em">${lbl}</div></div>`;
+  const actBox = `<div style="margin-bottom:16px">
+    <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:10px">Tu actividad del mes</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      ${act(mails,'mails')}${act(llamadas,'llamadas')}${act(tasaResp+'%','respuesta')}${act(tasaCierre+'%','cierre')}
+    </div></div>`;
+
+  // --- D) Hitos / reconocimiento ---
+  const hitos = [];
+  if(corona) hitos.push({i:'👑',t:'Corona del mes',s:'Vas 1º del equipo'});
+  if(ganadosTot>=1) hitos.push({i:'🏆',t:'Primera venta cerrada',s:'Ya estás en el tablero'});
+  if(vol>=COMISION_TRAMOS[1].desde) hitos.push({i:'📈',t:`Subiste al ${vPct(miEsc)}`,s:`Pasaste ${vMoney(COMISION_TRAMOS.find(x=>x.pct===miEsc).desde)}`});
+  if(mias.length>=3) hitos.push({i:'🔥',t:`${mias.length} ventas este mes`,s:'Buen ritmo'});
+  if(puesto===1 && !corona) hitos.push({i:'🥇',t:'Puntero del mes',s:'A un paso de la corona'});
+  const hitosBox = hitos.length ? `<div style="margin-bottom:4px">
+    <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:10px">Tus logros</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${hitos.map(h=>`<div style="display:flex;align-items:center;gap:12px;border:1px solid var(--hair2);border-radius:12px;padding:11px 14px">
+        <span style="font-size:22px">${h.i}</span>
+        <div><div style="font-weight:700;font-size:14px">${h.t}</div><div style="font-size:11.5px;color:var(--muted)">${h.s}</div></div>
+      </div>`).join("")}
+    </div></div>` : '';
 
   const tile=(lbl,val,sub,col)=>`<div style="flex:1;min-width:150px;border:1px solid var(--hair2);border-radius:16px;padding:16px 18px">
     <div style="font-family:var(--disp);font-size:14px;font-weight:800;color:#fff">${lbl}</div>
@@ -934,10 +985,13 @@ function renderMiResumen(){
     ${tile("Tu puesto", puesto?`${puesto}º`:'—', puesto===1?'1º del equipo 🔥':'en el ranking')}
     ${tile("Ticket promedio", ticket, "por venta")}
   </div>
-  <div style="border:1px solid var(--hair2);border-radius:16px;padding:16px 18px;background:rgba(221,125,71,.05)">
+  ${metaBox}
+  <div style="border:1px solid var(--hair2);border-radius:16px;padding:16px 18px;background:rgba(221,125,71,.05);margin-bottom:16px">
     ${faltaMsg}
   </div>
-  <div style="margin-top:14px"><button class="linkbtn" data-gotab="misclientes" style="font-size:13px">Ver mis clientes →</button></div>`;
+  ${actBox}
+  ${hitosBox}
+  <div style="margin-top:10px;display:flex;gap:16px"><button class="linkbtn" data-gotab="hoy" style="font-size:13px">Ver qué hacer hoy →</button><button class="linkbtn" data-gotab="misclientes" style="font-size:13px">Mis clientes →</button></div>`;
 }
 
 function renderMisClientes(){
@@ -2720,6 +2774,10 @@ document.addEventListener("change", async e=>{
     const { error } = await sb.from("leads").update({ vendedor_id: t.value||null }).eq("id", t.dataset.assignvend);
     if(error) note("No se pudo asignar: "+error.message); else { note(t.value?"Asignado ✓":"Sin asignar"); await loadAll(); }
   }
+  if(t.dataset && t.dataset.vendmeta){
+    const { error } = await sb.from("vendedores").update({ meta_mensual: Number(t.value)||0 }).eq("id", t.dataset.vendmeta);
+    if(error) note("No se pudo guardar la meta: "+error.message); else { note("Meta guardada ✓"); await loadAll(); }
+  }
 });
 
 /* ---------- login ---------- */
@@ -2758,7 +2816,7 @@ async function boot(){
     // ¿es vendedor? (ve solo lo suyo)
     try{ const {data:vid}=await sb.rpc("mi_vendedor_id"); miVendedorId=vid||null; }catch(e){ miVendedorId=null; }
     esVendedor=!!miVendedorId;
-    tab = esVendedor ? "miresumen" : "propuestas";
+    tab = esVendedor ? "hoy" : "propuestas";
   }
   await loadAll();
   // realtime: sincroniza entre dispositivos

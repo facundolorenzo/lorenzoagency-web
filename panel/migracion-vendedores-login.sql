@@ -8,8 +8,9 @@
 -- NO ve propuestas, facturas, clientes, captación ni los leads de otros.
 -- ============================================================
 
--- 1) Email del vendedor (vincula su cuenta de acceso) -----------------
+-- 1) Email + meta mensual del vendedor --------------------------------
 alter table public.vendedores add column if not exists email text;
+alter table public.vendedores add column if not exists meta_mensual numeric not null default 0; -- objetivo de venta del mes (USD)
 create unique index if not exists vendedores_email_uidx
   on public.vendedores (lower(email)) where email is not null;
 
