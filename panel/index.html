@@ -672,7 +672,7 @@ const FROM = {
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
-                  nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,idioma:r.idioma||null,visitaDia:r.visita_dia||null,visitado:r.visitado===true,visitadoFecha:r.visitado_fecha||null,visitaNota:r.visita_nota||null,visitaHora:r.visita_hora||null,
+                  nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,idioma:r.idioma||null,visitaDia:r.visita_dia||null,visitado:r.visitado===true,visitadoFecha:r.visitado_fecha||null,visitaNota:r.visita_nota||null,visitaHora:r.visita_hora||null,gcalEventId:r.gcal_event_id||null,
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,puntoFlojo:r.punto_flojo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
 };
@@ -2817,7 +2817,20 @@ document.addEventListener("click", async e=>{
   if(t.dataset.agmo){ agendaMonth+=Number(t.dataset.agmo); renderApp(); return; }
   if(t.dataset.agday){ agendaDay=t.dataset.agday.split("|")[1]; renderApp(); return; }
   if(t.dataset.aghora){ agendaHora=t.dataset.aghora.split("|")[1]; renderApp(); return; }
-  if(t.dataset.agok){ const id=t.dataset.agok; const pr=prospectos.find(x=>x.id===id); const dia=agendaDay||(pr&&pr.visitaDia); const v=agendaHora||(pr&&pr.visitaHora); if(!dia||!v){ return; } await sb.from("prospectos").update({visita_dia:dia,visita_hora:v,visitar:true,updated_at:new Date().toISOString()}).eq("id",id); agendaPick=null; agendaDay=null; agendaHora=null; note("📅 "+fmtDia(dia)+" · "+fmtHora(v)); await loadAll(); return; }
+  if(t.dataset.agok){
+    const id=t.dataset.agok; const pr=prospectos.find(x=>x.id===id);
+    const dia=agendaDay||(pr&&pr.visitaDia); const v=agendaHora||(pr&&pr.visitaHora);
+    if(!dia||!v){ return; }
+    await sb.from("prospectos").update({visita_dia:dia,visita_hora:v,visitar:true,updated_at:new Date().toISOString()}).eq("id",id);
+    agendaPick=null; agendaDay=null; agendaHora=null;
+    note("📅 "+fmtDia(dia)+" · "+fmtHora(v)+" — agendando en Google Calendar…");
+    await loadAll();
+    try{
+      const r=await callFn("agendar-calendar",{ id, empresa:pr&&pr.empresa, direccion:pr&&pr.direccion, ciudad:pr&&pr.ciudad, lat:pr&&pr.lat, lng:pr&&pr.lng, dia, hora:v, puntoFlojo:pr&&pr.puntoFlojo, idioma:pr&&pr.idioma, eventId:(pr&&pr.gcalEventId)||"" });
+      note(r&&r.htmlLink?("✅ Visita en tu Google Calendar · "+fmtDia(dia)+" "+fmtHora(v)):"✅ Agendado en Google Calendar.");
+    }catch(e){ note("📅 Guardado en el panel. Google Calendar: "+(e.message||e)); }
+    return;
+  }
   if(t.dataset.visitareg){ visitaReg=(visitaReg===t.dataset.visitareg)?null:t.dataset.visitareg; renderApp(); return; }
   if(t.dataset.visitcancel){ visitaReg=null; renderApp(); return; }
   if(t.dataset.visitres){
