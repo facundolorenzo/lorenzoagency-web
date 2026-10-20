@@ -824,15 +824,15 @@ function renderComisiones(){
   barras.push({ rango:`1º · +${money(COMISION_CORONA.piso)}`, pct:COMISION_CORONA.pctPlano, corona:true });
   const maxPct = Math.max(...barras.map(b=>b.pct));
   const H = 190;
-  const escaleraGrafico = `<div style="display:flex;align-items:flex-end;gap:18px;height:${H+58}px;padding:30px 6px 0;justify-content:center">
+  const escaleraGrafico = `<div style="display:flex;align-items:flex-end;gap:30px;height:${H+58}px;padding:30px 6px 0;justify-content:center">
     ${barras.map((b,i)=>{
       const h = Math.round(b.pct/maxPct*H);
       const glow = b.corona
         ? "background:linear-gradient(180deg,rgba(242,160,110,.35) 0%,rgba(221,125,71,.85) 55%,#DD7D47 100%);box-shadow:0 0 55px -4px rgba(221,125,71,.75),inset 0 0 26px rgba(255,200,160,.4)"
         : `background:linear-gradient(180deg,rgba(221,125,71,.10) 0%,rgba(221,125,71,${(0.30+i*0.14).toFixed(2)}) 55%,rgba(221,125,71,${(0.55+i*0.14).toFixed(2)}) 100%);box-shadow:0 0 38px -8px rgba(221,125,71,${(0.35+i*0.12).toFixed(2)}),inset 0 0 20px rgba(255,190,150,.18)`;
-      return `<div style="flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
-        <div style="font-family:var(--disp);font-weight:800;font-size:${b.corona?'30':'26'}px;color:#fff;margin-bottom:10px;text-shadow:0 0 18px rgba(221,125,71,.5)">${pct(b.pct)}${b.corona?' <span style="font-size:20px">👑</span>':''}</div>
-        <div style="width:100%;height:${h}px;border-radius:20px 20px 8px 8px;${glow}"></div>
+      return `<div style="width:62px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+        <div style="font-family:var(--disp);font-weight:800;font-size:${b.corona?'24':'21'}px;color:#fff;margin-bottom:10px;text-shadow:0 0 18px rgba(221,125,71,.5)">${pct(b.pct)}${b.corona?'<div style="font-size:16px;margin-top:-2px">👑</div>':''}</div>
+        <div style="width:100%;height:${h}px;border-radius:14px 14px 6px 6px;${glow}"></div>
         <div style="font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:12px;text-align:center;letter-spacing:.03em">${b.rango}</div>
       </div>`;
     }).join("")}
