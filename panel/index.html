@@ -1721,7 +1721,7 @@ function visitaFila(p, idx){
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center">
       <a class="btn sm ghost" style="${B};text-decoration:none" href="${mapsUrl}" target="_blank" rel="noopener">📍 Cómo llegar</a>
       ${p.visitaDia
-        ? `<span class="bs" style="padding:0 4px">📅 ${esc(p.visitaDia)}</span><input type="time" data-visitahora="${p.id}" value="${esc(p.visitaHora||"")}" title="Hora de la visita" style="height:38px;font-size:13px;padding:0 10px"><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|">Cambiar día</button>`
+        ? `<span class="bs" style="padding:0 4px">📅 ${esc(p.visitaDia)}</span><span class="bs">Hora:</span><input type="time" data-visitahora="${p.id}" value="${esc(p.visitaHora||"")}" title="Hora de la visita" style="height:38px;font-size:13px;padding:0 10px"><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|">Cambiar día</button>`
         : `<span class="bs">Ir el:</span><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|${iso(d1)}">Hoy</button><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|${iso(d2)}">Mañana</button><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|${iso(d3)}">Pasado</button><input type="date" data-visitafecha="${p.id}" style="height:38px;font-size:13px;padding:0 10px">`}
       <span style="flex:1;min-width:20px"></span>
       <button class="btn sm" style="${B}" data-visitareg="${p.id}">✓ Ya fui</button>
