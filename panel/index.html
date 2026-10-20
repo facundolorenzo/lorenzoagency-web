@@ -812,10 +812,26 @@ function renderComisiones(){
       </div>`).join("")
     : `<div style="color:var(--muted);font-size:13px">Todavía no cargaste vendedores. Agregá el primero arriba.</div>`;
 
-  const tramosTxt = COMISION_TRAMOS.map((tr,i)=>{
-    const rango = tr.hasta===Infinity ? `+${money(tr.desde)}` : `${money(tr.desde)} – ${money(tr.hasta)}`;
-    return `${rango} → <b>${pct(tr.pct)}</b>`;
-  }).join(" &nbsp;·&nbsp; ");
+  // Gráfico de barras de la escalera (incluye la corona como 4ª barra)
+  const barras = COMISION_TRAMOS.map(tr=>({
+    rango: tr.hasta===Infinity ? `+${money(tr.desde)}` : `${money(tr.desde)}–${money(tr.hasta)}`,
+    pct: tr.pct, corona:false
+  }));
+  barras.push({ rango:`1º · +${money(COMISION_CORONA.piso)}`, pct:COMISION_CORONA.pctPlano, corona:true });
+  const maxPct = Math.max(...barras.map(b=>b.pct));
+  const H = 140;
+  const escaleraGrafico = `<div style="display:flex;align-items:flex-end;gap:14px;height:${H+28}px;padding:8px 4px 0">
+    ${barras.map((b,i)=>{
+      const h = Math.round(b.pct/maxPct*H);
+      const col = b.corona ? "var(--accent)" : `rgba(221,125,71,${0.30+i*0.22})`;
+      const brd = b.corona ? "border:1.5px solid var(--accent);box-shadow:0 0 0 3px rgba(221,125,71,.15)" : "";
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+        <div style="font-family:var(--disp);font-weight:800;font-size:16px;color:${b.corona?'var(--accent)':'#fff'};margin-bottom:6px">${pct(b.pct)}${b.corona?' 👑':''}</div>
+        <div style="width:100%;max-width:92px;height:${h}px;border-radius:10px 10px 4px 4px;background:${col};${brd}"></div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:8px;text-align:center;letter-spacing:.04em">${b.rango}</div>
+      </div>`;
+    }).join("")}
+  </div>`;
 
   $app().innerHTML = `
   <div class="bar"><h2><span class="tick"></span>Comisiones</h2>
@@ -840,10 +856,11 @@ function renderComisiones(){
   </table></div>`
   : `<div class="empty"><b>Sin ventas cargadas en ${esc(mesLabel(clave))}.</b><br>Cuando marques un lead como <b>Ganado</b> con su monto y vendedor, aparece acá el ranking y la comisión.</div>`}
 
-  <div style="margin-top:22px;border:1px solid var(--hair2);border-radius:16px;padding:16px 18px">
-    <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:4px">Escalera (mensual, se resetea cada mes)</div>
-    <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${tramosTxt}</div>
-    <div style="font-size:12px;color:var(--faint)">Marginal: cada tramo cobra su %, no se recalcula hacia atrás. &nbsp;·&nbsp; Corona: el 1º del mes, si pasa ${money(COMISION_CORONA.piso)}, cobra 15% plano + premio.</div>
+  <div style="margin-top:22px;border:1px solid var(--hair2);border-radius:16px;padding:18px 20px">
+    <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:2px">Escalera de comisiones</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Mensual · se resetea cada mes · más vendés, más alto el %</div>
+    ${escaleraGrafico}
+    <div style="font-size:11.5px;color:var(--faint);margin-top:14px;border-top:1px solid var(--hair);padding-top:12px">Marginal: cada tramo cobra su %, no se recalcula hacia atrás. &nbsp;·&nbsp; 👑 Corona: el 1º del mes, si pasa ${money(COMISION_CORONA.piso)}, cobra 15% plano sobre todo + premio.</div>
   </div>
 
   <div style="margin-top:18px;border:1px solid var(--hair2);border-radius:16px;padding:16px 18px">
