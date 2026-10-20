@@ -1062,19 +1062,22 @@ function renderMiResumen(){
     : next ? `Te faltan <b style="color:var(--accent)">${vMoney(next.desde-vol)}</b> para saltar a <b>${vPct(next.pct)}</b>.`
     : `Estás en el escalón más alto (${vPct(miEsc)}). Si salís 1º y pasás ${vMoney(COMISION_CORONA.piso)}, cobrás 15% + premio.`;
 
-  // --- B) Meta + progreso ---
+  // --- B) Meta + progreso (HÉROE: arriba de todo, grande, motiva) ---
   const meta = Number(miV.meta)||0;
   const pctMeta = meta>0 ? Math.min(100, Math.round(vol/meta*100)) : 0;
+  const cumplida = pctMeta>=100;
   const metaBox = meta>0 ? `
-    <div style="border:1px solid var(--hair2);border-radius:16px;padding:16px 18px;margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
-        <span style="font-family:var(--disp);font-weight:800;font-size:15px">Tu meta del mes</span>
-        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${vMoney(vol)} / ${vMoney(meta)}</span>
+    <div style="border:1.5px solid ${cumplida?'var(--ok)':'var(--accent)'};border-radius:20px;padding:26px 24px;margin-bottom:18px;background:linear-gradient(135deg,rgba(221,125,71,.09),rgba(221,125,71,.02));box-shadow:0 0 44px -14px rgba(221,125,71,.45)">
+      <div style="font-family:var(--mono);font-size:10px;letter-spacing:.24em;color:${cumplida?'var(--ok)':'var(--accent)'};text-transform:uppercase;margin-bottom:14px">◆ Tu meta de ${esc(mesLabel(clave))}</div>
+      <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div style="font-family:var(--disp);font-weight:800;font-size:46px;line-height:1;color:#fff;text-shadow:0 0 24px rgba(221,125,71,.4)">${vMoney(vol)}</div>
+        <div style="font-family:var(--mono);font-size:15px;color:var(--muted);padding-bottom:6px">de ${vMoney(meta)}</div>
+        <div style="margin-left:auto;font-family:var(--disp);font-weight:800;font-size:32px;line-height:1;color:${cumplida?'var(--ok)':'var(--accent)'}">${pctMeta}%</div>
       </div>
-      <div style="height:14px;border-radius:999px;background:var(--hair2);overflow:hidden">
-        <div style="height:100%;width:${pctMeta}%;border-radius:999px;background:linear-gradient(90deg,rgba(221,125,71,.6),var(--accent));box-shadow:0 0 16px -2px rgba(221,125,71,.6)"></div>
+      <div style="height:18px;border-radius:999px;background:rgba(0,0,0,.4);overflow:hidden;border:1px solid var(--hair2)">
+        <div style="height:100%;width:${Math.max(pctMeta,2)}%;border-radius:999px;background:linear-gradient(90deg,rgba(221,125,71,.55),var(--accent) 70%,#F2A06E);box-shadow:0 0 22px rgba(221,125,71,.8)"></div>
       </div>
-      <div style="font-size:12px;color:${pctMeta>=100?'var(--ok)':'var(--muted)'};margin-top:8px">${pctMeta>=100?'¡Meta cumplida! 🎉':`Vas ${pctMeta}% — te faltan <b style="color:var(--accent)">${vMoney(Math.max(0,meta-vol))}</b>`}</div>
+      <div style="font-size:13.5px;color:${cumplida?'var(--ok)':'var(--fg)'};margin-top:14px">${cumplida?'<b>¡Meta cumplida! 🎉</b> Todo lo que cierres ahora es récord.':`Te faltan <b style="color:var(--accent)">${vMoney(Math.max(0,meta-vol))}</b> para tu meta — cada llamada te acerca.`}</div>
     </div>` : '';
 
   // --- C) Actividad (de mis leads/touches, ya filtrados a lo mío) ---
@@ -1121,13 +1124,13 @@ function renderMiResumen(){
   <div class="bar"><h2><span class="tick"></span>Hola, ${esc(yo)}</h2>
     <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">${esc(mesLabel(clave))}</span>
   </div>
+  ${metaBox}
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
     ${tile("Vendiste este mes", vMoney(vol), `${mias.length} venta${mias.length===1?'':'s'}`)}
     ${tile("Tu comisión", vMoney2(comision), corona?'corona 👑 · 15%':`escalón ${vPct(miEsc)}`, corona?'var(--accent)':'var(--ok)')}
     ${tile("Tu puesto", puesto?`${puesto}º`:'—', puesto===1?'1º del equipo 🔥':'en el ranking')}
     ${tile("Ticket promedio", ticket, "por venta")}
   </div>
-  ${metaBox}
   <div style="border:1px solid var(--hair2);border-radius:16px;padding:16px 18px;background:rgba(221,125,71,.05);margin-bottom:16px">
     ${faltaMsg}
   </div>
