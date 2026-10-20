@@ -408,7 +408,7 @@ function tandaCandidatos(){
 function pfTag(pf){
   if(!pf) return "";
   const col={"sin web":"var(--accent)","web vieja":"var(--accent)","sin reservas online":"var(--accent)","reseñas flojas":"var(--warn)","poca presencia":"var(--warn)","recién abre":"var(--ok)","ventas flojas":"var(--bad)"}[pf]||"var(--faint)";
-  return `<span title="Punto flojo — por acá entra el primer mail" style="display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:${col};border:1px solid ${col};border-radius:6px;padding:2px 7px;margin-left:8px;white-space:nowrap;opacity:.9">${esc(pf)}</span>`;
+  return `<span title="Punto flojo — por acá entra el primer mail" style="display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:${col};border:1px solid ${col};border-radius:6px;padding:2px 7px;white-space:nowrap;opacity:.9;vertical-align:middle">${esc(pf)}</span>`;
 }
 
 /* Ficha del negocio ordenada: etiquetas en mono, datos aparte, "Entrar por" resaltado */
@@ -1700,7 +1700,7 @@ function renderProspeccion(){
     return `<tr id="pr-${p.id}"${hlProspId===p.id?' class="rowhl"':''}${p.feedback==="no"?' style="opacity:.45" title="Descartado'+(p.feedbackMotivo?": "+esc(p.feedbackMotivo):"")+'"':''}>
       <td><div style="display:flex;align-items:flex-start">
         ${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="Prioridad ${esc(p.prioridad)}${p.prioridadMotivo?" — "+esc(p.prioridadMotivo):""}">${esc(p.prioridad)}</span>`:""}
-        <div style="min-width:0"><b data-openprosp="${p.id}" style="cursor:pointer" title="Ver la ficha completa del negocio">${esc(p.empresa||"—")}</b>${pfTag(p.puntoFlojo)}${sub?`<div class="bs" style="margin-top:5px;line-height:1.5;max-width:230px">${esc(sub.slice(0,90))}</div>`:""}</div>
+        <div style="min-width:0"><b data-openprosp="${p.id}" style="cursor:pointer;line-height:1.3" title="Ver la ficha completa del negocio">${esc(p.empresa||"—")}</b>${p.puntoFlojo?`<div style="margin-top:7px">${pfTag(p.puntoFlojo)}</div>`:""}${sub?`<div class="bs" style="margin-top:7px;line-height:1.5;max-width:230px">${esc(sub.slice(0,90))}</div>`:""}</div>
       </div></td>
       <td style="font-size:12.5px">${p.contacto?esc(p.contacto):(p.emailDirecto||p.phoneDirecto||p.email||p.phone?"":`<span style="color:var(--faint)">sin contacto</span>`)}
         ${(function(){ const pl=[];
@@ -2281,7 +2281,7 @@ function prospModalHtml(){
   const kv=(k,v)=>v?`<div style="display:flex;gap:10px;margin-top:8px;font-size:13px"><span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;min-width:84px;padding-top:2px">${k}</span><span style="min-width:0;overflow-wrap:anywhere">${v}</span></div>`:"";
   return `<div class="cpop-bg" data-closeprosp="1"><div class="cpop" style="max-width:380px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-      <div style="font-family:var(--disp);font-size:16px;font-weight:800;color:#fff">${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}${pfTag(p.puntoFlojo)}</div>
+      <div style="font-family:var(--disp);font-size:16px;font-weight:800;color:#fff">${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}${p.puntoFlojo?`<span style="margin-left:9px">${pfTag(p.puntoFlojo)}</span>`:""}</div>
       <button class="btn ghost sm" data-closeprosp="1" style="flex:none">← Volver</button>
     </div>
     <div class="bs" style="margin-top:2px">${esc([p.nicho,p.ciudad].filter(Boolean).join(" · "))}</div>
