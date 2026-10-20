@@ -1867,28 +1867,7 @@ function renderProspeccion(){
           <span class="bs">Salen de a uno, con ~1 min entre cada uno (goteo anti-spam). Dejá la pestaña abierta.</span></div>
       </div>`:""}
     </div>`; })()}
-  ${(function(){
-    const vis=prospectos.filter(p=>p.visitar && p.status!=="descartado" && p.feedback!=="no");
-    if(!vis.length) return "";
-    const PARTIDA={lat:25.93,lng:-80.17}; // North Miami
-    const R=x=>x*Math.PI/180, hav=(a,b)=>{const dl=R(b.lat-a.lat),dg=R(b.lng-a.lng);const s=Math.sin(dl/2)**2+Math.cos(R(a.lat))*Math.cos(R(b.lat))*Math.sin(dg/2)**2;return 2*3959*Math.asin(Math.sqrt(s));};
-    const conGeo=vis.filter(p=>p.lat&&p.lng);
-    let orden;
-    if(conGeo.length===vis.length && vis.length>1){
-      const rest=[...vis]; orden=[]; let cur=PARTIDA;
-      while(rest.length){ let bi=0,bd=Infinity; rest.forEach((p,i)=>{const d=hav(cur,p); if(d<bd){bd=d;bi=i;}}); const n=rest.splice(bi,1)[0]; orden.push(n); cur=n; }
-    } else { orden=[...vis].sort((a,b)=>String(a.ciudad||"").localeCompare(String(b.ciudad||""))); }
-    const pt=p=>(p.lat&&p.lng)?(p.lat+","+p.lng):encodeURIComponent([p.empresa,p.ciudad].filter(Boolean).join(", "));
-    const pts=orden.slice(0,10).map(pt);
-    const dest=pts[pts.length-1], way=pts.slice(0,-1).join("|");
-    const url="https://www.google.com/maps/dir/?api=1&destination="+dest+(way?"&waypoints="+way:"")+"&travelmode=driving";
-    return `<div class="bcard" style="margin-bottom:18px">
-      <div class="bhead" style="margin-bottom:10px;flex-wrap:wrap;gap:8px"><span class="bt">🚗 Ruta de visitas — ${orden.length}</span>
-        <a class="btn sm" style="text-decoration:none" href="${url}" target="_blank" rel="noopener">Abrir ruta en Google Maps${orden.length>10?" (primeras 10)":""}</a></div>
-      <div class="bs" style="margin-bottom:12px">${conGeo.length===vis.length&&vis.length>1?"Ordenados por cercanía desde North Miami — para rendir la salida a la calle.":"Agrupados por zona (las búsquedas nuevas traen ubicación exacta y se ordenan por cercanía)."} Para visitar en persona conviene horario de día, cuando está el dueño.</div>
-      ${orden.map((p,i)=>`<div class="brow"><span><b style="color:var(--accent);font-family:var(--mono)">${i+1}</b>&nbsp;&nbsp;<b>${esc(p.empresa||"—")}</b>${p.puntoFlojo?" "+pfTag(p.puntoFlojo):""}<div class="bs" style="margin-top:4px">${esc(p.direccion||p.ciudad||"")}${p.horario?" · "+esc(String(p.horario).slice(0,46)):""}</div></span>
-        <button class="btn sm ghost" data-visitar="${p.id}" title="Sacar de la ruta">✕</button></div>`).join("")}
-    </div>`; })()}
+  ${(function(){ const n=prospectos.filter(p=>p.visitar && !p.visitado && p.status!=="descartado" && p.feedback!=="no").length; return n?`<div class="bcard" style="margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span class="bt">👤 ${n} negocio${n>1?"s":""} para visitar en persona</span><button class="btn sm" data-gotab="visitas">Abrir hoja de ruta →</button></div>`:""; })()}
   ${busquedas.length?`<div class="bcard" style="margin-bottom:18px">
     <div class="bhead" style="margin-bottom:10px"><span class="bt">Búsquedas</span></div>
     ${busquedas.map(b=>{
