@@ -781,19 +781,28 @@ function renderComisiones(){
   const medalla = i => i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}º`;
   const pct = p => (Math.round(p*1000)/10).toString().replace(".0","")+"%";
 
+  // Ranking en cuadros apilados (uno abajo del otro)
   const filas = rank.filter(r=>r.volumen>0 || r.vendedor.activo).map((r,i)=>{
-    const corona = r.esCorona ? `<span title="Líder del mes — 15% + premio" style="margin-left:6px">👑</span>` : "";
-    const escBadge = r.volumen>0
-      ? `<span style="font-family:var(--mono);font-size:10px;color:${r.esCorona?'var(--accent)':'var(--muted)'}">${pct(r.pctEfectivo)}${r.esCorona?' CORONA':''}</span>`
-      : `<span style="font-family:var(--mono);font-size:10px;color:var(--faint)">—</span>`;
-    return `<tr${r.esCorona?' style="background:rgba(221,125,71,.07)"':''}>
-      <td style="font-family:var(--disp);font-weight:800;width:40px">${r.volumen>0?medalla(i):'·'}</td>
-      <td><b>${esc(r.vendedor.nombre)}</b>${corona}${!r.vendedor.activo?' <span style="font-size:10px;color:var(--faint)">(inactivo)</span>':''}</td>
-      <td style="text-align:right;font-family:var(--mono)">${money(r.volumen)}</td>
-      <td style="text-align:center;font-size:12px">${r.ventas}</td>
-      <td style="text-align:right">${escBadge}</td>
-      <td style="text-align:right;font-family:var(--disp);font-weight:800;color:${r.esCorona?'var(--accent)':'var(--ok)'}">${money2(r.comisionFinal)}</td>
-    </tr>`;
+    const puesto = r.volumen>0 ? medalla(i) : '·';
+    const pctTxt = r.volumen>0 ? `${pct(r.pctEfectivo)}${r.esCorona?' · CORONA 👑':''}` : 'sin ventas';
+    const borde = r.esCorona ? 'border:1.5px solid var(--accent);box-shadow:0 0 0 3px rgba(221,125,71,.1)' : '1px solid var(--hair2)';
+    const bg = r.esCorona ? 'background:rgba(221,125,71,.06)' : '';
+    return `<div style="display:flex;align-items:center;gap:16px;border:${borde};${bg};border-radius:16px;padding:16px 18px">
+      <div style="font-family:var(--disp);font-weight:800;font-size:26px;min-width:44px;text-align:center">${puesto}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--disp);font-weight:800;font-size:17px;color:#fff">${esc(r.vendedor.nombre)}${!r.vendedor.activo?' <span style="font-size:10px;color:var(--faint);font-weight:400">(inactivo)</span>':''}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:${r.esCorona?'var(--accent)':'var(--muted)'};margin-top:3px;letter-spacing:.04em">${esc(pctTxt)}</div>
+      </div>
+      <div style="text-align:right;min-width:92px">
+        <div style="font-family:var(--mono);font-size:14px;color:#fff">${money(r.volumen)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${r.ventas} venta${r.ventas===1?'':'s'}</div>
+      </div>
+      <div style="width:1px;align-self:stretch;background:var(--hair2)"></div>
+      <div style="text-align:right;min-width:92px">
+        <div style="font-family:var(--disp);font-weight:800;font-size:19px;color:${r.esCorona?'var(--accent)':'var(--ok)'}">${money2(r.comisionFinal)}</div>
+        <div style="font-size:10px;color:var(--faint);margin-top:2px;letter-spacing:.06em;text-transform:uppercase">comisión</div>
+      </div>
+    </div>`;
   }).join("");
 
   const lider = rank[0];
@@ -850,10 +859,9 @@ function renderComisiones(){
     ${coronaMsg}
   </div>
 
-  ${rank.some(r=>r.volumen>0) ? `<div class="tablewrap"><table>
-    <tr><th style="width:40px"></th><th>Vendedor</th><th style="text-align:right">Vendido</th><th style="text-align:center">Ventas</th><th style="text-align:right">% efect.</th><th style="text-align:right">Comisión</th></tr>
+  ${rank.some(r=>r.volumen>0 || r.vendedor.activo) ? `<div style="display:flex;flex-direction:column;gap:10px">
     ${filas}
-  </table></div>`
+  </div>`
   : `<div class="empty"><b>Sin ventas cargadas en ${esc(mesLabel(clave))}.</b><br>Cuando marques un lead como <b>Ganado</b> con su monto y vendedor, aparece acá el ranking y la comisión.</div>`}
 
   <div style="margin-top:22px;border:1px solid var(--hair2);border-radius:16px;padding:18px 20px">
