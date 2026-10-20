@@ -952,14 +952,14 @@ function renderEquipo(target){
     const estadoHoy = pendHoy===0
       ? `<span style="color:var(--ok);font-weight:700">✓ Al día</span>`
       : `<span style="color:var(--warn);font-weight:700">${pendHoy} pendiente${pendHoy===1?'':'s'} hoy</span>`;
-    return `<div style="border:1px solid ${corona?'var(--accent)':'var(--hair2)'};border-radius:16px;padding:18px 20px;${corona?'background:rgba(221,125,71,.05)':''}">
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;line-height:1.3">
-        <div style="font-family:var(--disp);font-weight:800;font-size:18px;line-height:1.3">${esc(v.nombre)}${corona?' 👑':''}</div>
+    return `<div style="display:flex;flex-direction:column;gap:18px;border:1px solid ${corona?'var(--accent)':'var(--hair2)'};border-radius:16px;padding:20px;overflow:hidden;${corona?'background:rgba(221,125,71,.05)':''}">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;line-height:1.4">
+        <span style="font-family:var(--disp);font-weight:800;font-size:18px">${esc(v.nombre)}${corona?' 👑':''}</span>
         ${puesto?`<span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${puesto}º del mes</span>`:''}
         ${!v.email?'<span style="font-size:10px;color:var(--warn)">sin email</span>':''}
         <span style="margin-left:auto;font-size:12px">${estadoHoy}</span>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between">
         ${metric(llamHoy,'llam. hoy', llamHoy>0?'var(--ok)':'#fff')}
         ${metric(mailHoy,'mails hoy')}
         ${metric(llamMes,'llam. mes')}
@@ -967,7 +967,7 @@ function renderEquipo(target){
         ${metric(money(vol),'vendido')}
         ${metric(money2(comision),'comisión','var(--ok)')}
       </div>
-      ${meta>0?`<div style="margin-top:14px">
+      ${meta>0?`<div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px"><span>Meta del mes</span><span>${money(vol)} / ${money(meta)} · ${pctMeta}%</span></div>
         <div style="height:9px;border-radius:999px;background:var(--hair2);overflow:hidden"><div style="height:100%;width:${pctMeta}%;background:linear-gradient(90deg,rgba(221,125,71,.6),var(--accent))"></div></div>
       </div>`:''}
