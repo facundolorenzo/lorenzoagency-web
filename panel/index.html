@@ -816,23 +816,24 @@ function renderComisiones(){
       </div>`).join("")
     : `<div style="color:var(--muted);font-size:13px">Todavía no cargaste vendedores. Agregá el primero arriba.</div>`;
 
-  // Gráfico de barras de la escalera (incluye la corona como 4ª barra)
+  // Gráfico de barras con glow (incluye la corona como 4ª barra)
   const barras = COMISION_TRAMOS.map(tr=>({
     rango: tr.hasta===Infinity ? `+${money(tr.desde)}` : `${money(tr.desde)}–${money(tr.hasta)}`,
     pct: tr.pct, corona:false
   }));
   barras.push({ rango:`1º · +${money(COMISION_CORONA.piso)}`, pct:COMISION_CORONA.pctPlano, corona:true });
   const maxPct = Math.max(...barras.map(b=>b.pct));
-  const H = 140;
-  const escaleraGrafico = `<div style="display:flex;align-items:flex-end;gap:14px;height:${H+28}px;padding:8px 4px 0">
+  const H = 190;
+  const escaleraGrafico = `<div style="display:flex;align-items:flex-end;gap:18px;height:${H+58}px;padding:30px 6px 0;justify-content:center">
     ${barras.map((b,i)=>{
       const h = Math.round(b.pct/maxPct*H);
-      const col = b.corona ? "var(--accent)" : `rgba(221,125,71,${0.30+i*0.22})`;
-      const brd = b.corona ? "border:1.5px solid var(--accent);box-shadow:0 0 0 3px rgba(221,125,71,.15)" : "";
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
-        <div style="font-family:var(--disp);font-weight:800;font-size:16px;color:${b.corona?'var(--accent)':'#fff'};margin-bottom:6px">${pct(b.pct)}${b.corona?' 👑':''}</div>
-        <div style="width:100%;max-width:92px;height:${h}px;border-radius:10px 10px 4px 4px;background:${col};${brd}"></div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:8px;text-align:center;letter-spacing:.04em">${b.rango}</div>
+      const glow = b.corona
+        ? "background:linear-gradient(180deg,rgba(242,160,110,.35) 0%,rgba(221,125,71,.85) 55%,#DD7D47 100%);box-shadow:0 0 55px -4px rgba(221,125,71,.75),inset 0 0 26px rgba(255,200,160,.4)"
+        : `background:linear-gradient(180deg,rgba(221,125,71,.10) 0%,rgba(221,125,71,${(0.30+i*0.14).toFixed(2)}) 55%,rgba(221,125,71,${(0.55+i*0.14).toFixed(2)}) 100%);box-shadow:0 0 38px -8px rgba(221,125,71,${(0.35+i*0.12).toFixed(2)}),inset 0 0 20px rgba(255,190,150,.18)`;
+      return `<div style="flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+        <div style="font-family:var(--disp);font-weight:800;font-size:${b.corona?'30':'26'}px;color:#fff;margin-bottom:10px;text-shadow:0 0 18px rgba(221,125,71,.5)">${pct(b.pct)}${b.corona?' <span style="font-size:20px">👑</span>':''}</div>
+        <div style="width:100%;height:${h}px;border-radius:20px 20px 8px 8px;${glow}"></div>
+        <div style="font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:12px;text-align:center;letter-spacing:.03em">${b.rango}</div>
       </div>`;
     }).join("")}
   </div>`;
