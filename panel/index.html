@@ -404,6 +404,13 @@ function tandaCandidatos(){
     .slice(0,Math.max(0,CUOTA-mailsHoy));
 }
 
+/* Etiqueta de color del PUNTO FLOJO — el ángulo del primer impacto */
+function pfTag(pf){
+  if(!pf) return "";
+  const col={"sin web":"var(--accent)","web vieja":"var(--accent)","sin reservas online":"var(--accent)","reseñas flojas":"var(--warn)","poca presencia":"var(--warn)","recién abre":"var(--ok)","ventas flojas":"var(--bad)"}[pf]||"var(--faint)";
+  return `<span title="Punto flojo — por acá entra el primer mail" style="display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:${col};border:1px solid ${col};border-radius:6px;padding:2px 7px;margin-left:8px;white-space:nowrap;opacity:.9">${esc(pf)}</span>`;
+}
+
 /* Ficha del negocio ordenada: etiquetas en mono, datos aparte, "Entrar por" resaltado */
 function fichaNegocioHtml(msg){
   const L=`font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:3px`;
@@ -417,6 +424,8 @@ function fichaNegocioHtml(msg){
     if(/^QUÉ ESTÁ PASANDO/i.test(ln)){ enPasando=true; continue; }
     if(/^[•\-]/.test(ln)&&enPasando){ puntos.push(ln.replace(/^[•\-]\s*/,"")); continue; }
     enPasando=false; cerrarPuntos();
+    const pf=ln.match(/^PUNTO FLOJO[^:]*:\s*(.+)$/i);
+    if(pf){ out.push(fila("Punto flojo — primer impacto",pf[1],"color:var(--accent);font-weight:700;text-transform:uppercase;font-size:13px")); continue; }
     const kv=ln.match(/^(Contacto|Entrar por|Web|web|IG|Instagram|Notas?)\s*:\s*(.+)$/i);
     if(kv){
       const k=kv[1].toLowerCase();
@@ -648,7 +657,7 @@ const FROM = {
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",
-                  busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,
+                  busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,puntoFlojo:r.punto_flojo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
 };
 const TO = {
@@ -1691,7 +1700,7 @@ function renderProspeccion(){
     return `<tr id="pr-${p.id}"${hlProspId===p.id?' class="rowhl"':''}${p.feedback==="no"?' style="opacity:.45" title="Descartado'+(p.feedbackMotivo?": "+esc(p.feedbackMotivo):"")+'"':''}>
       <td><div style="display:flex;align-items:flex-start">
         ${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="Prioridad ${esc(p.prioridad)}${p.prioridadMotivo?" — "+esc(p.prioridadMotivo):""}">${esc(p.prioridad)}</span>`:""}
-        <div style="min-width:0"><b data-openprosp="${p.id}" style="cursor:pointer" title="Ver la ficha completa del negocio">${esc(p.empresa||"—")}</b>${sub?`<div class="bs" style="margin-top:5px;line-height:1.5;max-width:230px">${esc(sub.slice(0,90))}</div>`:""}</div>
+        <div style="min-width:0"><b data-openprosp="${p.id}" style="cursor:pointer" title="Ver la ficha completa del negocio">${esc(p.empresa||"—")}</b>${pfTag(p.puntoFlojo)}${sub?`<div class="bs" style="margin-top:5px;line-height:1.5;max-width:230px">${esc(sub.slice(0,90))}</div>`:""}</div>
       </div></td>
       <td style="font-size:12.5px">${p.contacto?esc(p.contacto):(p.emailDirecto||p.phoneDirecto||p.email||p.phone?"":`<span style="color:var(--faint)">sin contacto</span>`)}
         ${(function(){ const pl=[];
@@ -2272,7 +2281,7 @@ function prospModalHtml(){
   const kv=(k,v)=>v?`<div style="display:flex;gap:10px;margin-top:8px;font-size:13px"><span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;min-width:84px;padding-top:2px">${k}</span><span style="min-width:0;overflow-wrap:anywhere">${v}</span></div>`:"";
   return `<div class="cpop-bg" data-closeprosp="1"><div class="cpop" style="max-width:380px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-      <div style="font-family:var(--disp);font-size:16px;font-weight:800;color:#fff">${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}</div>
+      <div style="font-family:var(--disp);font-size:16px;font-weight:800;color:#fff">${p.prioridad?`<span class="prchip ${esc(p.prioridad)}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}${pfTag(p.puntoFlojo)}</div>
       <button class="btn ghost sm" data-closeprosp="1" style="flex:none">← Volver</button>
     </div>
     <div class="bs" style="margin-top:2px">${esc([p.nicho,p.ciudad].filter(Boolean).join(" · "))}</div>
@@ -2602,7 +2611,7 @@ document.addEventListener("click", async e=>{
       if(!p||!m.to||!m.cuerpo) continue;
       note("✉ Enviando "+(i+1)+"/"+items.length+" — "+m.empresa+"…");
       try{
-        const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.contacto?("Contacto: "+p.contacto):"",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.notas||""].filter(Boolean).join("\n");
+        const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.contacto?("Contacto: "+p.contacto):"",p.puntoFlojo?("PUNTO FLOJO (entrá el mail por acá): "+p.puntoFlojo):"",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.notas||""].filter(Boolean).join("\n");
         const {data:nl,error}=await sb.from("leads").insert({name:p.empresa||p.contacto,email:m.to,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"captación",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
         if(error) throw error;
         await sb.from("prospectos").update({lead_id:nl.id,status:"enviado",updated_at:new Date().toISOString()}).eq("id",p.id);
@@ -2844,7 +2853,7 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.prospmail){
     const p=prospectos.find(x=>x.id===t.dataset.prospmail); if(!p) return;
-    const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.contacto?("Contacto: "+p.contacto):"",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.notas||""].filter(Boolean).join("\n");
+    const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.contacto?("Contacto: "+p.contacto):"",p.puntoFlojo?("PUNTO FLOJO (entrá el mail por acá): "+p.puntoFlojo):"",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.notas||""].filter(Boolean).join("\n");
     const {data:nl,error}=await sb.from("leads").insert({name:p.empresa||p.contacto,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"captación",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
     if(error){ note("No se pudo preparar: "+error.message); return; }
     try{ await sb.from("prospectos").update({lead_id:nl.id,updated_at:new Date().toISOString()}).eq("id",p.id); }catch(err){}
@@ -2853,7 +2862,7 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.prosplead){
     const p=prospectos.find(x=>x.id===t.dataset.prosplead); if(!p) return;
-    const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.contacto?("Contacto: "+p.contacto):"",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.instagram?("IG: "+p.instagram):"",p.notas||""].filter(Boolean).join("\n");
+    const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.contacto?("Contacto: "+p.contacto):"",p.puntoFlojo?("PUNTO FLOJO (entrá el mail por acá): "+p.puntoFlojo):"",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.instagram?("IG: "+p.instagram):"",p.notas||""].filter(Boolean).join("\n");
     const {data:nl,error}=await sb.from("leads").insert({name:p.empresa||p.contacto,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"prospección",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
     if(error){ note("No se pudo pasar a Leads: "+error.message); return; }
     try{ await sb.from("prospectos").update({lead_id:nl.id,updated_at:new Date().toISOString()}).eq("id",p.id); }catch(err){}
