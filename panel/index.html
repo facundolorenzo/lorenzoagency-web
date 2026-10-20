@@ -746,7 +746,7 @@ async function runDraft(id, isRehacer){
 
 /* ============================ RENDER ============================ */
 function tabsHtml(){
-  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["comisiones","COMISIONES"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"]]
+  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["equipo","EQUIPO"],["comisiones","COMISIONES"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"]]
             : esVendedor ? [["hoy","PARA HOY"],["miresumen","MI RESUMEN"],["misclientes","MIS CLIENTES"],["miranking","RANKING"]]
             : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
   const nuevos = leads.filter(x=>x.status==='nuevo').length;
@@ -916,6 +916,83 @@ function renderComisiones(){
     <div style="font-size:11px;color:var(--faint);margin-bottom:4px">El email es con el que el vendedor entra al panel y ve solo lo suyo.</div>
     <div style="margin-top:8px">${vendList}</div>
   </div>`;
+}
+
+/* ================= EQUIPO (admin supervisa a los vendedores) ================= */
+function renderEquipo(){
+  const clave = mesVigente();
+  const money = n => "$"+Math.round(n).toLocaleString("en-US");
+  const money2 = n => "$"+(Math.round(n*100)/100).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2});
+  const pct = p => (Math.round(p*1000)/10).toString().replace(".0","")+"%";
+  const hoy0=new Date(); hoy0.setHours(0,0,0,0);
+  const esHoy = d => new Date(d)>=hoy0;
+  const rank = rankingMes(clave);
+  const puestoDe = id => { const i=rank.findIndex(r=>r.vendedor.id===id); return i<0?null:i+1; };
+  const activos = vendedores.filter(v=>v.activo);
+
+  if(!activos.length){
+    $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Equipo</h2></div>
+      <div class="empty"><b>No hay vendedores cargados.</b><br>Agregalos en <b>Comisiones</b> (nombre + email + meta).</div>`;
+    return;
+  }
+
+  const metric = (val,lbl,col)=>`<div style="text-align:center;min-width:76px"><div style="font-family:var(--disp);font-weight:800;font-size:19px;color:${col||'#fff'}">${val}</div><div style="font-size:10px;color:var(--faint);margin-top:2px;letter-spacing:.05em;text-transform:uppercase">${lbl}</div></div>`;
+
+  const cards = activos.map(v=>{
+    const misLeads = leads.filter(l=>l.vendedorId===v.id);
+    const ids = new Set(misLeads.map(l=>l.id));
+    const misTouch = touches.filter(t=>ids.has(t.leadId));
+    const llamHoy = misTouch.filter(t=>t.tipo==='llamada' && esHoy(t.createdAt)).length;
+    const mailHoy = misTouch.filter(t=>t.tipo==='mail' && esHoy(t.createdAt)).length;
+    const llamMes = misTouch.filter(t=>t.tipo==='llamada').length;
+    const pendHoy = misLeads.filter(l=>accionHoy(l)).length;    // su cola "Para hoy"
+    const hechoHoy = llamHoy + mailHoy;
+    const vol = ventasDelMes(v.id,clave).reduce((a,l)=>a+Number(l.montoVenta||0),0);
+    const corona = rank[0] && rank[0].vendedor.id===v.id && rank[0].volumen>COMISION_CORONA.piso;
+    const comision = corona ? vol*COMISION_CORONA.pctPlano : comisionEscalera(vol);
+    const puesto = puestoDe(v.id);
+    const meta = Number(v.meta)||0;
+    const pctMeta = meta>0 ? Math.min(100,Math.round(vol/meta*100)) : null;
+    // cumplió lo del día: sin acciones pendientes de hoy
+    const cumplio = pendHoy===0;
+    const estadoHoy = pendHoy===0
+      ? `<span style="color:var(--ok);font-weight:700">✓ Al día</span>`
+      : `<span style="color:var(--warn);font-weight:700">${pendHoy} pendiente${pendHoy===1?'':'s'} hoy</span>`;
+    return `<div style="border:1px solid ${corona?'var(--accent)':'var(--hair2)'};border-radius:16px;padding:16px 18px;${corona?'background:rgba(221,125,71,.05)':''}">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="font-family:var(--disp);font-weight:800;font-size:18px">${esc(v.nombre)}${corona?' 👑':''}</div>
+        ${puesto?`<span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${puesto}º del mes</span>`:''}
+        ${!v.email?'<span style="font-size:10px;color:var(--warn)">sin email</span>':''}
+        <span style="margin-left:auto;font-size:12px">${estadoHoy}</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between">
+        ${metric(llamHoy,'llam. hoy', llamHoy>0?'var(--ok)':'#fff')}
+        ${metric(mailHoy,'mails hoy')}
+        ${metric(llamMes,'llam. mes')}
+        ${metric(misLeads.length,'clientes')}
+        ${metric(money(vol),'vendido')}
+        ${metric(money2(comision),'comisión','var(--ok)')}
+      </div>
+      ${meta>0?`<div style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px"><span>Meta del mes</span><span>${money(vol)} / ${money(meta)} · ${pctMeta}%</span></div>
+        <div style="height:9px;border-radius:999px;background:var(--hair2);overflow:hidden"><div style="height:100%;width:${pctMeta}%;background:linear-gradient(90deg,rgba(221,125,71,.6),var(--accent))"></div></div>
+      </div>`:''}
+    </div>`;
+  }).join("");
+
+  // totales del equipo hoy
+  const totLlamHoy = activos.reduce((a,v)=>{const ids=new Set(leads.filter(l=>l.vendedorId===v.id).map(l=>l.id)); return a+touches.filter(t=>ids.has(t.leadId)&&t.tipo==='llamada'&&esHoy(t.createdAt)).length;},0);
+  const totPendHoy = activos.reduce((a,v)=>a+leads.filter(l=>l.vendedorId===v.id&&accionHoy(l)).length,0);
+  const tile=(lbl,val,sub)=>`<div style="flex:1;min-width:140px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px"><div style="font-family:var(--disp);font-size:14px;font-weight:800">${lbl}</div><div style="font-size:26px;margin-top:4px">${val}</div>${sub?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${sub}</div>`:''}</div>`;
+
+  $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Equipo</h2>
+    <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">${esc(mesLabel(clave))}</span></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      ${tile("Vendedores activos", activos.length)}
+      ${tile("Llamadas hoy (equipo)", totLlamHoy)}
+      ${tile("Pendientes hoy", totPendHoy, totPendHoy===0?'todos al día ✓':'acciones sin hacer')}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">${cards}</div>`;
 }
 
 /* ================= VISTA DEL VENDEDOR (ve solo lo suyo) ================= */
@@ -1100,6 +1177,7 @@ function renderBody(){
   else if(tab==="resumen") renderResumen();
   else if(tab==="analisis") renderAnalisis();
   else if(tab==="llamadas") renderLlamadas();
+  else if(tab==="equipo") renderEquipo();
   else if(tab==="comisiones") renderComisiones();
   else if(tab==="propuestas") renderProposals();
   else if(tab==="facturas") renderInvoices();
