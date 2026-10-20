@@ -52,6 +52,27 @@ nav button.on{color:#fff;border-color:var(--accent);background:var(--accent);fon
 .mdrop-item:hover{background:var(--accent);color:#fff}
 .mdrop-item.sel{color:var(--accent)}
 .mdrop-item.sel:hover{color:#fff}
+/* --- gestión de vendedores (Equipo) --- */
+.vadd{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.vadd .vf{flex:1;min-width:170px;display:flex;flex-direction:column;gap:5px}
+.vadd label{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+.vadd input{background:rgba(0,0,0,.3);border:1px solid var(--hair2);border-radius:10px;padding:11px 13px;font-size:13.5px}
+.vadd input:focus{border-color:var(--accent);outline:none}
+.vadd .btn{align-self:flex-end;padding:11px 22px}
+.vrow{display:flex;align-items:center;gap:14px;border:1px solid var(--hair2);border-radius:14px;padding:13px 16px;flex-wrap:wrap;transition:border-color .15s}
+.vrow:hover{border-color:var(--hair)}
+.vrow .vavatar{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:17px;color:#fff;background:linear-gradient(135deg,rgba(221,125,71,.85),rgba(221,125,71,.45));flex-shrink:0}
+.vrow.off .vavatar{background:var(--hair2);color:var(--muted)}
+.vrow .vinfo{flex:1;min-width:130px}
+.vrow .vinfo b{font-family:var(--disp);font-size:15px}
+.vrow .vinfo .vm{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:2px}
+.vchip{font-family:var(--mono);font-size:9px;letter-spacing:.12em;padding:4px 9px;border-radius:999px;text-transform:uppercase}
+.vchip.on{color:var(--ok);border:1px solid rgba(76,195,138,.35)}
+.vchip.off{color:var(--muted);border:1px solid var(--hair2)}
+.vmeta{display:flex;align-items:center;gap:0;border:1px solid var(--hair2);border-radius:10px;overflow:hidden}
+.vmeta span{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--faint);padding:0 9px;text-transform:uppercase;border-right:1px solid var(--hair2);align-self:stretch;display:flex;align-items:center;background:rgba(0,0,0,.25)}
+.vmeta input{width:88px;border:none;border-radius:0;background:transparent;padding:9px 11px;font-family:var(--mono);font-size:13px;text-align:right}
+.vmeta input:focus{outline:none}
 .linkbtn{background:none;border:none;color:var(--accent);font-family:var(--disp);font-size:12.5px;text-align:left;
   cursor:pointer;padding:0;text-decoration:none}
 .linkbtn:hover{text-decoration:underline}
@@ -980,12 +1001,18 @@ function renderEquipo(target){
   const tile=(lbl,val,sub)=>`<div style="flex:1;min-width:140px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px"><div style="font-family:var(--disp);font-size:14px;font-weight:800">${lbl}</div><div style="font-size:26px;margin-top:4px">${val}</div>${sub?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${sub}</div>`:''}</div>`;
 
   // gestión de vendedores (agregar / meta / activar)
+  const inicial = n => (String(n||"?").trim()[0]||"?").toUpperCase();
   const vendList = vendedores.length
-    ? vendedores.map(v=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--hair);flex-wrap:wrap">
-        <span style="flex:1;min-width:140px">${esc(v.nombre)} ${v.activo?'':'<span style="font-size:10px;color:var(--faint)">(inactivo)</span>'}${v.email?`<br><span style="font-family:var(--mono);font-size:10px;color:var(--faint)">${esc(v.email)}</span>`:'<br><span style="font-size:10px;color:var(--warn)">sin email — no puede entrar</span>'}</span>
-        <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px">meta $<input type="number" min="0" value="${v.meta||''}" placeholder="0" data-vendmeta="${esc(v.id)}" style="width:84px"></label>
+    ? `<div style="display:flex;flex-direction:column;gap:9px">`+vendedores.map(v=>`<div class="vrow ${v.activo?'':'off'}">
+        <div class="vavatar">${esc(inicial(v.nombre))}</div>
+        <div class="vinfo">
+          <b>${esc(v.nombre)}</b>
+          <div class="vm">${v.email?esc(v.email):'<span style="color:var(--warn)">sin email — no puede entrar al panel</span>'}</div>
+        </div>
+        <span class="vchip ${v.activo?'on':'off'}">${v.activo?'activo':'inactivo'}</span>
+        <div class="vmeta"><span>meta</span><input type="number" min="0" value="${v.meta||''}" placeholder="0" data-vendmeta="${esc(v.id)}"></div>
         <button class="btn ghost sm" data-vendtoggle="${esc(v.id)}">${v.activo?'Desactivar':'Reactivar'}</button>
-      </div>`).join("")
+      </div>`).join("")+`</div>`
     : `<div style="color:var(--muted);font-size:13px">Todavía no cargaste vendedores. Agregá el primero arriba.</div>`;
 
   dest.innerHTML = `
@@ -996,15 +1023,18 @@ function renderEquipo(target){
     </div>
     <div style="display:flex;flex-direction:column;gap:12px">${cards}</div>
 
-    <div style="margin-top:22px;border:1px solid var(--hair2);border-radius:16px;padding:16px 18px">
-      <div style="font-family:var(--disp);font-weight:800;font-size:15px;margin-bottom:12px">Agregar / gestionar vendedores</div>
-      <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap">
-        <input id="vendnuevo" placeholder="nombre del vendedor" style="flex:1;min-width:140px">
-        <input id="vendemail" type="email" placeholder="email (para que entre al panel)" style="flex:1;min-width:160px">
-        <button class="btn sm" data-vendadd="1">Agregar</button>
+    <div style="margin-top:22px;border:1px solid var(--hair2);border-radius:16px;padding:20px">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:16px">
+        <span style="font-family:var(--disp);font-weight:800;font-size:15px">Vendedores</span>
+        <span style="font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--faint)">${vendedores.length} CARGADO${vendedores.length===1?'':'S'}</span>
       </div>
-      <div style="font-size:11px;color:var(--faint);margin-bottom:4px">El email es con el que el vendedor entra al panel y ve solo lo suyo.</div>
-      <div style="margin-top:8px">${vendList}</div>
+      <div class="vadd" style="margin-bottom:8px">
+        <div class="vf"><label>Nombre</label><input id="vendnuevo" placeholder="ej: Marcos"></div>
+        <div class="vf"><label>Email de acceso</label><input id="vendemail" type="email" placeholder="con este email entra al panel"></div>
+        <button class="btn sm" data-vendadd="1">+ Agregar</button>
+      </div>
+      <div style="font-size:11px;color:var(--faint);margin-bottom:16px">Entra al panel con ese email y ve solo lo suyo. Acordate de crearle la cuenta (email + contraseña) en Supabase → Authentication.</div>
+      ${vendList}
     </div>`;
 }
 
