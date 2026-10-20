@@ -656,7 +656,7 @@ const FROM = {
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
-                  nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,idioma:r.idioma||null,visitaDia:r.visita_dia||null,visitado:r.visitado===true,visitadoFecha:r.visitado_fecha||null,visitaNota:r.visita_nota||null,
+                  nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,idioma:r.idioma||null,visitaDia:r.visita_dia||null,visitado:r.visitado===true,visitadoFecha:r.visitado_fecha||null,visitaNota:r.visita_nota||null,visitaHora:r.visita_hora||null,
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,puntoFlojo:r.punto_flojo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
 };
@@ -1721,7 +1721,7 @@ function visitaFila(p, idx){
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center">
       <a class="btn sm ghost" style="${B};text-decoration:none" href="${mapsUrl}" target="_blank" rel="noopener">📍 Cómo llegar</a>
       ${p.visitaDia
-        ? `<span class="bs" style="padding:0 4px">📅 ${esc(p.visitaDia)}</span><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|">Cambiar día</button>`
+        ? `<span class="bs" style="padding:0 4px">📅 ${esc(p.visitaDia)}</span><input type="time" data-visitahora="${p.id}" value="${esc(p.visitaHora||"")}" title="Hora de la visita" style="height:38px;font-size:13px;padding:0 10px"><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|">Cambiar día</button>`
         : `<span class="bs">Ir el:</span><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|${iso(d1)}">Hoy</button><button class="btn sm ghost" style="${B}" data-visitadia="${p.id}|${iso(d2)}">Mañana</button><input type="date" data-visitafecha="${p.id}" style="height:38px;font-size:13px;padding:0 10px">`}
       <span style="flex:1;min-width:20px"></span>
       <button class="btn sm" style="${B}" data-visitareg="${p.id}">✓ Ya fui</button>
@@ -2204,6 +2204,14 @@ function leadsHoy(){
 }
 function renderHoy(){
   const items = leadsHoy();
+  const hoyISO = new Date().toISOString().slice(0,10);
+  const visHoy = prospectos.filter(p=>p.visitar && !p.visitado && p.visitaDia===hoyISO && p.status!=="descartado" && p.feedback!=="no")
+    .sort((a,b)=>String(a.visitaHora||"99").localeCompare(String(b.visitaHora||"99")));
+  const visBox = visHoy.length ? `<div class="bcard" style="margin-bottom:18px">
+      <div class="bhead" style="margin-bottom:10px;flex-wrap:wrap;gap:8px"><span class="bt">🚗 Visitas de hoy · ${visHoy.length}</span><button class="btn sm ghost" data-gotab="visitas">Ver hoja de ruta →</button></div>
+      ${visHoy.map(p=>`<div class="brow"><span>${p.visitaHora?`<b style="font-family:var(--mono);color:var(--accent)">${esc(p.visitaHora)}</b>&nbsp;&nbsp;`:""}<b>${esc(p.empresa||"—")}</b>${p.puntoFlojo?" "+pfTag(p.puntoFlojo):""} <span class="bs">· ${esc(p.direccion||p.ciudad||"")}</span></span>
+        <a class="btn sm ghost" style="text-decoration:none" href="${(p.lat&&p.lng)?("https://www.google.com/maps/dir/?api=1&destination="+p.lat+","+p.lng):("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent([p.empresa,p.ciudad].filter(Boolean).join(", ")))}" target="_blank" rel="noopener">📍 Ir</a></div>`).join("")}
+    </div>` : "";
   const body = items.length ? `<div class="tablewrap"><table>
     <tr><th>Acción</th><th>Nombre</th><th>Servicio</th><th>Contacto</th><th class="r"></th></tr>
     ${items.map(({l,a})=>`<tr>
@@ -2220,7 +2228,7 @@ function renderHoy(){
     : `<div class="empty"><b>Nada para hoy ✦</b><br>Cuando entren consultas, respondan o toque un seguimiento, aparece acá.</div>`;
   $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Para hoy</h2></div>
     <div style="font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--muted);margin:-8px 0 16px">Tu lista del día. Resolvés y desaparece.</div>
-    ${body}`;
+    ${visBox}${body}`;
 }
 
 function callModalHtml(){
@@ -3124,6 +3132,10 @@ document.addEventListener("change", async e=>{
   if(t.dataset && t.dataset.visitafecha && t.value){
     await sb.from("prospectos").update({ visita_dia:t.value, visitar:true, updated_at:new Date().toISOString() }).eq("id", t.dataset.visitafecha);
     note("📅 Asignado a "+t.value); await loadAll(); return;
+  }
+  if(t.dataset && t.dataset.visitahora){
+    await sb.from("prospectos").update({ visita_hora:t.value||null, updated_at:new Date().toISOString() }).eq("id", t.dataset.visitahora);
+    note(t.value?("🕒 Hora: "+t.value):"Hora borrada"); await loadAll(); return;
   }
   if(t.dataset && t.dataset.prstatus){
     const { error } = await sb.from("prospectos").update({ status: t.value, updated_at:new Date().toISOString() }).eq("id", t.dataset.prstatus);
