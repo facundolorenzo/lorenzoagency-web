@@ -2610,7 +2610,7 @@ document.addEventListener("click", async e=>{
         try{ await sb.from("touches").insert({lead_id:nl.id,tipo:"mail",texto:m.cuerpo}); }catch(e){}
         okc++;
       }catch(err){ note("No salió el de "+m.empresa+": "+err.message); }
-      if(i<items.length-1) await new Promise(r=>setTimeout(r,45000+Math.floor(Math.random()*45000)));
+      if(i<items.length-1) await new Promise(r=>setTimeout(r,90000+Math.floor(Math.random()*90000)));
     }
     tandaEnviando=false; note("🚀 Tanda enviada: "+okc+"/"+items.length+" mails."); await loadAll(); return;
   }
