@@ -2612,15 +2612,21 @@ function confirmHtml(){
 
 /* ---------- eventos ---------- */
 function note(msg){
-  document.querySelectorAll(".lz-toast").forEach(x=>{ try{x.remove();}catch(e){} });
+  document.querySelectorAll(".lz-toast,.lz-toast-bd").forEach(x=>{ try{x.remove();}catch(e){} });
+  const bd=document.createElement("div");
+  bd.className="lz-toast-bd";
+  bd.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.38);backdrop-filter:blur(1px);z-index:9998";
   const n=document.createElement("div");
   n.className="lz-toast";
-  n.style.cssText="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#15161a;border:1px solid var(--hair);border-left:3px solid var(--accent);padding:13px 20px;border-radius:13px;font-size:14px;line-height:1.45;z-index:9999;max-width:min(540px,92vw);text-align:left;box-shadow:0 16px 48px rgba(0,0,0,.55);color:var(--fg);display:flex;align-items:center;gap:11px";
-  const dot=document.createElement("span"); dot.style.cssText="width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none";
-  const txt=document.createElement("span"); txt.textContent=msg;
-  n.appendChild(dot); n.appendChild(txt); document.body.appendChild(n);
-  try{ n.animate([{opacity:0,transform:"translateX(-50%) translateY(12px)"},{opacity:1,transform:"translateX(-50%) translateY(0)"}],{duration:220,easing:"cubic-bezier(.2,.8,.2,1)"}); }catch(e){}
-  setTimeout(()=>{ try{ const o=n.animate([{opacity:1},{opacity:0,transform:"translateX(-50%) translateY(8px)"}],{duration:300,easing:"ease-in",fill:"forwards"}); o.onfinish=()=>{ try{n.remove();}catch(e){} }; }catch(e){ try{n.remove();}catch(_){}} },4300);
+  n.style.cssText="position:fixed;top:42%;left:50%;transform:translate(-50%,-50%);background:#15161a;border:1px solid var(--hair);border-top:3px solid var(--accent);padding:24px 30px;border-radius:18px;font-size:16px;line-height:1.5;z-index:9999;max-width:min(460px,90vw);text-align:center;box-shadow:0 28px 80px rgba(0,0,0,.6);color:var(--fg);display:flex;flex-direction:column;align-items:center;gap:14px";
+  const ic=document.createElement("div"); ic.style.cssText="width:40px;height:40px;border-radius:50%;background:rgba(221,125,71,.18);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:20px;flex:none"; ic.textContent="✓";
+  const txt=document.createElement("span"); txt.textContent=msg; txt.style.cssText="max-width:400px";
+  n.appendChild(ic); n.appendChild(txt);
+  document.body.appendChild(bd); document.body.appendChild(n);
+  const cerrar=()=>{ try{ const o=n.animate([{opacity:1,transform:"translate(-50%,-50%) scale(1)"},{opacity:0,transform:"translate(-50%,-50%) scale(.96)"}],{duration:260,easing:"ease-in",fill:"forwards"}); o.onfinish=()=>{ try{n.remove();bd.remove();}catch(e){} }; bd.animate([{opacity:1},{opacity:0}],{duration:260,fill:"forwards"}); }catch(e){ try{n.remove();bd.remove();}catch(_){}} };
+  bd.addEventListener("click",cerrar);
+  try{ n.animate([{opacity:0,transform:"translate(-50%,-50%) scale(.92)"},{opacity:1,transform:"translate(-50%,-50%) scale(1)"}],{duration:200,easing:"cubic-bezier(.2,.8,.2,1)"}); }catch(e){}
+  setTimeout(cerrar,2800);
 }
 
 document.addEventListener("click", async e=>{
