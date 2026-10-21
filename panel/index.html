@@ -417,7 +417,7 @@ let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
 let openProspId = null, hlProspId = null, fbAsk = null, visitaReg = null, horaPicker = null;
 let agendaPick=null, agendaMonth=0, agendaDay=null, agendaHora=null;
-let visitaVista="lista", visitaMes=0;
+let visitaVista="lista", visitaMes=0, resumenMes=0;
 let plantillas = [], plantSel = null, tandaEdit = false, tandaPrev = null, tandaEnviando = false;
 
 /* Candidatos de la tanda del día (misma regla que la card) */
@@ -1290,43 +1290,38 @@ function renderBody(){
 const $app = () => document.getElementById("app");
 
 function calProximosHtml(){
-  const hoy=new Date(); hoy.setHours(0,0,0,0);
-  const finHoy=new Date(hoy); finHoy.setHours(23,59,59,999);
-  const limite=new Date(hoy); limite.setDate(limite.getDate()+21);
-  const isoL=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-  const ev=[];
-  prospectos.forEach(p=>{
-    if(p.visitar && !p.visitado && p.visitaDia){
-      const d=new Date(p.visitaDia+"T12:00:00");
-      if(d>finHoy && d<=limite) ev.push({diaISO:p.visitaDia, orden:(p.visitaHora||"99:99"), hora:p.visitaHora?fmtHora(p.visitaHora):"", tipo:"visita", nombre:p.empresa||"—", importante:p.importante===true, go:`data-gotab="visitas"`});
-    }
-  });
-  leads.forEach(l=>{
-    if(["ganado","perdido"].includes(l.status)) return;
-    if(!l.nextAt) return;
-    const d=new Date(l.nextAt);
-    if(d>finHoy && d<=limite){
-      const hh=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
-      ev.push({diaISO:isoL(d), orden:hh, hora:(d.getHours()||d.getMinutes())?fmtHora(hh):"", tipo:(l.nextTipo==="llamada"?"llamada":"seguimiento"), nombre:l.name||l.email||"—", importante:false, go:`data-openlead="${l.id}"`});
-    }
-  });
-  if(!ev.length) return `<div class="empty" style="margin-top:0"><b>Nada agendado para los próximos días.</b><br>Cuando agendes visitas o programes seguimientos, los vas a ver acá como agenda de lo que viene.</div>`;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const base=new Date(today.getFullYear(),today.getMonth()+resumenMes,1);
+  const hoyISO=isoLocal(today);
+  const porDia={};
+  const add=(di,o)=>{ (porDia[di]=porDia[di]||[]).push(o); };
+  prospectos.forEach(p=>{ if(p.visitar && !p.visitado && p.visitaDia){ add(p.visitaDia,{orden:p.visitaHora||"99:99",tipo:"visita",hora:p.visitaHora?fmtHora(p.visitaHora):"",nombre:p.empresa||"—",importante:p.importante===true}); } });
+  leads.forEach(l=>{ if(["ganado","perdido"].includes(l.status))return; if(!l.nextAt)return; const d=new Date(l.nextAt); const hh=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); add(isoLocal(d),{orden:hh,tipo:(l.nextTipo==="llamada"?"llamada":"seguimiento"),hora:(d.getHours()||d.getMinutes())?fmtHora(hh):"",nombre:l.name||l.email||"—",importante:false}); });
+  const dow=["DO","LU","MA","MI","JU","VI","SA"];
+  const mesLbl=base.toLocaleDateString("es-AR",{month:"long",year:"numeric"});
   const ico={visita:"📍",llamada:"📞",seguimiento:"↻"};
-  const dias={}; ev.forEach(e=>{ (dias[e.diaISO]=dias[e.diaISO]||[]).push(e); });
-  const fmtDiaLargo=iso=>{ try{ const d=new Date(iso+"T12:00:00"); return d.toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"}); }catch{ return iso; } };
-  return `<div class="bcard" style="margin-top:4px">${Object.keys(dias).sort().map(di=>{
-    const items=dias[di].sort((a,b)=>String(a.orden).localeCompare(String(b.orden)));
-    return `<div style="margin-bottom:16px">
-      <div class="bt" style="text-transform:capitalize;margin-bottom:8px">${esc(fmtDiaLargo(di))} <span style="color:var(--faint);font-weight:400">· ${items.length}</span></div>
-      ${items.map(e=>`<div class="step" ${e.go} role="button" tabindex="0" style="cursor:pointer">
-        <span style="width:22px;text-align:center;flex:none">${ico[e.tipo]}</span>
-        ${e.importante?`<span title="Importante" style="color:var(--accent);flex:none">★</span>`:""}
-        <span class="st-a" style="min-width:70px">${e.hora||""}</span>
-        <span class="st-n">${esc(e.nombre)}</span>
-        <span class="bs" style="margin-left:auto;font-size:11px">${e.tipo==="visita"?"presencial":e.tipo==="llamada"?"llamada":"seguimiento"}</span>
-      </div>`).join("")}
+  const celdas=mesGrid(base).map(d=>{
+    if(!d) return `<div style="min-height:94px;border-radius:10px"></div>`;
+    const di=isoLocal(d); const esHoy=di===hoyISO;
+    const items=(porDia[di]||[]).sort((a,b)=>String(a.orden).localeCompare(String(b.orden)));
+    return `<div style="min-height:94px;border:1px solid var(--hair2);border-radius:10px;padding:6px;${esHoy?"outline:1.5px solid var(--accent);outline-offset:-1px":""}">
+      <div class="bs" style="font-family:var(--mono);font-size:11px;${esHoy?"color:var(--accent);font-weight:700":""}">${d.getDate()}</div>
+      ${items.map(e=>`<div title="${esc(e.nombre)}${e.hora?' · '+e.hora:''}" style="margin-top:3px;background:${e.importante?"rgba(221,125,71,.28)":"rgba(221,125,71,.16)"};border-radius:6px;padding:2px 5px;font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.importante?"★":ico[e.tipo]} ${e.hora?`<b>${e.hora}</b> `:""}${esc(e.nombre)}</div>`).join("")}
     </div>`;
-  }).join("")}</div>`;
+  }).join("");
+  return `<div class="bcard" style="margin-top:4px">
+    <div class="bhead" style="margin-bottom:14px;gap:10px;align-items:center">
+      <button class="navmo" data-rmes="-1">‹</button>
+      <span class="bt" style="text-transform:capitalize">${esc(mesLbl)}</span>
+      <button class="navmo" data-rmes="1">›</button>
+      <span style="flex:1"></span>
+      <span class="bs" style="font-size:11px">📍 presencial · 📞 llamada · ↻ seguimiento · ★ importante</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center;margin-bottom:6px">
+      ${dow.map(x=>`<div class="bs" style="font-family:var(--mono);font-size:10px;letter-spacing:.5px">${x}</div>`).join("")}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">${celdas}</div>
+  </div>`;
 }
 function renderResumen(){
   const sum = a=>a.reduce((s,x)=>s+(Number(x.amount)||0),0);
@@ -1537,8 +1532,8 @@ function renderResumen(){
       <div class="brow"><span>Prioridad A sin contactar</span><b style="color:var(--accent)">${prospectos.filter(p=>p.prioridad==="A"&&!["enviado","respondio","descartado"].includes(p.status)&&!p.leadId).length}</b></div>
     </div>
   </div>
-  <div class="bar" style="margin-top:28px"><h2><span class="tick"></span>Próximos días</h2></div>
-  ${(function(){ try{ return calProximosHtml(); }catch(e){ return '<div class="empty" style="margin-top:0">No se pudo armar la agenda.</div>'; } })()}
+  <div class="bar" style="margin-top:28px"><h2><span class="tick"></span>Calendario</h2></div>
+  ${(function(){ try{ return calProximosHtml(); }catch(e){ return '<div class="empty" style="margin-top:0">No se pudo armar el calendario.</div>'; } })()}
   <div class="bar" style="margin-top:28px"><h2><span class="tick"></span>Últimas propuestas</h2></div>
   ${proposals.length? proposalTable(proposals.slice(0,5), false) :
     '<div class="empty"><b>Sin propuestas todavía.</b><br>Creá la primera desde la pestaña Propuestas — el número se asigna solo.</div>'}`;
@@ -2987,6 +2982,7 @@ document.addEventListener("click", async e=>{
   if(t.dataset.letapa){ const [id,et]=t.dataset.letapa.split("|"); const l=leads.find(x=>x.id===id); const nueva=(l&&l.etapa===et)?null:et; await sb.from("leads").update({etapa:nueva}).eq("id",id); note(nueva?("Etapa: "+(ETAPA_LBL[nueva]||nueva)):"Etapa borrada"); await loadAll(); return; }
   if(t.dataset.vvista){ visitaVista=t.dataset.vvista; renderApp(); return; }
   if(t.dataset.vmes){ visitaMes+=Number(t.dataset.vmes); renderApp(); return; }
+  if(t.dataset.rmes){ resumenMes+=Number(t.dataset.rmes); renderApp(); return; }
   if(t.dataset.caljump){ const id=t.dataset.caljump; visitaVista="lista"; renderApp(); setTimeout(()=>{ const el=document.querySelector('[data-agopen="'+id+'"]')||document.querySelector('[data-visitareg="'+id+'"]'); if(el){ const card=el.closest('.bcard')||el; card.scrollIntoView({behavior:"smooth",block:"center"}); } },60); return; }
   if(t.dataset.agopen){ const id=t.dataset.agopen; const pr=prospectos.find(x=>x.id===id); agendaPick=id; agendaMonth=0; agendaDay=(pr&&pr.visitaDia)||null; agendaHora=(pr&&pr.visitaHora)||null; renderApp(); return; }
   if(t.dataset.agclose){ agendaPick=null; agendaDay=null; agendaHora=null; renderApp(); return; }
