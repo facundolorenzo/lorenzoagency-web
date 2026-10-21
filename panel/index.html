@@ -19,7 +19,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:radial-gradient(circle at 85% -10%,rgba(232,235,242,.06),transparent 45%),var(--bg0);
   color:var(--fg);font-family:var(--disp);font-size:14px;min-height:100vh;padding-block:0 48px}
-.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.wrap{max-width:1480px;margin:0 auto;padding:0 20px}
 header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
   padding:22px 0 18px;border-bottom:1px solid var(--hair2)}
 .wordmark b{font-weight:600;font-size:13px;letter-spacing:.2em}
@@ -2303,7 +2303,7 @@ function leadRowHtml(l){
     <td style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap">${esc(String(l.createdAt||"").slice(0,10))}</td>
     <td>${esc(l.name||"—")}<div style="margin-top:14px">${langChip(l)}</div></td>
     <td>${interestBar(l.respuestas)}</td>
-    <td style="font-size:12px;line-height:1.5">${l.email?`<div style="word-break:break-all">${esc(l.email)}</div>`:""}${l.phone?`<div style="margin-top:7px"><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">${ICON_PHONE} ${esc(l.phone)}</a></div>`:""}</td>
+    <td style="font-size:12px;line-height:1.5;white-space:nowrap">${l.email?`<div><a href="mailto:${esc(l.email)}" class="telink" style="color:var(--fg)">${esc(l.email)}</a></div>`:""}${l.phone?`<div style="margin-top:7px"><a href="tel:${esc(String(l.phone).replace(/[^\d+]/g,""))}" class="telink">${ICON_PHONE} ${esc(l.phone)}</a></div>`:""}</td>
     <td>${l.service?`<span class="lrubro">${esc(l.service)}</span>`:"—"}</td>
     <td style="max-width:240px"><button class="linkbtn" data-openlead="${l.id}">${short}</button>${l.mailsEnviados?`<br><span style="font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.1em">${l.mailsEnviados} mail(s) enviado(s)</span>`:""}</td>
     <td><select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select></td>
