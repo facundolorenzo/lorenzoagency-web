@@ -685,7 +685,7 @@ const FROM = {
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
-                  nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,idioma:r.idioma||null,visitaDia:r.visita_dia||null,visitado:r.visitado===true,visitadoFecha:r.visitado_fecha||null,visitaNota:r.visita_nota||null,visitaHora:r.visita_hora||null,gcalEventId:r.gcal_event_id||null,
+                  nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,idioma:r.idioma||null,visitaDia:r.visita_dia||null,visitado:r.visitado===true,visitadoFecha:r.visitado_fecha||null,visitaNota:r.visita_nota||null,visitaHora:r.visita_hora||null,gcalEventId:r.gcal_event_id||null,importante:r.importante===true,
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,puntoFlojo:r.punto_flojo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
 };
@@ -1289,6 +1289,45 @@ function renderBody(){
 }
 const $app = () => document.getElementById("app");
 
+function calProximosHtml(){
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const finHoy=new Date(hoy); finHoy.setHours(23,59,59,999);
+  const limite=new Date(hoy); limite.setDate(limite.getDate()+21);
+  const isoL=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  const ev=[];
+  prospectos.forEach(p=>{
+    if(p.visitar && !p.visitado && p.visitaDia){
+      const d=new Date(p.visitaDia+"T12:00:00");
+      if(d>finHoy && d<=limite) ev.push({diaISO:p.visitaDia, orden:(p.visitaHora||"99:99"), hora:p.visitaHora?fmtHora(p.visitaHora):"", tipo:"visita", nombre:p.empresa||"—", importante:p.importante===true, go:`data-gotab="visitas"`});
+    }
+  });
+  leads.forEach(l=>{
+    if(["ganado","perdido"].includes(l.status)) return;
+    if(!l.nextAt) return;
+    const d=new Date(l.nextAt);
+    if(d>finHoy && d<=limite){
+      const hh=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+      ev.push({diaISO:isoL(d), orden:hh, hora:(d.getHours()||d.getMinutes())?fmtHora(hh):"", tipo:(l.nextTipo==="llamada"?"llamada":"seguimiento"), nombre:l.name||l.email||"—", importante:false, go:`data-openlead="${l.id}"`});
+    }
+  });
+  if(!ev.length) return `<div class="empty" style="margin-top:0"><b>Nada agendado para los próximos días.</b><br>Cuando agendes visitas o programes seguimientos, los vas a ver acá como agenda de lo que viene.</div>`;
+  const ico={visita:"📍",llamada:"📞",seguimiento:"↻"};
+  const dias={}; ev.forEach(e=>{ (dias[e.diaISO]=dias[e.diaISO]||[]).push(e); });
+  const fmtDiaLargo=iso=>{ try{ const d=new Date(iso+"T12:00:00"); return d.toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"}); }catch{ return iso; } };
+  return `<div class="bcard" style="margin-top:4px">${Object.keys(dias).sort().map(di=>{
+    const items=dias[di].sort((a,b)=>String(a.orden).localeCompare(String(b.orden)));
+    return `<div style="margin-bottom:16px">
+      <div class="bt" style="text-transform:capitalize;margin-bottom:8px">${esc(fmtDiaLargo(di))} <span style="color:var(--faint);font-weight:400">· ${items.length}</span></div>
+      ${items.map(e=>`<div class="step" ${e.go} role="button" tabindex="0" style="cursor:pointer">
+        <span style="width:22px;text-align:center;flex:none">${ico[e.tipo]}</span>
+        ${e.importante?`<span title="Importante" style="color:var(--accent);flex:none">★</span>`:""}
+        <span class="st-a" style="min-width:70px">${e.hora||""}</span>
+        <span class="st-n">${esc(e.nombre)}</span>
+        <span class="bs" style="margin-left:auto;font-size:11px">${e.tipo==="visita"?"presencial":e.tipo==="llamada"?"llamada":"seguimiento"}</span>
+      </div>`).join("")}
+    </div>`;
+  }).join("")}</div>`;
+}
 function renderResumen(){
   const sum = a=>a.reduce((s,x)=>s+(Number(x.amount)||0),0);
   const sent = proposals.filter(p=>p.status==="enviada");
@@ -1498,6 +1537,8 @@ function renderResumen(){
       <div class="brow"><span>Prioridad A sin contactar</span><b style="color:var(--accent)">${prospectos.filter(p=>p.prioridad==="A"&&!["enviado","respondio","descartado"].includes(p.status)&&!p.leadId).length}</b></div>
     </div>
   </div>
+  <div class="bar" style="margin-top:28px"><h2><span class="tick"></span>Próximos días</h2></div>
+  ${calProximosHtml()}
   <div class="bar" style="margin-top:28px"><h2><span class="tick"></span>Últimas propuestas</h2></div>
   ${proposals.length? proposalTable(proposals.slice(0,5), false) :
     '<div class="empty"><b>Sin propuestas todavía.</b><br>Creá la primera desde la pestaña Propuestas — el número se asigna solo.</div>'}`;
@@ -1853,7 +1894,7 @@ function visitaFila(p, idx){
       <button class="btn sm ghost" style="${B}" data-visitreabrir="${p.id}" title="Marcar como no visitado">↩ Reabrir</button></div>`;
   }
   return `<div style="padding:16px 2px;border-bottom:1px solid var(--hair2)">
-    <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">${idx!=null?`<b style="color:var(--accent);font-family:var(--mono);font-size:15px">${idx+1}</b>`:""}<b style="font-size:15px">${esc(p.empresa||"—")}</b>${p.puntoFlojo?pfTag(p.puntoFlojo):""}${idiomaTag(p.idioma)}</div>
+    <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">${idx!=null?`<b style="color:var(--accent);font-family:var(--mono);font-size:15px">${idx+1}</b>`:""}<b style="font-size:15px">${esc(p.empresa||"—")}</b>${p.puntoFlojo?pfTag(p.puntoFlojo):""}${idiomaTag(p.idioma)}<button class="linkbtn" data-visitimp="${p.id}" title="${p.importante?"Quitar de importantes":"Marcar como importante"}" style="color:${p.importante?"var(--accent)":"var(--faint)"};font-size:15px;padding:0 2px">${p.importante?"★":"☆"}</button></div>
     <div class="bs" style="margin-top:6px">${dist}${esc(info)}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center">
       <a class="btn sm ghost" style="${B};text-decoration:none" href="${mapsUrl}" target="_blank" rel="noopener">📍 Cómo llegar</a>
@@ -2942,6 +2983,7 @@ document.addEventListener("click", async e=>{
     }catch(e){ note("No se pudo analizar: "+(e.message||e)); if(b){ b.disabled=false; b.textContent="⚡ Correr análisis"; } }
     return;
   }
+  if(t.dataset.visitimp){ const id=t.dataset.visitimp; const p=prospectos.find(x=>x.id===id); const val=!(p&&p.importante); await sb.from("prospectos").update({importante:val}).eq("id",id); note(val?"★ Marcada como importante":"Sacada de importantes"); await loadAll(); return; }
   if(t.dataset.letapa){ const [id,et]=t.dataset.letapa.split("|"); const l=leads.find(x=>x.id===id); const nueva=(l&&l.etapa===et)?null:et; await sb.from("leads").update({etapa:nueva}).eq("id",id); note(nueva?("Etapa: "+(ETAPA_LBL[nueva]||nueva)):"Etapa borrada"); await loadAll(); return; }
   if(t.dataset.vvista){ visitaVista=t.dataset.vvista; renderApp(); return; }
   if(t.dataset.vmes){ visitaMes+=Number(t.dataset.vmes); renderApp(); return; }
