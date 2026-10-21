@@ -96,6 +96,25 @@ Deno.serve(async (req) => {
     const nuevosDetalle = L.filter((l: any) => l.status === "nuevo").map((l: any) => ({ nombre: nombre(l), email: l.email || null, idioma: lang(l), servicio: l.service || null }));
     const calientes = L.filter((l: any) => l.status === "respondio").map((l: any) => ({ nombre: nombre(l), email: l.email || null, idioma: lang(l) }));
 
+    // ===== Visitas de hoy (presenciales agendadas) =====
+    const hoyISO = new Date().toISOString().slice(0, 10);
+    let visitasHoy: any[] = [];
+    try {
+      const { data: pz } = await db.from("prospectos").select("empresa,direccion,ciudad,visita_dia,visita_hora,visitado,visitar").eq("visita_dia", hoyISO);
+      visitasHoy = (pz || []).filter((p: any) => p.visitar && !p.visitado).sort((a: any, b: any) => String(a.visita_hora || "").localeCompare(String(b.visita_hora || "")))
+        .map((p: any) => ({ empresa: p.empresa || "—", hora: p.visita_hora || null, donde: p.direccion || p.ciudad || null }));
+    } catch { /* tabla puede no existir */ }
+
+    // ===== Receta de venta vigente (Agente 2) =====
+    let receta_actual: any = null;
+    try {
+      const { data: rc } = await db.from("recetas").select("*").order("version", { ascending: false }).limit(1);
+      if (rc && rc[0]) {
+        const r = rc[0];
+        receta_actual = { version: r.version, modo: r.modo, muestra: r.muestra, informe: r.informe || "", reglas: Array.isArray(r.reglas) ? r.reglas : [] };
+      }
+    } catch { /* tabla puede no existir */ }
+
     // ===== REVISAR: por cada ítem a revisar, ORIGINAL + IDIOMA + TRADUCCIÓN al español =====
     // Usa la traducción guardada en la base; si falta y el lead es inglés, la traduce AHORA y la guarda (cache).
     const paraHoyLeads = L.filter((l: any) =>
@@ -140,7 +159,9 @@ Deno.serve(async (req) => {
       `${nuevos} consultas nuevas sin contestar${nuevos ? ` (${nuevosDetalle.filter(n => n.idioma === "es").length} en español, ${nuevosDetalle.filter(n => n.idioma === "en").length} en inglés)` : ""}. ` +
       `${resp} leads respondieron y están calientes. ` +
       `Mandaste propuestas a ${enviados} que todavía no contestan. ` +
-      `Cerraste ${gan} y perdiste ${perd}. Tasa de respuesta ${tasaResp} por ciento.`;
+      `Cerraste ${gan} y perdiste ${perd}. Tasa de respuesta ${tasaResp} por ciento.` +
+      (visitasHoy.length ? ` Hoy tenés ${visitasHoy.length} visita${visitasHoy.length > 1 ? "s" : ""} en persona: ${visitasHoy.map(v => v.empresa + (v.hora ? " a las " + v.hora : "")).join(", ")}.` : "") +
+      (receta_actual ? ` Receta de venta vigente, versión ${receta_actual.version}.` : "");
 
     return json({
       fecha: new Date().toISOString(),
@@ -153,6 +174,8 @@ Deno.serve(async (req) => {
       idioma: { es, en },
       nuevos_detalle: nuevosDetalle,
       calientes,
+      visitas_hoy: visitasHoy,
+      receta_actual,
       resumen_texto: resumenTexto,
     });
   } catch (err) {
