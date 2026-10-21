@@ -408,6 +408,7 @@ let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
 let openProspId = null, hlProspId = null, fbAsk = null, visitaReg = null, horaPicker = null;
 let agendaPick=null, agendaMonth=0, agendaDay=null, agendaHora=null;
+let visitaVista="lista", visitaMes=0;
 let plantillas = [], plantSel = null, tandaEdit = false, tandaPrev = null, tandaEnviando = false;
 
 /* Candidatos de la tanda del día (misma regla que la card) */
@@ -1812,6 +1813,37 @@ function visitaFila(p, idx){
     </div>`:""}
   </div>`;
 }
+function calVisitasHtml(lista){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const base=new Date(today.getFullYear(),today.getMonth()+visitaMes,1);
+  const porDia={}; lista.forEach(p=>{ if(p.visitaDia){ (porDia[p.visitaDia]=porDia[p.visitaDia]||[]).push(p); } });
+  const dow=["DO","LU","MA","MI","JU","VI","SA"];
+  const mesLbl=base.toLocaleDateString("es-AR",{month:"long",year:"numeric"});
+  const hoyISO=isoLocal(today);
+  const celdas=mesGrid(base).map(d=>{
+    if(!d) return `<div style="min-height:92px"></div>`;
+    const di=isoLocal(d); const esHoy=di===hoyISO;
+    const items=(porDia[di]||[]).sort((a,b)=>String(a.visitaHora||"").localeCompare(String(b.visitaHora||"")));
+    return `<div style="min-height:92px;border:1px solid var(--hair2);border-radius:10px;padding:6px;${esHoy?"outline:1.5px solid var(--accent);outline-offset:-1px":""}">
+      <div class="bs" style="font-family:var(--mono);font-size:11px;${esHoy?"color:var(--accent);font-weight:700":""}">${d.getDate()}</div>
+      ${items.map(p=>`<div style="margin-top:3px;background:${p.visitado?"rgba(74,222,128,.16)":"rgba(221,125,71,.2)"};border-radius:6px;padding:3px 5px;font-size:10.5px;line-height:1.3;cursor:pointer" data-caljump="${p.id}" title="${esc(p.empresa||"")}${p.visitaHora?" · "+fmtHora(p.visitaHora):""}">${p.visitaHora?`<b>${fmtHora(p.visitaHora)}</b> `:""}${esc((p.empresa||"").slice(0,15))}</div>`).join("")}
+    </div>`;
+  }).join("");
+  return `<div class="bcard" style="margin-bottom:18px">
+    <div class="bhead" style="margin-bottom:14px;flex-wrap:wrap;gap:10px;align-items:center">
+      <button class="navmo" data-vmes="-1">‹</button>
+      <span class="bt" style="text-transform:capitalize">${esc(mesLbl)}</span>
+      <button class="navmo" data-vmes="1">›</button>
+      <span style="flex:1;min-width:10px"></span>
+      <a class="btn sm ghost" style="text-decoration:none" href="https://calendar.google.com/calendar/u/0/r" target="_blank" rel="noopener">📆 Abrir en Google Calendar</a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center;margin-bottom:6px">
+      ${dow.map(x=>`<div class="bs" style="font-family:var(--mono);font-size:10px;letter-spacing:.5px">${x}</div>`).join("")}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">${celdas}</div>
+    <div class="bs" style="margin-top:12px;font-size:12px">Tocá una visita para abrirla en la lista y operarla (cambiar día, marcar “Ya fui”).</div>
+  </div>`;
+}
 function renderVisitas(){
   const todos=prospectos.filter(p=>p.visitar && p.status!=="descartado" && p.feedback!=="no");
   const vis=todos.filter(p=>!p.visitado);
@@ -1820,8 +1852,19 @@ function renderVisitas(){
   const porDia={}; vis.filter(p=>p.visitaDia).forEach(p=>{ (porDia[p.visitaDia]=porDia[p.visitaDia]||[]).push(p); });
   const dias=Object.keys(porDia).sort();
   const fmtDia=iso=>{ try{ const d=new Date(iso+"T12:00:00"); return d.toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"}); }catch{ return iso; } };
+  const toggle=`<div style="display:flex;gap:8px;margin-bottom:16px">
+    <button class="btn sm ${visitaVista==="lista"?"":"ghost"}" data-vvista="lista">📋 Lista</button>
+    <button class="btn sm ${visitaVista==="calendario"?"":"ghost"}" data-vvista="calendario">📅 Calendario</button>
+  </div>`;
+  if(visitaVista==="calendario"){
+    $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Visitas — ir a vender en persona</h2></div>
+    <div class="wrap">${toggle}
+      ${!todos.length?`<div class="empty"><b>Todavía no marcaste negocios para visitar.</b><br>En CAPTACIÓN CLIENTES tocá 👤 en los negocios donde quieras ir en persona.</div>`:calVisitasHtml(todos)}
+    </div>`;
+    return;
+  }
   $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Visitas — ir a vender en persona</h2></div>
-  <div class="wrap">
+  <div class="wrap">${toggle}
     ${!todos.length?`<div class="empty"><b>Todavía no marcaste negocios para visitar.</b><br>En CAPTACIÓN CLIENTES tocá 👤 en los negocios donde quieras ir en persona (los <b>sin web</b> son la entrada más fácil). Acá armás la hoja de ruta por día.</div>`:`
     ${dias.map(d=>{ const ord=ordenarCercania(porDia[d]); const url=rutaMapsUrl(ord);
       return `<div class="bcard" style="margin-bottom:18px">
@@ -2812,6 +2855,9 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.horapicker){ horaPicker=(horaPicker===t.dataset.horapicker)?null:t.dataset.horapicker; renderApp(); return; }
   if(t.dataset.horaset){ const [id,v]=t.dataset.horaset.split("|"); await sb.from("prospectos").update({visita_hora:v||null,updated_at:new Date().toISOString()}).eq("id",id); horaPicker=null; note(v?("🕒 Hora: "+fmtHora(v)):"Hora quitada"); await loadAll(); return; }
+  if(t.dataset.vvista){ visitaVista=t.dataset.vvista; renderApp(); return; }
+  if(t.dataset.vmes){ visitaMes+=Number(t.dataset.vmes); renderApp(); return; }
+  if(t.dataset.caljump){ const id=t.dataset.caljump; visitaVista="lista"; renderApp(); setTimeout(()=>{ const el=document.querySelector('[data-agopen="'+id+'"]')||document.querySelector('[data-visitareg="'+id+'"]'); if(el){ const card=el.closest('.bcard')||el; card.scrollIntoView({behavior:"smooth",block:"center"}); } },60); return; }
   if(t.dataset.agopen){ const id=t.dataset.agopen; const pr=prospectos.find(x=>x.id===id); agendaPick=id; agendaMonth=0; agendaDay=(pr&&pr.visitaDia)||null; agendaHora=(pr&&pr.visitaHora)||null; renderApp(); return; }
   if(t.dataset.agclose){ agendaPick=null; agendaDay=null; agendaHora=null; renderApp(); return; }
   if(t.dataset.agmo){ agendaMonth+=Number(t.dataset.agmo); renderApp(); return; }
