@@ -1315,7 +1315,7 @@ function calProximosHtml(){
       <span class="bt" style="text-transform:capitalize">${esc(mesLbl)}</span>
       <button class="navmo" data-rmes="1">›</button>
       <span style="flex:1"></span>
-      <span class="bs" style="font-size:11px">👤 presencial · <span style="color:var(--ok)">${ICON_PHONE}</span> llamada · <span style="color:#fff">↻</span> seguimiento · <span style="color:var(--warn)">★</span> importante</span>
+      <span class="bs" style="font-size:11px">${(sep=>`👤 presencial${sep}<span style="color:var(--ok)">${ICON_PHONE}</span> llamada${sep}<span style="color:#fff">↻</span> seguimiento${sep}<span style="color:var(--warn)">★</span> importante`)(`<span style="color:var(--faint);font-size:15px;margin:0 7px">/</span>`)}</span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center;margin-bottom:6px">
       ${dow.map(x=>`<div class="bs" style="font-family:var(--mono);font-size:10px;letter-spacing:.5px">${x}</div>`).join("")}
