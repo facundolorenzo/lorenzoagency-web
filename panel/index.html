@@ -2618,9 +2618,9 @@ function note(msg){
   bd.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.38);backdrop-filter:blur(1px);z-index:9998";
   const n=document.createElement("div");
   n.className="lz-toast";
-  n.style.cssText="position:fixed;top:42%;left:50%;transform:translate(-50%,-50%);background:#15161a;border:1px solid var(--hair);border-top:3px solid var(--accent);padding:24px 30px;border-radius:18px;font-size:16px;line-height:1.5;z-index:9999;max-width:min(460px,90vw);text-align:center;box-shadow:0 28px 80px rgba(0,0,0,.6);color:var(--fg);display:flex;flex-direction:column;align-items:center;gap:14px";
-  const ic=document.createElement("div"); ic.style.cssText="width:40px;height:40px;border-radius:50%;background:rgba(221,125,71,.18);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:20px;flex:none"; ic.textContent="✓";
-  const txt=document.createElement("span"); txt.textContent=msg; txt.style.cssText="max-width:400px";
+  n.style.cssText="position:fixed;top:42%;left:50%;transform:translate(-50%,-50%);background:#15161a;border:1px solid var(--hair);border-top:3px solid var(--accent);padding:14px 20px;border-radius:14px;font-size:13.5px;line-height:1.4;z-index:9999;max-width:min(560px,92vw);text-align:left;box-shadow:0 28px 80px rgba(0,0,0,.6);color:var(--fg);display:flex;flex-direction:row;align-items:center;gap:11px";
+  const ic=document.createElement("div"); ic.style.cssText="width:24px;height:24px;border-radius:50%;background:rgba(221,125,71,.18);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:13px;flex:none"; ic.textContent="✓";
+  const txt=document.createElement("span"); txt.textContent=msg;
   n.appendChild(ic); n.appendChild(txt);
   document.body.appendChild(bd); document.body.appendChild(n);
   const cerrar=()=>{ try{ const o=n.animate([{opacity:1,transform:"translate(-50%,-50%) scale(1)"},{opacity:0,transform:"translate(-50%,-50%) scale(.96)"}],{duration:260,easing:"ease-in",fill:"forwards"}); o.onfinish=()=>{ try{n.remove();bd.remove();}catch(e){} }; bd.animate([{opacity:1},{opacity:0}],{duration:260,fill:"forwards"}); }catch(e){ try{n.remove();bd.remove();}catch(_){}} };
