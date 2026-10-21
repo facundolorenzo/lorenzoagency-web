@@ -1538,7 +1538,7 @@ function renderResumen(){
     </div>
   </div>
   <div class="bar" style="margin-top:28px"><h2><span class="tick"></span>Próximos días</h2></div>
-  ${calProximosHtml()}
+  ${(function(){ try{ return calProximosHtml(); }catch(e){ return '<div class="empty" style="margin-top:0">No se pudo armar la agenda.</div>'; } })()}
   <div class="bar" style="margin-top:28px"><h2><span class="tick"></span>Últimas propuestas</h2></div>
   ${proposals.length? proposalTable(proposals.slice(0,5), false) :
     '<div class="empty"><b>Sin propuestas todavía.</b><br>Creá la primera desde la pestaña Propuestas — el número se asigna solo.</div>'}`;
