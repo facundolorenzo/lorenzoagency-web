@@ -2346,10 +2346,8 @@ function repartoBarHtml(){
     <button data-repn="+:${id}" title="más">+</button></div>`;
   return `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--accent);border-radius:14px;padding:12px 16px;margin-bottom:16px;background:rgba(221,125,71,.05)">
     <span style="font-family:var(--disp);font-weight:800;font-size:14px">Repartir clientes</span>
-    <span style="font-size:13px;color:var(--muted)">Darle</span>
-    ${stepper('a',6)}<span style="font-size:12px;color:var(--muted)">prioridad <b style="color:var(--accent)">A</b></span>
-    <span style="color:var(--faint)">+</span>
-    ${stepper('b',4)}<span style="font-size:12px;color:var(--muted)">prioridad <b>B</b></span>
+    <span style="display:inline-flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--muted)">prioridad <b style="color:var(--accent)">A</b></span>${stepper('a',6)}</span>
+    <span style="display:inline-flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--muted)">prioridad <b>B</b></span>${stepper('b',4)}</span>
     <span style="font-size:13px;color:var(--muted)">a</span>
     <div class="mdrop ${repDropOpen?'open':''}">
       <button class="mdrop-btn" data-repdroptoggle="1">${esc(selV?selV.nombre:'elegí')}<span class="car">▾</span></button>
