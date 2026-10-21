@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       ).join("\n");
       const primerMail = touchesDe(l.id).find((t: any) => t.tipo === "mail");
       const horas1a = primerMail ? ((new Date(primerMail.created_at).getTime() - new Date(l.created_at).getTime()) / 3600000).toFixed(1) : "s/d";
-      return `--- DEAL (${salida}) — ${corta(l.name || l.email, 60)} · rubro: ${l.service || "s/d"} · idioma: ${l.idioma || "s/d"}
+      return `--- DEAL (${salida}) — ${corta(l.name || l.email, 60)} · rubro: ${l.service || "s/d"} · idioma: ${l.idioma || "s/d"} · etapa alcanzada: ${l.etapa || "s/d"}
   1a respuesta: ${horas1a} h desde que entró · toques: ${touchesDe(l.id).length}
   Mensaje inicial del lead: ${corta(l.message, 400)}
   ${salida !== "GANADO" ? `Motivo anotado: ${l.cierre_motivo || "s/d"} · Qué faltó: ${l.cierre_falto || "s/d"} · Obs: ${corta(l.cierre_obs, 200)}` : `Obs del cierre: ${corta(l.cierre_obs, 200)}`}
@@ -113,8 +113,10 @@ MARCO DE ANÁLISIS (en este orden):
    seguimiento, no propuso llamada/visita) | confianza-credibilidad | timing-presupuesto | no-decision.
    El "motivo anotado" por el vendedor está mal el 50-70% de las veces: si difiere de lo que muestra
    la conversación, señalá la discrepancia. "Precio" casi siempre es proxy de valor percibido o confianza.
-2. DÓNDE SE ENFRIÓ cada perdido/no-decisión: el momento exacto (qué mail/llamada) y las señales de
-   stall (respuestas más cortas o lentas, lenguaje vago, "lo vemos más adelante").
+2. DÓNDE SE ENFRIÓ cada perdido/no-decisión: la ETAPA del pipeline donde quedó (contactado /
+   interesado / reunión / propuesta / negociando) y el momento exacto (qué mail/llamada), más las
+   señales de stall (respuestas más cortas o lentas, lenguaje vago, "lo vemos más adelante").
+   Si varios se caen en la misma etapa, ese es el cuello de botella — decilo.
 3. PATRONES DE GANADOS: qué factores se repiten (con frecuencia: "en 2 de 3 ganados...").
 4. EJECUCIÓN vs benchmarks verificados: 1a respuesta <1 h (multiplica ~7x la calificación);
    ~6 toques capturan la mayoría de conversiones y >7 rinde negativo; ¿se propuso llamada/visita

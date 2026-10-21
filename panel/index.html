@@ -555,6 +555,8 @@ const L_STATES = ["nuevo","enviado","respondio","sin_respuesta","ganado","perdid
 const PR_STATES = ["encontrado","contactable","enviado","respondio","descartado"];
 const PR_LABELS = {encontrado:"Encontrado",contactable:"Con email ✓",enviado:"Enviado",respondio:"Respondió 🔥",descartado:"Descartado"};
 const L_LABELS = {nuevo:"Nuevos",enviado:"Enviados",respondio:"Respondieron",sin_respuesta:"Sin respuesta",ganado:"Ganado",perdido:"Perdido"};
+const ETAPAS = [["contactado","Contactado"],["interesado","Interesado"],["reunion","Reunión/Visita"],["propuesta","Propuesta"],["negociando","Negociando"]];
+const ETAPA_LBL = Object.fromEntries(ETAPAS);
 
 /* ============================ COMISIONES ============================
    Escalera por volumen MENSUAL (se resetea cada mes). MARGINAL: cada
@@ -666,7 +668,7 @@ const FROM = {
                   ultimoEnvio:r.fecha_ultimo_envio, primerEnvio:r.fecha_primer_envio, ultimaRespuesta:r.ultima_respuesta_texto,
                   cadenciaPaso:Number(r.cadencia_paso)||0, nextAt:r.next_action_at, nextTipo:r.next_action_tipo,
                   segActivo:r.seguimiento_activo!==false, cierreMotivo:r.cierre_motivo, cierreFalto:r.cierre_falto, cierreObs:r.cierre_obs,
-                  idioma:r.idioma||null,
+                  idioma:r.idioma||null, etapa:r.etapa||null,
                   cierrePct:(r.cierre_pct==null?null:Number(r.cierre_pct)), cierreFreno:r.cierre_freno||null,
                   cierreFalta:r.cierre_falta||null, cierreSug:r.cierre_sug||null,
                   vendedorId:r.vendedor_id||null, montoVenta:(r.monto_venta==null?null:Number(r.monto_venta)), fechaCierre:r.fecha_cierre||null}),
@@ -1589,6 +1591,21 @@ function renderAnalisis(){
     diag = `Todavía no cerraste deals. Cuando marques Ganado/Perdido con su motivo, acá te voy a decir <b>dónde ajustar</b>.`;
   }
 
+  // ---- Pipeline por etapa ----
+  const activos = leads.filter(l=>!["ganado","perdido"].includes(l.status));
+  const actEt={}, perdEt={}; ETAPAS.forEach(([k])=>{actEt[k]=0;perdEt[k]=0;});
+  activos.forEach(l=>{ if(l.etapa&&actEt[l.etapa]!=null) actEt[l.etapa]++; });
+  perdidos.forEach(l=>{ if(l.etapa&&perdEt[l.etapa]!=null) perdEt[l.etapa]++; });
+  const hayEtapas = ETAPAS.some(([k])=>actEt[k]||perdEt[k]);
+  const maxAct = Math.max(1, ...ETAPAS.map(([k])=>actEt[k]));
+  const pipeHtml = hayEtapas
+    ? ETAPAS.map(([k,lbl])=>{ const a=actEt[k], p=perdEt[k];
+        return `<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${esc(lbl)}</span><span style="font-family:var(--mono);color:var(--muted)">${a} activo${a!==1?"s":""}${p?` · <span style="color:var(--bad)">${p} cayó acá</span>`:""}</span></div>
+          <div style="height:9px;background:var(--hair2);border-radius:99px;overflow:hidden"><div style="height:100%;width:${Math.max(3,Math.round(a/maxAct*100))}%;background:var(--accent)"></div></div>
+        </div>`; }).join("")
+    : `<div style="color:var(--muted);font-size:13px">Movés la etapa de cada deal desde su ficha (Contactado → Interesado → Reunión → Propuesta → Negociando). Acá vas a ver cuántos deals hay en cada etapa y <b>en cuál se te caen</b>.</div>`;
+
   $app().innerHTML = `
     ${recetaAgente2Html()}
     <div class="panel" style="border-left:3px solid var(--accent)">
@@ -1603,6 +1620,10 @@ function renderAnalisis(){
     <div class="panel">
       <div class="bar"><h2><span class="tick"></span>Embudo</h2></div>
       ${funnelHtml}
+    </div>
+    <div class="panel">
+      <div class="bar"><h2><span class="tick"></span>Pipeline por etapa</h2></div>
+      ${pipeHtml}
     </div>
     <div class="grid2">
       <div class="panel"><div class="bar"><h2><span class="tick"></span>Por qué se pierden</h2></div>${motivosHtml}</div>
@@ -2467,6 +2488,11 @@ function leadModalHtml(){
     </div>
     ${cierreBarHtml(l)}
 
+    ${(l.status!=="ganado"&&l.status!=="perdido")?`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:14px 0 2px">
+      <span class="bs" style="font-size:11px;letter-spacing:.06em;margin-right:2px">ETAPA</span>
+      ${(function(){ const idx=ETAPAS.findIndex(x=>x[0]===l.etapa); return ETAPAS.map((e,i)=>`<button class="btn sm ${idx>=0&&i<=idx?"":"ghost"}" style="height:30px;font-size:11px;padding:0 11px" data-letapa="${l.id}|${e[0]}" title="${idx>=0&&i<=idx?"Ya pasó por acá — tocá para retroceder":"Mover a esta etapa"}">${esc(e[1])}</button>`).join(""); })()}
+    </div>`:""}
+
     <div class="ftabs">
       <button class="ftab ${fichaTab==="email"?"on":""}" data-ftab="email">Email</button>
       <button class="ftab ${fichaTab==="llamadas"?"on":""}" data-ftab="llamadas">Llamadas${llamadas.length?` (${llamadas.length})`:""}</button>
@@ -2897,6 +2923,7 @@ document.addEventListener("click", async e=>{
     }catch(e){ note("No se pudo analizar: "+(e.message||e)); if(b){ b.disabled=false; b.textContent="⚡ Correr análisis"; } }
     return;
   }
+  if(t.dataset.letapa){ const [id,et]=t.dataset.letapa.split("|"); const l=leads.find(x=>x.id===id); const nueva=(l&&l.etapa===et)?null:et; await sb.from("leads").update({etapa:nueva}).eq("id",id); note(nueva?("Etapa: "+(ETAPA_LBL[nueva]||nueva)):"Etapa borrada"); await loadAll(); return; }
   if(t.dataset.vvista){ visitaVista=t.dataset.vvista; renderApp(); return; }
   if(t.dataset.vmes){ visitaMes+=Number(t.dataset.vmes); renderApp(); return; }
   if(t.dataset.caljump){ const id=t.dataset.caljump; visitaVista="lista"; renderApp(); setTimeout(()=>{ const el=document.querySelector('[data-agopen="'+id+'"]')||document.querySelector('[data-visitareg="'+id+'"]'); if(el){ const card=el.closest('.bcard')||el; card.scrollIntoView({behavior:"smooth",block:"center"}); } },60); return; }
