@@ -1299,14 +1299,15 @@ function calProximosHtml(){
   leads.forEach(l=>{ if(["ganado","perdido"].includes(l.status))return; if(!l.nextAt)return; const d=new Date(l.nextAt); const hh=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); add(isoLocal(d),{orden:hh,tipo:(l.nextTipo==="llamada"?"llamada":"seguimiento"),hora:(d.getHours()||d.getMinutes())?fmtHora(hh):"",nombre:l.name||l.email||"—",importante:false}); });
   const dow=["DO","LU","MA","MI","JU","VI","SA"];
   const mesLbl=base.toLocaleDateString("es-AR",{month:"long",year:"numeric"});
-  const ico={visita:"👤",llamada:`<span style="color:var(--ok)">${ICON_PHONE}</span>`,seguimiento:`<span style="color:#fff">↻</span>`};
+  const telSm=`<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
+  const ico={visita:`<span style="font-size:9px">👤</span>`,llamada:`<span style="color:var(--ok)">${telSm}</span>`,seguimiento:`<span style="color:#fff;font-size:10px">↻</span>`};
   const celdas=mesGrid(base).map(d=>{
     if(!d) return `<div style="min-height:94px;border-radius:10px"></div>`;
     const di=isoLocal(d); const esHoy=di===hoyISO;
     const items=(porDia[di]||[]).sort((a,b)=>String(a.orden).localeCompare(String(b.orden)));
     return `<div style="min-height:94px;border:1px solid var(--hair2);border-radius:10px;padding:6px;${esHoy?"outline:1.5px solid var(--accent);outline-offset:-1px":""}">
       <div class="bs" style="font-family:var(--mono);font-size:11px;${esHoy?"color:var(--accent);font-weight:700":""}">${d.getDate()}</div>
-      ${items.map(e=>`<div title="${esc(e.nombre)}${e.hora?' · '+e.hora:''}" style="margin-top:3px;background:${e.importante?"rgba(221,125,71,.28)":"rgba(221,125,71,.16)"};border-radius:6px;padding:2px 5px;font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.importante?`<span style="color:var(--warn)">★</span>`:ico[e.tipo]} ${e.hora?`<b>${e.hora}</b> `:""}${esc(e.nombre)}</div>`).join("")}
+      ${items.map(e=>`<div title="${esc(e.nombre)}${e.hora?' · '+e.hora:''}" style="margin-top:3px;background:${e.importante?"rgba(221,125,71,.28)":"rgba(221,125,71,.16)"};border-radius:6px;padding:2px 5px;font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.importante?`<span style="color:var(--warn);font-size:9px">★</span>`:ico[e.tipo]} ${e.hora?`<b>${e.hora}</b> `:""}${esc(e.nombre)}</div>`).join("")}
     </div>`;
   }).join("");
   return `<div class="bcard" style="margin-top:4px">
