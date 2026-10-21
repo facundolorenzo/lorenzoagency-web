@@ -1798,7 +1798,7 @@ function visitaFila(p, idx){
       ${agendaPick===p.id
         ? `<span style="position:relative;display:inline-block"><button class="btn sm" style="${B}" data-agclose="${p.id}">📅 Día y hora ▾</button>${agendaPanel(p)}</span>`
         : p.visitaDia
-          ? `<span class="bs" style="padding:0 4px;text-transform:capitalize">📅 ${esc(fmtDia(p.visitaDia))}${p.visitaHora?" · "+fmtHora(p.visitaHora):""}</span><a class="btn sm" style="${B};text-decoration:none" href="${gcalUrl(p)}" target="_blank" rel="noopener" title="Crear el evento en tu Google Calendar">📆 Agendar</a><button class="btn sm ghost" style="${B}" data-agopen="${p.id}">Cambiar</button>`
+          ? `<span class="bs" style="padding:0 4px;text-transform:capitalize">📅 ${esc(fmtDia(p.visitaDia))}${p.visitaHora?" · "+fmtHora(p.visitaHora):""}</span>${p.gcalEventId?`<span class="bs" style="padding:0 4px;color:#4ade80">✓ en Calendar</span>`:""}<button class="btn sm ghost" style="${B}" data-agopen="${p.id}">Cambiar</button>`
           : `<button class="btn sm ghost" style="${B}" data-agopen="${p.id}">📅 Elegir día y hora</button>`}
       <span style="flex:1;min-width:20px"></span>
       <button class="btn sm" style="${B}" data-visitareg="${p.id}">✓ Ya fui</button>
