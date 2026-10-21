@@ -2826,7 +2826,7 @@ document.addEventListener("click", async e=>{
     note("📅 "+fmtDia(dia)+" · "+fmtHora(v)+" — agendando en Google Calendar…");
     await loadAll();
     try{
-      const r=await callFn("agendar-calendar",{ id, empresa:pr&&pr.empresa, direccion:pr&&pr.direccion, ciudad:pr&&pr.ciudad, lat:pr&&pr.lat, lng:pr&&pr.lng, dia, hora:v, puntoFlojo:pr&&pr.puntoFlojo, idioma:pr&&pr.idioma, eventId:(pr&&pr.gcalEventId)||"" });
+      const r=await callFn("super-handler",{ id, empresa:pr&&pr.empresa, direccion:pr&&pr.direccion, ciudad:pr&&pr.ciudad, lat:pr&&pr.lat, lng:pr&&pr.lng, dia, hora:v, puntoFlojo:pr&&pr.puntoFlojo, idioma:pr&&pr.idioma, eventId:(pr&&pr.gcalEventId)||"" });
       note(r&&r.htmlLink?("✅ Visita en tu Google Calendar · "+fmtDia(dia)+" "+fmtHora(v)):"✅ Agendado en Google Calendar.");
     }catch(e){ note("📅 Guardado en el panel. Google Calendar: "+(e.message||e)); }
     return;
