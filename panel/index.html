@@ -462,6 +462,7 @@ let prospectos = [];
 let vendedores = [];
 let comisionMes = null; // 'YYYY-MM' seleccionado en la sección Comisiones (null = mes actual)
 let busquedas = [];
+let recetas = [];
 let callLeadId = null, closeLeadId = null;
 let callLang = null; // idioma del micrófono en la llamada (es/en); por defecto, el del lead
 let verLlamadaId = null; // visor de transcripción abierto
@@ -694,7 +695,7 @@ async function loadAll(){
   const pr = await sb.from("proposals").select("*").order("created_at",{ascending:false});
   proposals = (pr.data||[]).map(FROM.proposals);
   if(isAdmin){
-    const [inv, cl, ld, st, tc, pz, bq, pl, vd] = await Promise.all([
+    const [inv, cl, ld, st, tc, pz, bq, pl, vd, rc] = await Promise.all([
       sb.from("invoices").select("*").order("created_at",{ascending:false}),
       sb.from("clients").select("*").order("created_at",{ascending:false}),
       sb.from("leads").select("*").order("created_at",{ascending:false}),
@@ -704,6 +705,7 @@ async function loadAll(){
       sb.from("busquedas").select("*").order("created_at",{ascending:false}),
       sb.from("plantillas").select("*").order("created_at",{ascending:true}),
       sb.from("vendedores").select("*").order("created_at",{ascending:true}),
+      sb.from("recetas").select("*").order("version",{ascending:false}),
     ]);
     invoices = (inv.data||[]).map(FROM.invoices);
     clients  = (cl.data||[]).map(FROM.clients);
@@ -715,6 +717,7 @@ async function loadAll(){
     busquedas = (bq && !bq.error && bq.data) ? bq.data.map(FROM.busquedas) : [];
     plantillas = (pl && !pl.error && pl.data) ? pl.data : [];
     vendedores = (vd && !vd.error && vd.data) ? vd.data.map(FROM.vendedores) : [];
+    recetas = (rc && !rc.error && rc.data) ? rc.data : [];
   } else if(esVendedor){
     // Vendedor: solo lo suyo. La RLS filtra leads/touches a los asignados a él.
     const [ld, tc, vd, rk] = await Promise.all([
@@ -1490,9 +1493,36 @@ function renderResumen(){
 }
 
 /* ---------- ANÁLISIS (cerebro) ---------- */
+function recetaAgente2Html(){
+  const r = recetas && recetas[0];
+  const paraChip = p=>{ const map={"agente-respuestas":["Agente de mails","var(--accent)"],"visita":["Visita","var(--accent)"],"oferta":["Oferta","#e0b341"],"proceso":["Proceso","#60a5fa"]}; const c=map[p]||[p,"var(--muted)"]; return `<span style="font-size:10px;font-family:var(--mono);border:1px solid ${c[1]};color:${c[1]};border-radius:99px;padding:1px 8px">${esc(c[0])}</span>`; };
+  const confChip = c=>{ const col=c==="alta"?"var(--ok)":c==="media"?"#e0b341":"var(--faint)"; return `<span style="font-size:10px;color:${col}">confianza ${esc(c||"-")}</span>`; };
+  let cuerpo;
+  if(r){
+    const reglas=Array.isArray(r.reglas)?r.reglas:[];
+    cuerpo = `<div class="bs" style="margin-bottom:10px">Receta v${r.version} · ${esc(r.muestra||"")} · <span style="color:${r.modo==="estadistico"?"var(--ok)":"var(--accent)"}">${r.modo==="estadistico"?"con estadística":r.modo==="cualitativo"?"lectura cualitativa (muestra chica)":"modo observación"}</span></div>
+      ${r.informe?`<div style="font-size:13.5px;line-height:1.6;white-space:pre-wrap;margin-bottom:16px">${esc(r.informe)}</div>`:""}
+      ${reglas.length?`<div style="display:flex;flex-direction:column;gap:10px">${reglas.map((rg,i)=>`<div style="border:1px solid var(--hair2);border-radius:12px;padding:12px 14px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><b style="color:var(--accent);font-family:var(--mono)">${i+1}</b> <span style="font-weight:600;font-size:13.5px">${esc(rg.regla||"")}</span></div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">${rg.para?paraChip(rg.para):""}${confChip(rg.confianza)}</div>
+        ${rg.evidencia?`<div class="bs" style="font-size:12.5px">${esc(rg.evidencia)}</div>`:""}
+      </div>`).join("")}</div>`:""}
+      ${r.pregunta_comprador?`<div style="margin-top:14px;border-left:2px solid var(--accent);padding:4px 0 4px 12px"><div class="bs" style="font-size:11px;margin-bottom:3px">PREGUNTA PARA VALIDAR CON EL PRÓXIMO CERRADO</div><div style="font-size:13.5px">“${esc(r.pregunta_comprador)}”</div></div>`:""}`;
+  } else {
+    cuerpo = `<div class="bs" style="font-size:13px">Cuando tengas deals cerrados (ganados/perdidos), tocá <b>Correr análisis</b> y el Agente 2 va a leer las conversaciones y armar la receta de venta. Con menos de 8 cierres da lectura cualitativa (hipótesis); con 8+ saca estadística.</div>`;
+  }
+  return `<div class="bcard" style="margin-bottom:22px">
+    <div class="bhead" style="margin-bottom:12px;flex-wrap:wrap;gap:10px;align-items:center">
+      <span class="bt">🧠 Receta de venta — Agente 2</span>
+      <span style="flex:1;min-width:10px"></span>
+      <button class="btn sm" id="btn-analizar" data-correranalisis="1">⚡ Correr análisis</button>
+    </div>
+    ${cuerpo}
+  </div>`;
+}
 function renderAnalisis(){
   const total = leads.length;
-  if(!total){ $app().innerHTML = `<div class="empty"><b>Todavía no hay datos para analizar.</b><br>Cuando empieces a mover leads (enviar, responder, ganar, perder), acá vas a ver <b>dónde se te caen los deals y por qué</b>, con recomendaciones basadas en estudios de ventas.</div>`; return; }
+  if(!total){ $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Análisis</h2></div><div class="wrap">${recetaAgente2Html()}<div class="empty"><b>Todavía no hay datos para analizar.</b><br>Cuando empieces a mover leads (enviar, responder, ganar, perder), acá vas a ver <b>dónde se te caen los deals y por qué</b>, con recomendaciones basadas en estudios de ventas.</div></div>`; return; }
 
   const inState = (...s)=>leads.filter(l=>s.includes(l.status));
   const gan = inState("ganado").length, perd = inState("perdido").length;
@@ -1560,6 +1590,7 @@ function renderAnalisis(){
   }
 
   $app().innerHTML = `
+    ${recetaAgente2Html()}
     <div class="panel" style="border-left:3px solid var(--accent)">
       <div class="bar"><h2><span class="tick"></span>Diagnóstico</h2></div>
       <div style="font-size:14px;line-height:1.6;color:#E6E7EB">${diag}</div>
@@ -2855,6 +2886,17 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.horapicker){ horaPicker=(horaPicker===t.dataset.horapicker)?null:t.dataset.horapicker; renderApp(); return; }
   if(t.dataset.horaset){ const [id,v]=t.dataset.horaset.split("|"); await sb.from("prospectos").update({visita_hora:v||null,updated_at:new Date().toISOString()}).eq("id",id); horaPicker=null; note(v?("🕒 Hora: "+fmtHora(v)):"Hora quitada"); await loadAll(); return; }
+  if(t.dataset.correranalisis){
+    const b=document.getElementById("btn-analizar"); if(b){ b.disabled=true; b.textContent="⏳ Analizando…"; }
+    try{
+      const r=await callFn("analizar",{});
+      if(r&&r.sinDatos){ note("Todavía no hay cierres para analizar. Cerrá deals y volvé a correrlo."); }
+      else if(r&&r.ok){ note("✅ Receta v"+r.version+" lista ("+(r.muestra||"")+")"); }
+      else { note("Análisis sin resultado."); }
+      await loadAll();
+    }catch(e){ note("No se pudo analizar: "+(e.message||e)); if(b){ b.disabled=false; b.textContent="⚡ Correr análisis"; } }
+    return;
+  }
   if(t.dataset.vvista){ visitaVista=t.dataset.vvista; renderApp(); return; }
   if(t.dataset.vmes){ visitaMes+=Number(t.dataset.vmes); renderApp(); return; }
   if(t.dataset.caljump){ const id=t.dataset.caljump; visitaVista="lista"; renderApp(); setTimeout(()=>{ const el=document.querySelector('[data-agopen="'+id+'"]')||document.querySelector('[data-visitareg="'+id+'"]'); if(el){ const card=el.closest('.bcard')||el; card.scrollIntoView({behavior:"smooth",block:"center"}); } },60); return; }
