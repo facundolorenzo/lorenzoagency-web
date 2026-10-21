@@ -2612,9 +2612,15 @@ function confirmHtml(){
 
 /* ---------- eventos ---------- */
 function note(msg){
+  document.querySelectorAll(".lz-toast").forEach(x=>{ try{x.remove();}catch(e){} });
   const n=document.createElement("div");
-  n.style.cssText="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d1e23;border:1px solid var(--hair);padding:10px 16px;border-radius:8px;font-size:13px;z-index:999;max-width:90vw;text-align:center";
-  n.textContent=msg; document.body.appendChild(n); setTimeout(()=>n.remove(),5000);
+  n.className="lz-toast";
+  n.style.cssText="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#15161a;border:1px solid var(--hair);border-left:3px solid var(--accent);padding:13px 20px;border-radius:13px;font-size:14px;line-height:1.45;z-index:9999;max-width:min(540px,92vw);text-align:left;box-shadow:0 16px 48px rgba(0,0,0,.55);color:var(--fg);display:flex;align-items:center;gap:11px";
+  const dot=document.createElement("span"); dot.style.cssText="width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none";
+  const txt=document.createElement("span"); txt.textContent=msg;
+  n.appendChild(dot); n.appendChild(txt); document.body.appendChild(n);
+  try{ n.animate([{opacity:0,transform:"translateX(-50%) translateY(12px)"},{opacity:1,transform:"translateX(-50%) translateY(0)"}],{duration:220,easing:"cubic-bezier(.2,.8,.2,1)"}); }catch(e){}
+  setTimeout(()=>{ try{ const o=n.animate([{opacity:1},{opacity:0,transform:"translateX(-50%) translateY(8px)"}],{duration:300,easing:"ease-in",fill:"forwards"}); o.onfinish=()=>{ try{n.remove();}catch(e){} }; }catch(e){ try{n.remove();}catch(_){}} },4300);
 }
 
 document.addEventListener("click", async e=>{
