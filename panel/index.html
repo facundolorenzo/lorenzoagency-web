@@ -377,7 +377,7 @@ th.r{text-align:right}
 .login .box{position:relative;width:100%;max-width:430px;background:rgba(255,255,255,.055);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);border:1px solid rgba(255,255,255,.14);border-radius:26px;padding:46px 40px;box-shadow:0 30px 90px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.16)}
 .login .stache{height:34px;width:104px;margin:0 auto 20px;display:block;background:var(--accent);-webkit-mask:url(/email/firma-bigote.png) center/contain no-repeat;mask:url(/email/firma-bigote.png) center/contain no-repeat}
 .login h1{text-align:center;font-size:18px;letter-spacing:.26em;font-weight:600;margin-bottom:3px}
-.login .sub{text-align:center;color:var(--muted);font-size:11px;letter-spacing:.26em;font-family:var(--mono);margin-bottom:32px}
+.login .sub{text-align:center;color:var(--muted);font-size:11px;letter-spacing:.26em;font-family:var(--mono);margin-bottom:44px}
 .login label{display:block;margin-bottom:16px}
 .login .fl{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;display:block}
 .login input{width:100%;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.13);border-radius:13px;padding:14px 16px;color:var(--fg);font-size:14px;transition:border-color .15s,background .15s}
@@ -3394,7 +3394,7 @@ function renderLogin(err){
   document.getElementById("root").innerHTML = `
   <div class="login"><div class="box">
     <span class="stache" aria-hidden="true"></span>
-    <h1>LORENZO <span style="font-size:12px;letter-spacing:.22em;color:var(--muted);font-weight:500">AGENCY</span></h1><div class="sub">PANEL</div>
+    <h1>LORENZO</h1><div class="sub">AGENCY · PANEL</div>
     <form id="loginf">
       <label><span class="fl">Email</span><input name="email" type="email" required autocomplete="username"></label>
       <label><span class="fl">Contraseña</span><input name="password" type="password" required autocomplete="current-password"></label>
