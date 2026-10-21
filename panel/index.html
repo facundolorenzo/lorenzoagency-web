@@ -371,13 +371,22 @@ th.r{text-align:right}
 .tl-dot{width:7px;height:7px;border-radius:99px;background:var(--accent);margin-top:6px;flex:0 0 auto}
 .tl-b{font-size:12.5px;color:#C9CBD1;line-height:1.5}
 .tl-b .w{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.1em;display:block;margin-bottom:2px}
-.login{max-width:360px;margin:12vh auto 0;padding:0 20px}
-.login .box{background:var(--card);border:1px solid var(--hair2);border-radius:14px;padding:26px}
-.login h1{font-size:13px;letter-spacing:.2em;font-weight:600;margin-bottom:2px}
-.login .sub{color:var(--muted);font-size:12px;letter-spacing:.2em;font-family:var(--mono);margin-bottom:22px}
-.login label{display:block;margin-bottom:14px}
-.login .fl{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;display:block}
-.login .err{color:var(--bad);font-size:12.5px;margin-top:10px;min-height:16px}
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden}
+.login::before{content:"";position:absolute;width:620px;height:620px;border-radius:50%;background:radial-gradient(circle,rgba(221,125,71,.24),transparent 62%);top:-200px;right:-140px;filter:blur(44px);pointer-events:none}
+.login::after{content:"";position:absolute;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(221,125,71,.15),transparent 62%);bottom:-220px;left:-160px;filter:blur(54px);pointer-events:none}
+.login .box{position:relative;width:100%;max-width:430px;background:rgba(255,255,255,.055);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);border:1px solid rgba(255,255,255,.14);border-radius:26px;padding:46px 40px;box-shadow:0 30px 90px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.16)}
+.login .stache{height:34px;width:104px;margin:0 auto 20px;display:block;background:var(--accent);-webkit-mask:url(/email/firma-bigote.png) center/contain no-repeat;mask:url(/email/firma-bigote.png) center/contain no-repeat}
+.login h1{text-align:center;font-size:18px;letter-spacing:.26em;font-weight:600;margin-bottom:3px}
+.login .sub{text-align:center;color:var(--muted);font-size:11px;letter-spacing:.26em;font-family:var(--mono);margin-bottom:32px}
+.login label{display:block;margin-bottom:16px}
+.login .fl{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;display:block}
+.login input{width:100%;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.13);border-radius:13px;padding:14px 16px;color:var(--fg);font-size:14px;transition:border-color .15s,background .15s}
+.login input:focus{outline:none;border-color:var(--accent);background:rgba(255,255,255,.08)}
+.login .btn-login{width:100%;margin-top:8px;padding:15px;border:none;border-radius:13px;background:linear-gradient(180deg,#ec9158,#DD7D47 60%,#cf6f3c);color:#1b0f07;font-weight:700;font-size:14.5px;letter-spacing:.03em;font-family:var(--disp);cursor:pointer;box-shadow:0 10px 28px rgba(221,125,71,.38),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .12s,box-shadow .15s,filter .15s}
+.login .btn-login:hover{transform:translateY(-1px);box-shadow:0 14px 36px rgba(221,125,71,.5),inset 0 1px 0 rgba(255,255,255,.35);filter:brightness(1.04)}
+.login .btn-login:active{transform:translateY(0)}
+.login .btn-login:disabled{opacity:.7;cursor:default}
+.login .err{color:var(--bad);font-size:12.5px;margin-top:12px;min-height:16px;text-align:center}
 @media(max-width:480px){.bar h2{font-size:15px}}
 footer{margin-top:72px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint);
   display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--hair2);padding-top:16px}
@@ -3384,11 +3393,12 @@ document.addEventListener("change", async e=>{
 function renderLogin(err){
   document.getElementById("root").innerHTML = `
   <div class="login"><div class="box">
+    <span class="stache" aria-hidden="true"></span>
     <h1>LORENZO</h1><div class="sub">AGENCY · PANEL</div>
     <form id="loginf">
       <label><span class="fl">Email</span><input name="email" type="email" required autocomplete="username"></label>
       <label><span class="fl">Contraseña</span><input name="password" type="password" required autocomplete="current-password"></label>
-      <button class="btn" type="submit" style="width:100%">Entrar</button>
+      <button class="btn-login" type="submit">Entrar</button>
       <div class="err">${err?esc(err):""}</div>
     </form>
   </div></div>`;
