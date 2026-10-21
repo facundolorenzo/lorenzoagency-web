@@ -1480,11 +1480,15 @@ function renderResumen(){
     </div>
     <div class="bcard sp3">
       <div class="bhead"><span class="bt">Objetivo del mes</span><button class="iconbtn" data-goaledit="1" title="Cambiar el objetivo">✎</button></div>
-      <div style="display:flex;gap:18px;align-items:center">
+      <div style="text-align:center;margin:6px 0 4px">
+        <div class="big" style="margin:0;font-size:clamp(34px,4.2vw,52px);line-height:1;letter-spacing:-.02em">${money(goal||0)}</div>
+        <div class="bs" style="margin-top:6px;letter-spacing:.04em">la meta de este mes</div>
+      </div>
+      <div style="display:flex;gap:18px;align-items:center;margin-top:16px">
         ${anillo}
         <div style="min-width:0">
-          <div class="big" style="margin:0;font-size:clamp(20px,1.8vw,28px)">${money(cobradoMes)}</div>
-          <div class="bs" style="margin-top:4px">cobrado este mes${goal?" · de "+money(goal):""}</div>
+          <div class="big" style="margin:0;font-size:clamp(20px,1.8vw,28px);color:var(--ok)">${money(cobradoMes)}</div>
+          <div class="bs" style="margin-top:4px">cobrado${goal?" · faltan "+money(Math.max(0,goal-cobradoMes)):""}</div>
         </div>
       </div>
       <div class="goalmsg${metGoal?' ok':''}">${msg}</div>
