@@ -388,6 +388,16 @@ th.r{text-align:right}
 .login .btn-login:disabled{opacity:.7;cursor:default}
 .login .err{color:var(--bad);font-size:12.5px;margin-top:12px;min-height:16px;text-align:center}
 @media(max-width:480px){.bar h2{font-size:15px}}
+@media(max-width:620px){
+  .wrap{padding:0 12px}
+  .calgrid{gap:3px}
+  .calgrid>div{min-height:62px!important;padding:4px!important}
+  .calgrid>div>div:first-child{font-size:10px!important}
+  .agenda-pop{position:fixed!important;top:50%!important;left:50%!important;transform:translate(-50%,-50%)!important;width:92vw!important;max-width:360px;max-height:84vh;overflow:auto}
+  .agflex{flex-direction:column!important;gap:14px!important}
+  .agflex>div{min-width:0!important;width:100%!important;border-left:none!important;padding-left:0!important}
+  .agflex [style*="grid-template-columns:repeat(7,36px)"]{grid-template-columns:repeat(7,1fr)!important}
+}
 footer{margin-top:72px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint);
   display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--hair2);padding-top:16px}
 </style>
@@ -1324,7 +1334,7 @@ function calProximosHtml(){
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center;margin-bottom:6px">
       ${dow.map(x=>`<div class="bs" style="font-family:var(--mono);font-size:10px;letter-spacing:.5px">${x}</div>`).join("")}
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">${celdas}</div>
+    <div class="calgrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">${celdas}</div>
   </div>`;
 }
 function renderResumen(){
@@ -1840,7 +1850,7 @@ function agendaPanel(p){
   const selH=agendaHora||p.visitaHora||null;
   const horas=HORAS.map(v=>'<button class="hslot '+(selH===v?"hsel":"")+'" '+(sel?"":"disabled")+' data-aghora="'+p.id+'|'+v+'">'+fmtHora(v)+'</button>').join("");
   const listo=!!(sel&&selH);
-  return '<div class="agenda-pop"><div style="display:flex;gap:18px">'
+  return '<div class="agenda-pop"><div class="agflex" style="display:flex;gap:18px">'
     +'<div style="min-width:272px">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
         +'<button class="navmo" data-agmo="-1">‹</button>'
@@ -1941,7 +1951,7 @@ function calVisitasHtml(lista){
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center;margin-bottom:6px">
       ${dow.map(x=>`<div class="bs" style="font-family:var(--mono);font-size:10px;letter-spacing:.5px">${x}</div>`).join("")}
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">${celdas}</div>
+    <div class="calgrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">${celdas}</div>
     <div class="bs" style="margin-top:12px;font-size:12px">Tocá una visita para abrirla en la lista y operarla (cambiar día, marcar “Ya fui”).</div>
   </div>`;
 }
