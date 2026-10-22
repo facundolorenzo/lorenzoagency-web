@@ -52,6 +52,16 @@ Deno.serve(async (req) => {
     const PASS = Deno.env.get("SMTP_PASS")!;          // contraseña del buzón Private Email
     const FROM = Deno.env.get("SMTP_FROM") || ("LORENZO Agency <" + USER + ">");
 
+    // Firma fija al pie de todos los mails (vendedor de contacto)
+    const FIRMA_TXT = "\n\n—\nNicolás Ferrer\nVentas · LORENZO Agency\nlorenzoagency.tech";
+    const FIRMA_HTML =
+      '<br><br><div style="margin-top:18px;padding-top:12px;border-top:1px solid #e5e5e5;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#444">' +
+      '<strong style="color:#111">Nicolás Ferrer</strong><br>' +
+      'Ventas · LORENZO Agency<br>' +
+      '<a href="https://lorenzoagency.tech" style="color:#DD7D47;text-decoration:none">lorenzoagency.tech</a>' +
+      '</div>';
+    const bodyHtml = String(body).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>");
+
     // Enviar por SMTP — Private Email: mail.privateemail.com, 465 SSL
     const client = new SMTPClient({
       connection: { hostname: "mail.privateemail.com", port: 465, tls: true, auth: { username: USER, password: PASS } },
@@ -60,8 +70,8 @@ Deno.serve(async (req) => {
       from: FROM,
       to,
       subject: subject || "Respuesta — LORENZO Agency",
-      content: body,
-      html: String(body).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>"),
+      content: body + FIRMA_TXT,
+      html: bodyHtml + FIRMA_HTML,
     });
     await client.close();
 
