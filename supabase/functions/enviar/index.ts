@@ -55,7 +55,8 @@ Deno.serve(async (req) => {
     // Firma fija al pie de todos los mails (vendedor de contacto)
     const FIRMA_TXT = "\n\n—\nNicolás Ferrer\nVentas · LORENZO Agency\nlorenzoagency.tech";
     const FIRMA_HTML =
-      '<br><br><div style="margin-top:18px;padding-top:12px;border-top:1px solid #e5e5e5;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#444">' +
+      '<br><br><div style="margin-top:18px;padding-top:14px;border-top:1px solid #e5e5e5;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#444">' +
+      '<img src="https://lorenzoagency.tech/email/firma-bigote.png" alt="LORENZO Agency" width="168" height="22" style="display:block;margin-bottom:9px;border:0;outline:none">' +
       '<strong style="color:#111">Nicolás Ferrer</strong><br>' +
       'Ventas · LORENZO Agency<br>' +
       '<a href="https://lorenzoagency.tech" style="color:#DD7D47;text-decoration:none">lorenzoagency.tech</a>' +
