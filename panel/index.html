@@ -3242,7 +3242,13 @@ document.addEventListener("click", async e=>{
     const {error}=await sb.from("leads").update(patch).eq("id",id);
     if(error){ note("No se pudo guardar: "+error.message); return; }
     try{ await sb.from("touches").insert({lead_id:id,tipo:"nota",texto:(outcome==='ganado'?'Ganado. ':'Perdido. ')+(patch.cierre_obs||'')}); }catch(e){}
-    closeLeadId=null; openLeadId=null; await loadAll(); return;
+    closeLeadId=null; openLeadId=null; await loadAll();
+    // Auto-análisis Agente 2: cada cierre dispara el aprendizaje (no bloquea la UI)
+    note("✅ Cierre guardado — el Agente 2 está leyendo este deal…");
+    callFn("analizar",{}).then(async r=>{
+      if(r&&r.ok){ try{ await loadAll(); }catch(e){} note("🧠 Receta de venta actualizada (v"+r.version+")"); }
+    }).catch(()=>{});
+    return;
   }
   if(t.dataset.replymail){
     const em=t.dataset.replymail;
