@@ -61,6 +61,11 @@ function generarImagen(key: string, motor: string, prompt: string, refs: string[
     if (refs && refs.length) body.image_urls = refs.slice(0, 10);   // Grok acepta hasta 10
     return hfSubmitPoll(key, "/xai/grok-imagine-image-2.0", body);
   }
+  if (motor === "recraft") {
+    // Recraft V4.1 text-to-image: placas con texto, diseño gráfico, vectorial. NO usa referencias.
+    const body: Record<string, unknown> = { prompt, resolution: "2k", aspect_ratio: "1:1", output_format: "png" };
+    return hfSubmitPoll(key, "/recraft/v4.1/text-to-image", body);
+  }
   // default: marketing-studio (modo directo)
   const body: Record<string, unknown> = { prompt, resolution: "2k", aspect_ratio: "1:1", enhance_prompt: false };
   if (refs && refs.length) body.image_urls = refs.slice(0, 2);
@@ -121,6 +126,7 @@ REFERENCIAS: si hay referencias cargadas, usalas como guía de estilo/estética 
 ELEGÍ EL MOTOR (uno para toda la pieza, según la idea):
 - "marketing-studio": imágenes publicitarias / de campaña, producto, placas premium, avisos de marca.
 - "grok": escenas fotográficas o cinematográficas realistas, lifestyle visual, o cuando hay varias referencias.
+- "recraft": placas con TEXTO/tipografía, infografías, diseño gráfico, logos, íconos, ilustración vectorial o flat, assets de marca con paleta controlada. Ideal para carruseles informativos con texto adentro. NO usa referencias.
 
 DESCRIPCIÓN (caption): español rioplatense, gancho en la primera línea, desarrollo corto, un CTA claro, y 3-5 hashtags relevantes.
 
@@ -144,7 +150,7 @@ Exactamente ${n} prompts.`;
     if (!prompts.length) return json({ error: "El LLM no armó prompts" }, 502);
 
     // 2) Generar cada imagen en paralelo con Higgsfield
-    const motor = (plan.motor === "grok" || plan.motor === "marketing-studio") ? plan.motor : (pieza.motor || "marketing-studio");
+    const motor = ["grok", "marketing-studio", "recraft"].includes(plan.motor) ? plan.motor : (pieza.motor || "marketing-studio");
     const resultados = await Promise.allSettled(prompts.map((p) => generarImagen(HF_KEY, motor, p, refs)));
 
     // 3) Descargar las que salieron y subirlas a Storage
