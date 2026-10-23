@@ -482,6 +482,7 @@ let vendedores = [];
 let comisionMes = null; // 'YYYY-MM' seleccionado en la sección Comisiones (null = mes actual)
 let busquedas = [];
 let recetas = [];
+let contenidoPiezas=[]; let contCuenta='ag', contLote=[{idea:""}], contSel=null;
 let callLeadId = null, closeLeadId = null;
 let callLang = null; // idioma del micrófono en la llamada (es/en); por defecto, el del lead
 let verLlamadaId = null; // visor de transcripción abierto
@@ -741,6 +742,8 @@ async function loadAll(){
     plantillas = (pl && !pl.error && pl.data) ? pl.data : [];
     vendedores = (vd && !vd.error && vd.data) ? vd.data.map(FROM.vendedores) : [];
     recetas = (rc && !rc.error && rc.data) ? rc.data : [];
+    const cpR = await sb.from("contenido_piezas").select("*").order("orden",{ascending:true});
+    contenidoPiezas = (cpR && !cpR.error && cpR.data) ? cpR.data : [];
   } else if(esVendedor){
     // Vendedor: solo lo suyo. La RLS filtra leads/touches a los asignados a él.
     const [ld, tc, vd, rk] = await Promise.all([
@@ -825,7 +828,7 @@ async function runDraft(id, isRehacer){
 
 /* ============================ RENDER ============================ */
 function tabsHtml(){
-  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["vendedores","VENDEDORES"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"],["visitas","VISITAS"]]
+  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["vendedores","VENDEDORES"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"],["visitas","VISITAS"],["contenido","CONTENIDO"]]
             : esVendedor ? [["hoy","PARA HOY"],["miresumen","MI RESUMEN"],["misclientes","MIS CLIENTES"],["miranking","RANKING"]]
             : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
   const nuevos = leads.filter(x=>x.status==='nuevo').length;
@@ -1295,6 +1298,7 @@ function renderBody(){
   else if(tab==="leads") renderLeads();
   else if(tab==="prospeccion") renderProspeccion();
   else if(tab==="visitas") renderVisitas();
+  else if(tab==="contenido") renderContenido();
   else if(tab==="miresumen") renderMiResumen();
   else if(tab==="misclientes") renderMisClientes();
   else if(tab==="miranking") renderMiRanking();
@@ -1335,6 +1339,96 @@ function calProximosHtml(){
       ${dow.map(x=>`<div class="bs" style="font-family:var(--mono);font-size:10px;letter-spacing:.5px">${x}</div>`).join("")}
     </div>
     <div class="calgrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">${celdas}</div>
+  </div>`;
+}
+/* ============================ CONTENIDO (Instagram) ============================ */
+async function contCargar(){ if(!sb) return; const r=await sb.from("contenido_piezas").select("*").order("orden",{ascending:true}); contenidoPiezas=(r&&!r.error&&r.data)?r.data:[]; }
+function contSetCuenta(c){ contCuenta=c; contSel=null; renderContenido(); }
+function contIdea(i,v){ if(contLote[i]) contLote[i].idea=v; }
+function contAdd(){ contLote.push({idea:""}); renderContenido(); }
+function contDel(i){ contLote.splice(i,1); if(!contLote.length) contLote.push({idea:""}); renderContenido(); }
+function contSelPieza(id){ contSel=id; renderContenido(); }
+async function contGen(){
+  const items=contLote.filter(x=>String(x.idea||"").trim());
+  if(!items.length){ note("Escribí al menos una idea."); return; }
+  const lote="L"+Date.now();
+  const rows=items.map((x,i)=>({cuenta:contCuenta, lote, orden:i, idea:String(x.idea).trim(), estado:"pendiente"}));
+  const {error}=await sb.from("contenido_piezas").insert(rows);
+  if(error){ note("No se pudo guardar: "+error.message); return; }
+  contLote=[{idea:""}]; await contCargar(); renderContenido();
+  note(items.length+" pieza(s) en la cola.");
+}
+async function contDecide(id,estado){
+  const {error}=await sb.from("contenido_piezas").update({estado, updated_at:new Date().toISOString()}).eq("id",id);
+  if(error){ note("Error: "+error.message); return; }
+  await contCargar(); renderContenido(); note(estado==="aprobado"?"Aprobado.":"Rechazado.");
+}
+async function contDesc(id){
+  const el=document.getElementById("cdesc"); const v=el?el.value:"";
+  const {error}=await sb.from("contenido_piezas").update({descripcion:v, updated_at:new Date().toISOString()}).eq("id",id);
+  if(error){ note("Error: "+error.message); return; }
+  await contCargar(); note("Descripción guardada.");
+}
+async function contProg(id){
+  const d=document.getElementById("cprog-d"), hh=document.getElementById("cprog-h");
+  const dia=d?d.value:"", hora=hh?hh.value:"";
+  if(!dia){ note("Elegí el día."); return; }
+  const {error}=await sb.from("contenido_piezas").update({fecha_pub:dia, hora_pub:hora||null, estado:"programado", updated_at:new Date().toISOString()}).eq("id",id);
+  if(error){ note("Error: "+error.message); return; }
+  await contCargar(); renderContenido(); note("Programado.");
+}
+async function contBorrar(id){
+  const {error}=await sb.from("contenido_piezas").delete().eq("id",id);
+  if(error){ note("Error: "+error.message); return; }
+  contSel=null; await contCargar(); renderContenido();
+}
+function renderContenido(){
+  const piezas=contenidoPiezas.filter(p=>p.cuenta===contCuenta);
+  const L_EST={pendiente:"Pendiente",aprobado:"Aprobado",rechazado:"Rechazado",programado:"Programado",publicado:"Publicado"};
+  const arm=contLote.map((it,i)=>`<div style="border:1px solid var(--hair2);border-radius:12px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:var(--accent);font-size:13px">Carrusel ${i+1}</b>${contLote.length>1?`<button class="linkbtn" onclick="contDel(${i})">Quitar</button>`:""}</div>
+      <textarea oninput="contIdea(${i},this.value)" placeholder="Idea de este carrusel… qué dice. Podés aclarar cuántas imágenes (ej: carrusel de 5)" style="width:100%;min-height:54px">${esc(it.idea||"")}</textarea>
+    </div>`).join("");
+  const cola=piezas.length?piezas.map(p=>{
+    const dot=(p.estado==="aprobado"||p.estado==="programado")?"var(--ok)":p.estado==="rechazado"?"var(--bad)":p.estado==="publicado"?"#8ab4f8":"var(--warn)";
+    const dh=p.fecha_pub?`${esc(p.fecha_pub)}${p.hora_pub?" · "+esc(p.hora_pub):""}`:"sin fecha";
+    return `<div onclick="contSelPieza('${p.id}')" style="border:1px solid ${contSel===p.id?"var(--accent)":"var(--hair2)"};border-radius:11px;padding:11px;margin-bottom:8px;cursor:pointer;display:flex;gap:10px;align-items:center">
+      <span style="width:9px;height:9px;border-radius:50%;background:${dot};flex:none"></span>
+      <div style="flex:1;min-width:0"><div class="bs" style="color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((p.idea||"(sin idea)").slice(0,70))}</div>
+      <div class="bs" style="font-size:11px">${L_EST[p.estado]||p.estado} · ${dh}</div></div></div>`;
+  }).join(""):`<div class="empty"><b>Sin piezas todavía.</b><br>Armá un lote arriba y tocá Generar.</div>`;
+  const sel=piezas.find(p=>p.id===contSel);
+  const editor=sel?`<div class="bcard">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="bt">Pieza</span><button class="btn sm ghost btn-del" onclick="contBorrar('${sel.id}')" title="Borrar">${typeof ICON_TRASH!=="undefined"?ICON_TRASH:"🗑"}</button></div>
+      <div class="bs" style="margin-bottom:14px;color:var(--fg)"><b>Idea:</b> ${esc(sel.idea||"")}</div>
+      <label class="bs" style="display:block;margin-bottom:6px">Descripción del post</label>
+      <textarea id="cdesc" style="width:100%;min-height:120px">${esc(sel.descripcion||"")}</textarea>
+      <button class="btn sm ghost" style="margin-top:8px" onclick="contDesc('${sel.id}')">Guardar descripción</button>
+      <div style="display:flex;gap:12px;align-items:flex-end;margin-top:18px;flex-wrap:wrap">
+        <div><label class="bs" style="display:block;margin-bottom:6px">Día</label><input id="cprog-d" type="date" value="${esc(sel.fecha_pub||"")}" style="padding:8px"></div>
+        <div><label class="bs" style="display:block;margin-bottom:6px">Hora</label><input id="cprog-h" type="time" value="${esc(sel.hora_pub||"")}" style="padding:8px"></div>
+        <button class="btn sm" onclick="contProg('${sel.id}')">Programar</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button class="btn sm" style="background:var(--ok);color:#0c1a0e;border:none" onclick="contDecide('${sel.id}','aprobado')">Aprobar ✓</button>
+        <button class="btn sm ghost" style="border-color:var(--bad);color:var(--bad)" onclick="contDecide('${sel.id}','rechazado')">Rechazar</button>
+      </div>
+    </div>`:`<div class="empty"><b>Elegí una pieza de la cola</b><br>para editarla y programarla.</div>`;
+  $app().innerHTML=`<div class="bar"><h2><span class="tick"></span>Contenido — Instagram</h2></div>
+  <div class="wrap">
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn sm ${contCuenta==="ag"?"":"ghost"}" onclick="contSetCuenta('ag')">LORENZO Agency</button>
+      <button class="btn sm ${contCuenta==="pe"?"":"ghost"}" onclick="contSetCuenta('pe')">Facundo Lorenzo</button>
+    </div>
+    <div class="bcard" style="margin-bottom:18px">
+      <div class="bt" style="margin-bottom:12px">Armar lote</div>${arm}
+      <div style="display:flex;gap:10px;margin-top:4px"><button class="btn sm ghost" style="flex:1" onclick="contAdd()">+ Agregar carrusel</button><button class="btn sm" onclick="contGen()">Generar lote ✦</button></div>
+      <div class="bs" style="margin-top:10px;font-size:12px">Por ahora guarda las piezas en la base (pendientes). La generación de imágenes con Higgsfield se conecta en la próxima fase.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:340px 1fr;gap:20px">
+      <div><div class="bt" style="margin-bottom:10px">Cola (${piezas.length})</div>${cola}</div>
+      <div>${editor}</div>
+    </div>
   </div>`;
 }
 function renderResumen(){
