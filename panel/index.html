@@ -482,10 +482,53 @@ let vendedores = [];
 let comisionMes = null; // 'YYYY-MM' seleccionado en la sección Comisiones (null = mes actual)
 let busquedas = [];
 let recetas = [];
-let contenidoPiezas=[]; let contCuenta='ag', contLote=[{idea:"",refs:[]}], contSel=null, contRefTarget=0, contMicOn={}, contRec=null, contMicCur=null, contPeUnlock=false;
+let contenidoPiezas=[]; let contCuenta='ag', contLote=[{idea:"",refs:[]}], contSel=null, contRefTarget=0, contMicOn={}, contRec=null, contMicCur=null, contPeUnlock=false, contPrevIdx=0;
 const CONT_PIN="2580";
 const CONT_MIC_SVG='<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 14a3 3 0 003-3V6a3 3 0 00-6 0v5a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.9V21h2v-3.1A7 7 0 0019 11h-2z"/></svg>';
 const CONT_STOP_SVG='<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+const IG_HEART='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 20.3l-1.45-1.32C5.4 14.25 2 11.2 2 7.5 2 5 3.98 3 6.5 3c1.74 0 3.41 1.01 4.22 2.44h.56C12.09 4.01 13.76 3 15.5 3 18.02 3 20 5 20 7.5c0 3.7-3.4 6.75-8.55 11.48L12 20.3z"/></svg>';
+const IG_COMMENT='<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 11.5a8.4 8.4 0 01-8.5 8.5 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8A8.4 8.4 0 0112.5 3 8.4 8.4 0 0121 11.5z"/></svg>';
+const IG_SHARE='<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
+const IG_BOOK='<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>';
+function contPrevNav(d){ const sel=contenidoPiezas.find(p=>p.id===contSel); const n=(sel&&Array.isArray(sel.imagenes))?sel.imagenes.length:0; if(!n) return; contPrevIdx=(contPrevIdx+d+n)%n; renderContenido(); }
+function contPreviewIG(sel){
+  const imgs=Array.isArray(sel.imagenes)?sel.imagenes:[]; const n=imgs.length;
+  if(contPrevIdx>=n) contPrevIdx=0;
+  const C=contCuenta==='ag'?{user:'lorenzoagency',ini:'L'}:{user:'facundo.lorenzo',ini:'F'};
+  const cur=n?imgs[contPrevIdx]:null;
+  const imgHtml=cur
+    ?`<img src="${esc(cur)}" style="width:100%;height:100%;object-fit:cover;display:block">`
+    :`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#9a9a9a;font-size:12px;text-align:center;padding:24px">Las imágenes del carrusel aparecen acá cuando se generan</div>`;
+  const nav=n>1?`
+    <button onclick="contPrevNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.9);border:none;cursor:pointer;font-size:17px;color:#111;display:flex;align-items:center;justify-content:center;padding:0">&#8249;</button>
+    <button onclick="contPrevNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.9);border:none;cursor:pointer;font-size:17px;color:#111;display:flex;align-items:center;justify-content:center;padding:0">&#8250;</button>
+    <div style="position:absolute;top:10px;right:12px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px">${contPrevIdx+1}/${n}</div>`:"";
+  const dots=n>1?`<div style="display:flex;gap:4px;justify-content:center;padding:8px 0 2px">${imgs.map((_,i)=>`<span style="width:6px;height:6px;border-radius:50%;background:${i===contPrevIdx?'#DD7D47':'#d0d0d0'}"></span>`).join("")}</div>`:"";
+  const cap=sel.descripcion?esc(sel.descripcion).replace(/\n/g,'<br>'):'<span style="color:#8e8e8e">La descripción del post aparece acá…</span>';
+  const chip=(ic,t)=>`<span style="background:#f0f0f0;color:#555;font-size:11px;padding:3px 9px;border-radius:20px">${ic} ${t}</span>`;
+  return `<div class="bs" style="margin-bottom:8px;color:var(--muted)">Así se va a ver en Instagram</div>
+  <div style="background:#fff;border-radius:14px;overflow:hidden;max-width:380px;margin:0 auto 18px;box-shadow:0 2px 16px rgba(0,0,0,.28);color:#262626;line-height:1.35">
+    <div style="display:flex;align-items:center;gap:10px;padding:11px 12px">
+      <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(45deg,#DD7D47,#E5B454);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex:none">${C.ini}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px">${C.user}</div>
+        <div style="font-size:11px;color:#8e8e8e">📍 <span style="color:#b0b0b0">Agregar ubicación</span></div>
+      </div>
+      <div style="font-size:18px;color:#262626;letter-spacing:1px">⋯</div>
+    </div>
+    <div style="position:relative;width:100%;aspect-ratio:1/1;background:#f0f0f0">${imgHtml}${nav}</div>
+    ${dots}
+    <div style="display:flex;align-items:center;padding:8px 12px 2px;color:#262626">
+      <span style="margin-right:14px;display:inline-flex">${IG_HEART}</span>
+      <span style="margin-right:14px;display:inline-flex">${IG_COMMENT}</span>
+      <span style="display:inline-flex">${IG_SHARE}</span>
+      <span style="margin-left:auto;display:inline-flex">${IG_BOOK}</span>
+    </div>
+    <div style="padding:2px 12px;font-weight:600;font-size:13px">Me gusta y comentarios reales cuando se publique</div>
+    <div style="padding:4px 12px 2px;font-size:13px"><span style="font-weight:600">${C.user}</span> ${cap}</div>
+    <div style="padding:10px 12px 12px;display:flex;gap:6px;flex-wrap:wrap">${chip('🎵','Audio')}${chip('👥','Colaboración')}${chip('🏷','Etiqueta')}</div>
+  </div>`;
+}
 let callLeadId = null, closeLeadId = null;
 let callLang = null; // idioma del micrófono en la llamada (es/en); por defecto, el del lead
 let verLlamadaId = null; // visor de transcripción abierto
@@ -1353,7 +1396,7 @@ function contPinCheck(){var el=document.getElementById('cpinin');var v=el?el.val
 function contIdea(i,v){ if(contLote[i]) contLote[i].idea=v; }
 function contAdd(){ contLote.push({idea:"",refs:[]}); renderContenido(); }
 function contDel(i){ contLote.splice(i,1); if(!contLote.length) contLote.push({idea:"",refs:[]}); renderContenido(); }
-function contSelPieza(id){ contSel=id; renderContenido(); }
+function contSelPieza(id){ contSel=id; contPrevIdx=0; renderContenido(); }
 function contMicReset(){var i=contMicCur;var b=(i!=null)?document.getElementById('cmic'+i):null;if(b){b.style.borderColor='';b.style.color='';b.style.background='';b.innerHTML=CONT_MIC_SVG;}contRec=null;contMicCur=null;}
 function contMicToggle(i){if(contMicCur===i&&contRec){try{contRec.stop();}catch(e){}return;}var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){note('Para dictar usá Chrome');return;}if(contRec){try{contRec.stop();}catch(e){}}var b=document.getElementById('cmic'+i);contMicCur=i;contRec=new SR();contRec.lang='es-ES';contRec.interimResults=true;contRec.continuous=true;if(b){b.style.borderColor='var(--bad)';b.style.color='var(--bad)';b.style.background='rgba(229,96,76,.14)';b.innerHTML=CONT_STOP_SVG;}note('Grabando…');contRec.onresult=function(e){var t='';for(var k=0;k<e.results.length;k++)t+=e.results[k][0].transcript;if(contLote[i])contLote[i].idea=t;var ta=document.getElementById('cidea'+i);if(ta)ta.value=t;};contRec.onerror=function(ev){contMicReset();note(ev&&ev.error==='not-allowed'?'Permití el micrófono en Chrome':'No se pudo dictar; escribí la idea');};contRec.onend=function(){var i2=contMicCur;contMicReset();var ta=i2!=null?document.getElementById('cidea'+i2):null;if(ta&&ta.value.trim())note('Idea cargada.');};try{contRec.start();}catch(e){}}
 function contRefAdd(i){contRefTarget=i;var f=document.getElementById('contfile');if(f){f.value='';f.click();}}
@@ -1431,7 +1474,7 @@ function renderContenido(){
   const editor=sel?`<div class="bcard">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="bt">Pieza</span><button class="btn sm ghost btn-del" onclick="contBorrar('${sel.id}')" title="Borrar">${typeof ICON_TRASH!=="undefined"?ICON_TRASH:"🗑"}</button></div>
       <div class="bs" style="margin-bottom:14px;color:var(--fg)"><b>Idea:</b> ${esc(sel.idea||"")}</div>
-      ${(Array.isArray(sel.imagenes)&&sel.imagenes.length)?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">${sel.imagenes.map(u=>`<img src="${esc(u)}" style="width:120px;height:120px;border-radius:10px;object-fit:cover;border:1px solid var(--hair2)">`).join("")}</div>`:`<div class="bs" style="margin-bottom:16px;color:var(--muted)">⏳ Sin imágenes todavía (en generación, o aún no se generó).</div>`}
+      ${contPreviewIG(sel)}
       <label class="bs" style="display:block;margin-bottom:6px">Descripción del post</label>
       <textarea id="cdesc" style="width:100%;min-height:120px">${esc(sel.descripcion||"")}</textarea>
       <button class="btn sm ghost" style="margin-top:8px" onclick="contDesc('${sel.id}')">Guardar descripción</button>
@@ -1454,7 +1497,7 @@ function renderContenido(){
     <div class="bcard" style="margin-bottom:18px">
       <div class="bt" style="margin-bottom:12px">Armar lote</div>${arm}
       <div style="display:flex;gap:10px;margin-top:4px"><button class="btn sm ghost" style="flex:1" onclick="contAdd()">+ Agregar carrusel</button><button class="btn sm" onclick="contGen()">Generar lote ✦</button></div>
-      <div class="bs" style="margin-top:10px;font-size:12px">Por ahora guarda las piezas en la base (pendientes). La generación de imágenes con Higgsfield se conecta en la próxima fase.</div>
+      <div class="bs" style="margin-top:10px;font-size:12px">Al generar, cada carrusel va a la cola y Higgsfield crea las imágenes (tarda unos minutos). Después las revisás en la vista previa.</div>
     </div>
     <div style="display:grid;grid-template-columns:340px 1fr;gap:20px">
       <div><div class="bt" style="margin-bottom:10px">Cola (${piezas.length})</div>${cola}</div>
