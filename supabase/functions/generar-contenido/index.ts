@@ -24,16 +24,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const HF_BASE = "https://api.higgsfield.ai";
 
-// ---- Higgsfield: Marketing Studio Image (modo directo: prompt + referencias) ----
-async function hfMarketingStudio(key: string, prompt: string, refs: string[]): Promise<string> {
-  const body: Record<string, unknown> = {
-    prompt,
-    resolution: "2k",
-    aspect_ratio: "1:1",   // IG usa 4:5 pero no está soportado; 1:1 es el más seguro
-    enhance_prompt: false,
-  };
-  if (refs && refs.length) body.image_urls = refs.slice(0, 2); // directo acepta refs para guiar
-  const r = await fetch(HF_BASE + "/marketing-studio/image", {
+// ---- Higgsfield: POST a un endpoint de generación + poll hasta la imagen ----
+async function hfSubmitPoll(key: string, endpoint: string, body: Record<string, unknown>): Promise<string> {
+  const r = await fetch(HF_BASE + endpoint, {
     method: "POST",
     headers: { "Authorization": "Key " + key, "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -41,11 +34,9 @@ async function hfMarketingStudio(key: string, prompt: string, refs: string[]): P
   const txt = await r.text();
   if (!r.ok) throw new Error("Higgsfield " + r.status + ": " + txt.slice(0, 180));
   let j: any; try { j = JSON.parse(txt); } catch { throw new Error("Higgsfield: respuesta no-JSON"); }
-  // Puede venir ya con images, o con status_url para pollear
   if (Array.isArray(j.images) && j.images[0]?.url) return j.images[0].url;
   const statusUrl = j.status_url || (j.request_id ? HF_BASE + "/requests/" + j.request_id + "/status" : null);
   if (!statusUrl) throw new Error("Higgsfield: sin status_url ni imágenes");
-  // Poll hasta completed / failed (acotado para no pasar el límite de la Edge Function)
   for (let i = 0; i < 24; i++) {
     await sleep(5000);
     const s = await fetch(statusUrl, { headers: { "Authorization": "Key " + key } });
@@ -61,6 +52,19 @@ async function hfMarketingStudio(key: string, prompt: string, refs: string[]): P
     }
   }
   throw new Error("Higgsfield: timeout esperando la imagen");
+}
+
+// Router de motores: arma el body según el motor y llama a Higgsfield.
+function generarImagen(key: string, motor: string, prompt: string, refs: string[]): Promise<string> {
+  if (motor === "grok") {
+    const body: Record<string, unknown> = { prompt, quality: "medium", resolution: "2k", aspect_ratio: "1:1" };
+    if (refs && refs.length) body.image_urls = refs.slice(0, 10);   // Grok acepta hasta 10
+    return hfSubmitPoll(key, "/xai/grok-imagine-image-2.0", body);
+  }
+  // default: marketing-studio (modo directo)
+  const body: Record<string, unknown> = { prompt, resolution: "2k", aspect_ratio: "1:1", enhance_prompt: false };
+  if (refs && refs.length) body.image_urls = refs.slice(0, 2);
+  return hfSubmitPoll(key, "/marketing-studio/image", body);
 }
 
 Deno.serve(async (req) => {
@@ -114,10 +118,14 @@ TEXTO DENTRO DE LA IMAGEN:
 
 REFERENCIAS: si hay referencias cargadas, usalas como guía de estilo/estética y mantené esa dirección visual en TODA la serie.
 
+ELEGÍ EL MOTOR (uno para toda la pieza, según la idea):
+- "marketing-studio": imágenes publicitarias / de campaña, producto, placas premium, avisos de marca.
+- "grok": escenas fotográficas o cinematográficas realistas, lifestyle visual, o cuando hay varias referencias.
+
 DESCRIPCIÓN (caption): español rioplatense, gancho en la primera línea, desarrollo corto, un CTA claro, y 3-5 hashtags relevantes.
 
 SALIDA: SOLO este JSON válido, sin texto extra:
-{"prompts":["prompt imagen 1","..."],"descripcion":"caption del post"}
+{"motor":"marketing-studio","prompts":["prompt imagen 1","..."],"descripcion":"caption del post"}
 Exactamente ${n} prompts.`;
     const user = `IDEA: ${pieza.idea || "(sin idea)"}\nReferencias cargadas: ${refs.length}\nCantidad de imágenes: ${n}`;
     const lr = await fetch("https://api.anthropic.com/v1/messages", {
@@ -136,7 +144,8 @@ Exactamente ${n} prompts.`;
     if (!prompts.length) return json({ error: "El LLM no armó prompts" }, 502);
 
     // 2) Generar cada imagen en paralelo con Higgsfield
-    const resultados = await Promise.allSettled(prompts.map((p) => hfMarketingStudio(HF_KEY, p, refs)));
+    const motor = (plan.motor === "grok" || plan.motor === "marketing-studio") ? plan.motor : (pieza.motor || "marketing-studio");
+    const resultados = await Promise.allSettled(prompts.map((p) => generarImagen(HF_KEY, motor, p, refs)));
 
     // 3) Descargar las que salieron y subirlas a Storage
     const urls: string[] = [];
@@ -162,7 +171,7 @@ Exactamente ${n} prompts.`;
       imagenes: urls,
       descripcion: plan.descripcion || pieza.descripcion || null,
       prompt: prompts.join("\n---\n"),
-      motor: "marketing-studio",
+      motor,
       updated_at: new Date().toISOString(),
     }).eq("id", pieza_id);
     if (ue) return json({ error: "No se pudo guardar: " + ue.message }, 500);
