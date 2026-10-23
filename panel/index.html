@@ -482,7 +482,7 @@ let vendedores = [];
 let comisionMes = null; // 'YYYY-MM' seleccionado en la sección Comisiones (null = mes actual)
 let busquedas = [];
 let recetas = [];
-let contenidoPiezas=[]; let contCuenta='ag', contLote=[{idea:""}], contSel=null;
+let contenidoPiezas=[]; let contCuenta='ag', contLote=[{idea:"",refs:[]}], contSel=null, contRefTarget=0, contMicOn={}, contRec=null;
 let callLeadId = null, closeLeadId = null;
 let callLang = null; // idioma del micrófono en la llamada (es/en); por defecto, el del lead
 let verLlamadaId = null; // visor de transcripción abierto
@@ -1345,14 +1345,19 @@ function calProximosHtml(){
 async function contCargar(){ if(!sb) return; const r=await sb.from("contenido_piezas").select("*").order("orden",{ascending:true}); contenidoPiezas=(r&&!r.error&&r.data)?r.data:[]; }
 function contSetCuenta(c){ contCuenta=c; contSel=null; renderContenido(); }
 function contIdea(i,v){ if(contLote[i]) contLote[i].idea=v; }
-function contAdd(){ contLote.push({idea:""}); renderContenido(); }
-function contDel(i){ contLote.splice(i,1); if(!contLote.length) contLote.push({idea:""}); renderContenido(); }
+function contAdd(){ contLote.push({idea:"",refs:[]}); renderContenido(); }
+function contDel(i){ contLote.splice(i,1); if(!contLote.length) contLote.push({idea:"",refs:[]}); renderContenido(); }
 function contSelPieza(id){ contSel=id; renderContenido(); }
+function contMic(i){var b=document.getElementById('cmic'+i);var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){note('Para dictar usá Chrome; acá escribí la idea');return;}if(contMicOn[i]){if(contRec)contRec.stop();return;}contMicOn[i]=true;if(b){b.style.borderColor='var(--bad)';b.style.color='var(--bad)';}contRec=new SR();contRec.lang='es-ES';contRec.interimResults=true;contRec.continuous=false;contRec.onresult=function(e){var t='';for(var k=0;k<e.results.length;k++)t+=e.results[k][0].transcript;if(contLote[i])contLote[i].idea=t;var ta=document.getElementById('cidea'+i);if(ta)ta.value=t;};contRec.onend=function(){contMicOn[i]=false;if(b){b.style.borderColor='';b.style.color='';}};contRec.onerror=function(ev){contMicOn[i]=false;if(b){b.style.borderColor='';b.style.color='';}note(ev&&ev.error==='not-allowed'?'No pude usar el micrófono. Usá Chrome y permití el micrófono':'No se pudo dictar; escribí la idea');};contRec.start();}
+function contRefAdd(i){contRefTarget=i;var f=document.getElementById('contfile');if(f){f.value='';f.click();}}
+async function contRefFile(ev){var files=ev.target.files;if(!files||!files.length)return;var i=contRefTarget,it=contLote[i];if(!it)return;it.refs=it.refs||[];for(var k=0;k<files.length;k++){if(it.refs.length>=8)break;var file=files[k];var path='ref/'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'-'+String(file.name||'img').replace(/[^\w.]+/g,'_');var up=await sb.storage.from('contenido').upload(path,file);if(up.error){note('No se pudo subir: '+up.error.message);continue;}var pub=sb.storage.from('contenido').getPublicUrl(path);it.refs.push(pub.data.publicUrl);}renderContenido();}
+function contRefDel(i,j){if(contLote[i]&&contLote[i].refs){contLote[i].refs.splice(j,1);renderContenido();}}
+
 async function contGen(){
   const items=contLote.filter(x=>String(x.idea||"").trim());
   if(!items.length){ note("Escribí al menos una idea."); return; }
   const lote="L"+Date.now();
-  const rows=items.map((x,i)=>({cuenta:contCuenta, lote, orden:i, idea:String(x.idea).trim(), estado:"pendiente"}));
+  const rows=items.map((x,i)=>({cuenta:contCuenta, lote, orden:i, idea:String(x.idea).trim(), referencias:(x.refs||[]).map(u=>({url:u})), estado:"pendiente"}));
   const {error}=await sb.from("contenido_piezas").insert(rows);
   if(error){ note("No se pudo guardar: "+error.message); return; }
   contLote=[{idea:""}]; await contCargar(); renderContenido();
@@ -1385,10 +1390,20 @@ async function contBorrar(id){
 function renderContenido(){
   const piezas=contenidoPiezas.filter(p=>p.cuenta===contCuenta);
   const L_EST={pendiente:"Pendiente",aprobado:"Aprobado",rechazado:"Rechazado",programado:"Programado",publicado:"Publicado"};
-  const arm=contLote.map((it,i)=>`<div style="border:1px solid var(--hair2);border-radius:12px;padding:12px;margin-bottom:10px">
+  const MIC='<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 14a3 3 0 003-3V6a3 3 0 00-6 0v5a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.9V21h2v-3.1A7 7 0 0019 11h-2z"/></svg>';
+  const arm=contLote.map((it,i)=>{
+    const refs=(it.refs||[]).map((u,j)=>`<div style="position:relative;width:46px;height:46px;border-radius:7px;overflow:hidden;border:1px solid var(--hair2)"><img src="${esc(u)}" style="width:100%;height:100%;object-fit:cover"><button onclick="contRefDel(${i},${j})" style="position:absolute;top:1px;right:1px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:none;cursor:pointer;font-size:11px;line-height:1;padding:0">×</button></div>`).join("");
+    const plus=(it.refs||[]).length<8?`<button onclick="contRefAdd(${i})" title="Subir referencias (hasta 8)" style="width:46px;height:46px;border-radius:7px;border:1px dashed var(--hair);background:transparent;color:var(--muted);font-size:20px;cursor:pointer">+</button>`:"";
+    return `<div style="border:1px solid var(--hair2);border-radius:12px;padding:12px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:var(--accent);font-size:13px">Carrusel ${i+1}</b>${contLote.length>1?`<button class="linkbtn" onclick="contDel(${i})">Quitar</button>`:""}</div>
-      <textarea oninput="contIdea(${i},this.value)" placeholder="Idea de este carrusel… qué dice. Podés aclarar cuántas imágenes (ej: carrusel de 5)" style="width:100%;min-height:54px">${esc(it.idea||"")}</textarea>
-    </div>`).join("");
+      <div style="display:flex;gap:8px;align-items:stretch">
+        <textarea id="cidea${i}" oninput="contIdea(${i},this.value)" placeholder="Idea de este carrusel… qué dice. Podés aclarar cuántas imágenes (ej: carrusel de 5)" style="flex:1;min-height:54px">${esc(it.idea||"")}</textarea>
+        <button id="cmic${i}" onclick="contMic(${i})" title="Dictar (en Chrome)" style="flex:0 0 44px;background:transparent;border:1px solid var(--hair2);border-radius:9px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center">${MIC}</button>
+      </div>
+      <div style="margin:11px 0 7px;font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)">Referencias (${(it.refs||[]).length}/8)</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">${refs}${plus}</div>
+    </div>`;
+  }).join("");
   const cola=piezas.length?piezas.map(p=>{
     const dot=(p.estado==="aprobado"||p.estado==="programado")?"var(--ok)":p.estado==="rechazado"?"var(--bad)":p.estado==="publicado"?"#8ab4f8":"var(--warn)";
     const dh=p.fecha_pub?`${esc(p.fecha_pub)}${p.hora_pub?" · "+esc(p.hora_pub):""}`:"sin fecha";
@@ -1415,7 +1430,7 @@ function renderContenido(){
       </div>
     </div>`:`<div class="empty"><b>Elegí una pieza de la cola</b><br>para editarla y programarla.</div>`;
   $app().innerHTML=`<div class="bar"><h2><span class="tick"></span>Contenido — Instagram</h2></div>
-  <div class="wrap" style="max-width:1080px">
+  <div class="wrap" style="max-width:1080px"><input type="file" id="contfile" accept="image/*" multiple style="display:none" onchange="contRefFile(event)">
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <button class="btn sm ${contCuenta==="ag"?"":"ghost"}" onclick="contSetCuenta('ag')">LORENZO Agency</button>
       <button class="btn sm ${contCuenta==="pe"?"":"ghost"}" onclick="contSetCuenta('pe')">Facundo Lorenzo</button>
