@@ -1365,10 +1365,16 @@ async function contGen(){
   if(!items.length){ note("Escribí al menos una idea."); return; }
   const lote="L"+Date.now();
   const rows=items.map((x,i)=>({cuenta:contCuenta, lote, orden:i, idea:String(x.idea).trim(), referencias:(x.refs||[]).map(u=>({url:u})), estado:"pendiente"}));
-  const {error}=await sb.from("contenido_piezas").insert(rows);
+  const {data:ins, error}=await sb.from("contenido_piezas").insert(rows).select();
   if(error){ note("No se pudo guardar: "+error.message); return; }
-  contLote=[{idea:""}]; await contCargar(); renderContenido();
-  note(items.length+" pieza(s) en la cola.");
+  contLote=[{idea:"",refs:[]}]; await contCargar(); renderContenido();
+  note((ins?ins.length:items.length)+" pieza(s) en la cola. Generando imágenes… (tarda unos minutos)");
+  (ins||[]).forEach(function(p){
+    callFn("generar-contenido",{pieza_id:p.id}).then(function(r){
+      if(r&&r.ok){ contCargar().then(function(){ if(tab==="contenido") renderContenido(); }); note("🎨 Imágenes listas para una pieza"); }
+      else if(r&&r.error){ note("Generación: "+r.error); }
+    }).catch(function(e){ note("Generación falló: "+(e&&e.message?e.message:e)); });
+  });
 }
 async function contDecide(id,estado){
   const {error}=await sb.from("contenido_piezas").update({estado, updated_at:new Date().toISOString()}).eq("id",id);
@@ -1414,8 +1420,10 @@ function renderContenido(){
   const cola=piezas.length?piezas.map(p=>{
     const dot=(p.estado==="aprobado"||p.estado==="programado")?"var(--ok)":p.estado==="rechazado"?"var(--bad)":p.estado==="publicado"?"#8ab4f8":"var(--warn)";
     const dh=p.fecha_pub?`${esc(p.fecha_pub)}${p.hora_pub?" · "+esc(p.hora_pub):""}`:"sin fecha";
+    const img0=(Array.isArray(p.imagenes)&&p.imagenes[0])?p.imagenes[0]:null;
     return `<div onclick="contSelPieza('${p.id}')" style="border:1px solid ${contSel===p.id?"var(--accent)":"var(--hair2)"};border-radius:11px;padding:11px;margin-bottom:8px;cursor:pointer;display:flex;gap:10px;align-items:center">
       <span style="width:9px;height:9px;border-radius:50%;background:${dot};flex:none"></span>
+      ${img0?`<img src="${esc(img0)}" style="width:42px;height:42px;border-radius:7px;object-fit:cover;flex:none">`:""}
       <div style="flex:1;min-width:0"><div class="bs" style="color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((p.idea||"(sin idea)").slice(0,70))}</div>
       <div class="bs" style="font-size:11px">${L_EST[p.estado]||p.estado} · ${dh}</div></div></div>`;
   }).join(""):`<div class="empty"><b>Sin piezas todavía.</b><br>Armá un lote arriba y tocá Generar.</div>`;
@@ -1423,6 +1431,7 @@ function renderContenido(){
   const editor=sel?`<div class="bcard">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="bt">Pieza</span><button class="btn sm ghost btn-del" onclick="contBorrar('${sel.id}')" title="Borrar">${typeof ICON_TRASH!=="undefined"?ICON_TRASH:"🗑"}</button></div>
       <div class="bs" style="margin-bottom:14px;color:var(--fg)"><b>Idea:</b> ${esc(sel.idea||"")}</div>
+      ${(Array.isArray(sel.imagenes)&&sel.imagenes.length)?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">${sel.imagenes.map(u=>`<img src="${esc(u)}" style="width:120px;height:120px;border-radius:10px;object-fit:cover;border:1px solid var(--hair2)">`).join("")}</div>`:`<div class="bs" style="margin-bottom:16px;color:var(--muted)">⏳ Sin imágenes todavía (en generación, o aún no se generó).</div>`}
       <label class="bs" style="display:block;margin-bottom:6px">Descripción del post</label>
       <textarea id="cdesc" style="width:100%;min-height:120px">${esc(sel.descripcion||"")}</textarea>
       <button class="btn sm ghost" style="margin-top:8px" onclick="contDesc('${sel.id}')">Guardar descripción</button>
