@@ -95,16 +95,30 @@ Deno.serve(async (req) => {
 
     // 1) El LLM arma los prompts (uno por imagen) + la descripción del post
     const sys = `Sos el director creativo de LORENZO Agency (agencia de marketing en Miami). A partir de una IDEA en criollo,
-armás los prompts para generar un carrusel de Instagram con "Marketing Studio Image" (imágenes publicitarias/de campaña).
-Reglas para que salga bien a la primera (y no gastar créditos):
-- Cada prompt: específico y en INGLÉS, con estructura [sujeto] + [acción] + [contexto/lugar] + [composición] + [estilo] + [luz].
-- Estética publicitaria/campaña premium, coherente entre las ${n} imágenes (mismo mundo visual).
-- Enmarcado en POSITIVO (nunca "sin X"). Si va texto en la imagen, ponelo entre comillas y describí la tipografía.
-- Las referencias cargadas guían el estilo; respetá esa dirección visual.
-- La descripción (caption) va en español rioplatense, con gancho y un CTA, + 3-5 hashtags.
-Devolvé SOLO este JSON válido, sin texto extra:
+armás los prompts para un carrusel de Instagram generado con "Marketing Studio Image" (imágenes publicitarias premium).
+OBJETIVO: que cada imagen salga USABLE A LA PRIMERA, sin desperdiciar créditos.
+
+ESTRUCTURA de cada prompt (en INGLÉS, en una frase rica y específica):
+[sujeto concreto + materiales] + [acción] + [contexto/lugar] + [composición y encuadre] + [estilo visual] + [iluminación] + [calidad].
+
+REGLAS DE CALIDAD (obligatorias):
+- Estética publicitaria PREMIUM para público de Miami (latino, aspiracional). Mundo visual COHERENTE entre las ${n} imágenes: misma paleta, misma luz, mismo estilo — como UNA campaña.
+- La PRIMERA imagen es la PORTADA: la más potente, scroll-stopper (gancho visual fuerte). Las siguientes desarrollan la idea.
+- Encuadre LIMPIO dejando AIRE / espacio negativo en una zona (arriba o a un costado) para poder sumar texto después.
+- Enmarcá SIEMPRE en POSITIVO (describí lo que SÍ querés; nunca "sin X").
+- Calidad al final de cada prompt: "high detail, sharp focus, professional studio photography" (o "clean premium 3D render" si es gráfico/producto).
+
+TEXTO DENTRO DE LA IMAGEN:
+- Por defecto NO pongas texto: el copy va en el caption. Terminá cada prompt con: ", no text, no watermark, no logos, no gibberish".
+- SOLO si la idea pide una placa/título dentro de la imagen: escribí las palabras EXACTAS entre comillas, cortas, en español, y describí la tipografía (ej: 'bold clean sans-serif, white'). Nada de párrafos.
+
+REFERENCIAS: si hay referencias cargadas, usalas como guía de estilo/estética y mantené esa dirección visual en TODA la serie.
+
+DESCRIPCIÓN (caption): español rioplatense, gancho en la primera línea, desarrollo corto, un CTA claro, y 3-5 hashtags relevantes.
+
+SALIDA: SOLO este JSON válido, sin texto extra:
 {"prompts":["prompt imagen 1","..."],"descripcion":"caption del post"}
-Deben ser exactamente ${n} prompts.`;
+Exactamente ${n} prompts.`;
     const user = `IDEA: ${pieza.idea || "(sin idea)"}\nReferencias cargadas: ${refs.length}\nCantidad de imágenes: ${n}`;
     const lr = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
