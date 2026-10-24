@@ -56,18 +56,19 @@ async function hfSubmitPoll(key: string, endpoint: string, body: Record<string, 
 
 // Router de motores: arma el body según el motor y llama a Higgsfield.
 function generarImagen(key: string, motor: string, prompt: string, refs: string[]): Promise<string> {
+  // Formato Instagram 2026: 3:4 vertical (1080x1440)
   if (motor === "grok") {
-    const body: Record<string, unknown> = { prompt, quality: "medium", resolution: "2k", aspect_ratio: "1:1" };
+    const body: Record<string, unknown> = { prompt, quality: "medium", resolution: "2k", aspect_ratio: "3:4" };
     if (refs && refs.length) body.image_urls = refs.slice(0, 10);   // Grok acepta hasta 10
     return hfSubmitPoll(key, "/xai/grok-imagine-image-2.0", body);
   }
   if (motor === "recraft") {
     // Recraft V4.1 text-to-image: placas con texto, diseño gráfico, vectorial. NO usa referencias.
-    const body: Record<string, unknown> = { prompt, resolution: "2k", aspect_ratio: "1:1", output_format: "png" };
+    const body: Record<string, unknown> = { prompt, resolution: "2k", aspect_ratio: "3:4", output_format: "png" };
     return hfSubmitPoll(key, "/recraft/v4.1/text-to-image", body);
   }
   // default: marketing-studio (modo directo)
-  const body: Record<string, unknown> = { prompt, resolution: "2k", aspect_ratio: "1:1", enhance_prompt: false };
+  const body: Record<string, unknown> = { prompt, resolution: "2k", aspect_ratio: "3:4", enhance_prompt: false };
   if (refs && refs.length) body.image_urls = refs.slice(0, 2);
   return hfSubmitPoll(key, "/marketing-studio/image", body);
 }
@@ -112,14 +113,19 @@ ESTRUCTURA de cada prompt (en INGLÉS, en una frase rica y específica):
 
 REGLAS DE CALIDAD (obligatorias):
 - Estética publicitaria PREMIUM para público de Miami (latino, aspiracional). Mundo visual COHERENTE entre las ${n} imágenes: misma paleta, misma luz, mismo estilo — como UNA campaña.
-- La PRIMERA imagen es la PORTADA: la más potente, scroll-stopper (gancho visual fuerte). Las siguientes desarrollan la idea.
-- Encuadre LIMPIO dejando AIRE / espacio negativo en una zona (arriba o a un costado) para poder sumar texto después.
 - Enmarcá SIEMPRE en POSITIVO (describí lo que SÍ querés; nunca "sin X").
 - Calidad al final de cada prompt: "high detail, sharp focus, professional studio photography" (o "clean premium 3D render" si es gráfico/producto).
 
+REGLAS DE CARRUSEL (formato Instagram 2026 — obligatorias):
+- Formato VERTICAL 3:4 (1080x1440). ZONA SEGURA: nada importante pegado a los bordes — dejá ~12% de aire arriba y abajo y ~5% a los costados (la interfaz de Instagram tapa esas zonas). Componé con el contenido clave centrado.
+- ESTRUCTURA (adaptala a ${n} imágenes): la 1ª es el GANCHO que detiene el scroll (frase o visual potente, intriga o beneficio claro — nunca aburrido); las del medio aportan VALOR con ejemplos concretos y diagramas simples que mantienen la atención; la ÚLTIMA cierra con UNA llamada a la acción simple. Nunca vendas antes de aportar valor. Cada slide tiene que dar un motivo para deslizar a la siguiente.
+- JERARQUÍA DE LECTURA: UN solo mensaje por imagen. El título grande se lee primero, después el subtítulo, después el detalle. Orden visual claro y guiado.
+- CONTRASTE ALTO: texto y elementos clave siempre muy legibles contra el fondo (pensado para pantalla de teléfono). Colores legibles y llamativos, nunca paleta lavada.
+- IMÁGENES INTEGRADAS: todo elemento visual integrado al diseño y al fondo (mismo mundo visual, luz y sombras coherentes) — nunca una foto "plana" pegada con bordes que no dialogan con el fondo.
+
 TEXTO DENTRO DE LA IMAGEN:
-- Por defecto NO pongas texto: el copy va en el caption. Terminá cada prompt con: ", no text, no watermark, no logos, no gibberish".
-- SOLO si la idea pide una placa/título dentro de la imagen: escribí las palabras EXACTAS entre comillas, cortas, en español, y describí la tipografía (ej: 'bold clean sans-serif, white'). Nada de párrafos.
+- Carrusel FOTOGRÁFICO (escenas, lifestyle, campaña visual): SIN texto — el copy va en el caption. Encuadre limpio con aire/espacio negativo en una zona. Terminá cada prompt con: ", no text, no watermark, no logos, no gibberish".
+- Carrusel INFORMATIVO (placas con consejos/datos — usá "recraft"): SÍ lleva texto diseñado. Escribí las palabras EXACTAS entre comillas, CORTAS, en español: un título grande por slide (máx 6 palabras) + una línea de apoyo. Describí la tipografía (ej: 'bold clean sans-serif') y pedí contraste alto contra el fondo. Nada de párrafos.
 
 REFERENCIAS: si hay referencias cargadas, usalas como guía de estilo/estética y mantené esa dirección visual en TODA la serie.
 
