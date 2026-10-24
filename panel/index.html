@@ -1527,6 +1527,12 @@ function contPkRender(){
     else{ const tg=hs.querySelector('.cpk-h.on')||hs.querySelector('[data-t="18:00"]'); if(tg) hs.scrollTop=Math.max(0,tg.offsetTop-hs.offsetTop-80); }
   }
 }
+function contBorrarAsk(btn,id){
+  if(btn.dataset.arm==="1"){ contBorrar(id); return; }
+  btn.dataset.arm="1"; btn.textContent="¿Borrar?";
+  btn.style.width="auto"; btn.style.padding="0 10px"; btn.style.borderColor="var(--bad)"; btn.style.color="var(--bad)"; btn.style.fontSize="11px";
+  setTimeout(function(){ if(btn&&btn.isConnected){ btn.dataset.arm=""; btn.textContent="×"; btn.style.width="24px"; btn.style.padding="0"; btn.style.borderColor="var(--hair2)"; btn.style.color="var(--muted)"; btn.style.fontSize="13px"; } },2600);
+}
 async function contBorrar(id){
   const {error}=await sb.from("contenido_piezas").delete().eq("id",id);
   if(error){ note("Error: "+error.message); return; }
@@ -1557,7 +1563,8 @@ function renderContenido(){
       <span style="width:9px;height:9px;border-radius:50%;background:${dot};flex:none"></span>
       ${img0?`<img src="${esc(img0)}" style="width:42px;height:42px;border-radius:7px;object-fit:cover;flex:none">`:""}
       <div style="flex:1;min-width:0"><div class="bs" style="color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((p.idea||"(sin idea)").slice(0,70))}</div>
-      <div class="bs" style="font-size:11px">${L_EST[p.estado]||p.estado} · ${dh}</div></div></div>`;
+      <div class="bs" style="font-size:11px">${L_EST[p.estado]||p.estado} · ${dh}</div></div>
+      <button onclick="event.stopPropagation();contBorrarAsk(this,'${p.id}')" title="Eliminar pieza" style="flex:none;width:24px;height:24px;border-radius:7px;border:1px solid var(--hair2);background:transparent;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:0">×</button></div>`;
   }).join(""):`<div class="empty"><b>Sin piezas todavía.</b><br>Armá un lote arriba y tocá Generar.</div>`;
   let sel=piezas.find(p=>p.id===contSel);
   if(!sel&&piezas.length){ sel=piezas[0]; contSel=sel.id; }
