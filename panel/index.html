@@ -1436,6 +1436,13 @@ async function contDecide(id,estado){
   if(error){ note("Error: "+error.message); return; }
   await contCargar(); renderContenido(); note(estado==="aprobado"?"Aprobado.":"Rechazado.");
 }
+async function contIdeaSave(id){
+  const el=document.getElementById("cidea-ed"); const v=el?el.value.trim():"";
+  if(!v){ note("La idea no puede quedar vacía."); return; }
+  const {error}=await sb.from("contenido_piezas").update({idea:v, updated_at:new Date().toISOString()}).eq("id",id);
+  if(error){ note("Error: "+error.message); return; }
+  await contCargar(); renderContenido(); note("Idea guardada. Regenerá las imágenes para que el carrusel use la idea nueva.");
+}
 async function contDesc(id){
   const el=document.getElementById("cdesc"); const v=el?el.value:"";
   const {error}=await sb.from("contenido_piezas").update({descripcion:v, updated_at:new Date().toISOString()}).eq("id",id);
@@ -1556,7 +1563,9 @@ function renderContenido(){
   if(!sel&&piezas.length){ sel=piezas[0]; contSel=sel.id; }
   const editor=sel?`<div class="bcard">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="bt">Pieza</span><button class="btn sm ghost btn-del" onclick="contBorrar('${sel.id}')" title="Borrar">${typeof ICON_TRASH!=="undefined"?ICON_TRASH:"🗑"}</button></div>
-      <div class="bs" style="margin-bottom:14px;color:var(--fg)"><b>Idea:</b> ${esc(sel.idea||"")}</div>
+      <label class="bs" style="display:block;margin-bottom:6px">Idea</label>
+      <textarea id="cidea-ed" style="width:100%;min-height:60px">${esc(sel.idea||"")}</textarea>
+      <div style="display:flex;gap:10px;margin:8px 0 14px;flex-wrap:wrap"><button class="btn sm ghost" onclick="contIdeaSave('${sel.id}')">Guardar idea</button>${(Array.isArray(sel.imagenes)&&sel.imagenes.length)?`<button class="btn sm ghost" onclick="contGenUna('${sel.id}')">↻ Regenerar imágenes</button>`:""}</div>
       ${contPreviewIG(sel)}
       <label class="bs" style="display:block;margin-bottom:6px">Descripción del post</label>
       <textarea id="cdesc" oninput="contDescLive(this.value)" style="width:100%;min-height:120px">${esc(sel.descripcion||"")}</textarea>
