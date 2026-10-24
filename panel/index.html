@@ -491,6 +491,14 @@ const IG_COMMENT='<svg viewBox="0 0 24 24" width="23" height="23" fill="none" st
 const IG_SHARE='<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
 const IG_BOOK='<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>';
 function contPrevNav(d){ const sel=contenidoPiezas.find(p=>p.id===contSel); const n=(sel&&Array.isArray(sel.imagenes))?sel.imagenes.length:0; if(!n) return; contPrevIdx=(contPrevIdx+d+n)%n; renderContenido(); }
+async function contGenUna(id){
+  note("✦ Generando imágenes… (tarda unos minutos, no cierres el panel)");
+  try{
+    const r=await callFn("generar-contenido",{pieza_id:id});
+    if(r&&r.ok){ await contCargar(); if(tab==="contenido") renderContenido(); note("🎨 Imágenes listas"); }
+    else note("Generación: "+((r&&r.error)||"error desconocido"));
+  }catch(e){ note("Generación falló: "+(e&&e.message?e.message:e)); }
+}
 function contPreviewIG(sel){
   const imgs=Array.isArray(sel.imagenes)?sel.imagenes:[]; const n=imgs.length;
   if(contPrevIdx>=n) contPrevIdx=0;
@@ -498,7 +506,11 @@ function contPreviewIG(sel){
   const cur=n?imgs[contPrevIdx]:null;
   const imgHtml=cur
     ?`<img src="${esc(cur)}" style="width:100%;height:100%;object-fit:cover;display:block">`
-    :`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#9a9a9a;font-size:12px;text-align:center;padding:24px">Las imágenes del carrusel aparecen acá cuando se generan</div>`;
+    :`<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:linear-gradient(135deg,#17171a 0%,#242428 55%,#1b1b1f 100%);text-align:center;padding:24px">
+        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#DD7D47" stroke-width="1.4"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.8"/><path d="M21 15.5l-4.5-4.5L6 21.5"/></svg>
+        <div style="font-size:12.5px;color:#b9b9b9;max-width:230px;line-height:1.55">Las imágenes del carrusel van a aparecer acá apenas se generen.</div>
+        <button onclick="contGenUna('${sel.id}')" style="background:#DD7D47;color:#1b1105;border:none;border-radius:20px;padding:8px 18px;font-weight:700;font-size:12.5px;cursor:pointer">✦ Generar imágenes</button>
+      </div>`;
   const nav=n>1?`
     <button onclick="contPrevNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.9);border:none;cursor:pointer;font-size:17px;color:#111;display:flex;align-items:center;justify-content:center;padding:0">&#8249;</button>
     <button onclick="contPrevNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.9);border:none;cursor:pointer;font-size:17px;color:#111;display:flex;align-items:center;justify-content:center;padding:0">&#8250;</button>
@@ -524,7 +536,7 @@ function contPreviewIG(sel){
       <span style="display:inline-flex">${IG_SHARE}</span>
       <span style="margin-left:auto;display:inline-flex">${IG_BOOK}</span>
     </div>
-    <div style="padding:2px 12px;font-weight:600;font-size:13px">Me gusta y comentarios reales cuando se publique</div>
+    <div style="padding:2px 12px;font-size:11.5px;color:#8e8e8e">Los me gusta y comentarios aparecen al publicarse</div>
     <div style="padding:4px 12px 2px;font-size:13px"><span style="font-weight:600">${C.user}</span> ${cap}</div>
     <div style="padding:10px 12px 12px;display:flex;gap:6px;flex-wrap:wrap">${chip('🎵','Audio')}${chip('👥','Colaboración')}${chip('🏷','Etiqueta')}</div>
   </div>`;
@@ -1470,7 +1482,8 @@ function renderContenido(){
       <div style="flex:1;min-width:0"><div class="bs" style="color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((p.idea||"(sin idea)").slice(0,70))}</div>
       <div class="bs" style="font-size:11px">${L_EST[p.estado]||p.estado} · ${dh}</div></div></div>`;
   }).join(""):`<div class="empty"><b>Sin piezas todavía.</b><br>Armá un lote arriba y tocá Generar.</div>`;
-  const sel=piezas.find(p=>p.id===contSel);
+  let sel=piezas.find(p=>p.id===contSel);
+  if(!sel&&piezas.length){ sel=piezas[0]; contSel=sel.id; }
   const editor=sel?`<div class="bcard">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span class="bt">Pieza</span><button class="btn sm ghost btn-del" onclick="contBorrar('${sel.id}')" title="Borrar">${typeof ICON_TRASH!=="undefined"?ICON_TRASH:"🗑"}</button></div>
       <div class="bs" style="margin-bottom:14px;color:var(--fg)"><b>Idea:</b> ${esc(sel.idea||"")}</div>
