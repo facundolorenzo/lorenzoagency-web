@@ -537,7 +537,7 @@ function contPreviewIG(sel){
       <span style="margin-left:auto;display:inline-flex">${IG_BOOK}</span>
     </div>
     <div style="padding:2px 12px;font-size:11.5px;color:#8e8e8e">Los me gusta y comentarios aparecen al publicarse</div>
-    <div style="padding:4px 12px 2px;font-size:13px"><span style="font-weight:600">${C.user}</span> ${cap}</div>
+    <div style="padding:4px 12px 2px;font-size:13px"><span style="font-weight:600">${C.user}</span> <span id="cprev-cap">${cap}</span></div>
     <div style="padding:10px 12px 12px;display:flex;gap:6px;flex-wrap:wrap">${chip('🎵','Audio')}${chip('👥','Colaboración')}${chip('🏷','Etiqueta')}</div>
   </div>`;
 }
@@ -1442,13 +1442,83 @@ async function contDesc(id){
   if(error){ note("Error: "+error.message); return; }
   await contCargar(); note("Descripción guardada.");
 }
-async function contProg(id){
-  const d=document.getElementById("cprog-d"), hh=document.getElementById("cprog-h");
-  const dia=d?d.value:"", hora=hh?hh.value:"";
-  if(!dia){ note("Elegí el día."); return; }
-  const {error}=await sb.from("contenido_piezas").update({fecha_pub:dia, hora_pub:hora||null, estado:"programado", updated_at:new Date().toISOString()}).eq("id",id);
+function contDescLive(v){ const el=document.getElementById('cprev-cap'); if(el){ el.innerHTML=v?esc(v).replace(/\n/g,'<br>'):'<span style="color:#8e8e8e">La descripción del post aparece acá…</span>'; } }
+let contPk={id:null,y:0,m:0,d:null,hora:null};
+const CPK_MES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+function contProgOpen(id){
+  const sel=contenidoPiezas.find(p=>p.id===id); const hoy=new Date();
+  let y=hoy.getFullYear(), m=hoy.getMonth(), d=null, hora=null;
+  if(sel&&sel.fecha_pub){ const pa=String(sel.fecha_pub).split("-"); y=+pa[0]; m=+pa[1]-1; d=+pa[2]; }
+  if(sel&&sel.hora_pub) hora=String(sel.hora_pub).slice(0,5);
+  contPk={id:id,y:y,m:m,d:d,hora:hora};
+  contPkRender();
+}
+function contPkNav(dir){ contPk.m+=dir; if(contPk.m<0){contPk.m=11;contPk.y--;} if(contPk.m>11){contPk.m=0;contPk.y++;} contPkRender(); }
+function contPkDia(d){ contPk.d=d; contPkRender(); }
+function contPkHora(h){ contPk.hora=h; contPkRender(); }
+function contPkClose(){ const o=document.getElementById('cpkov'); if(o)o.remove(); }
+async function contPkOk(){
+  if(!contPk.d){ note("Elegí el día."); return; }
+  if(!contPk.hora){ note("Elegí la hora."); return; }
+  const f=contPk.y+"-"+String(contPk.m+1).padStart(2,"0")+"-"+String(contPk.d).padStart(2,"0");
+  const {error}=await sb.from("contenido_piezas").update({fecha_pub:f, hora_pub:contPk.hora, estado:"programado", updated_at:new Date().toISOString()}).eq("id",contPk.id);
   if(error){ note("Error: "+error.message); return; }
-  await contCargar(); renderContenido(); note("Programado.");
+  contPkClose(); await contCargar(); renderContenido(); note("📅 Programado: "+f+" · "+contPk.hora+" hs");
+}
+function contPkRender(){
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const first=new Date(contPk.y,contPk.m,1);
+  let off=first.getDay()-1; if(off<0)off=6;
+  const nd=new Date(contPk.y,contPk.m+1,0).getDate();
+  const celdas=[]; for(let i=0;i<off;i++)celdas.push("<span></span>");
+  for(let d=1;d<=nd;d++){
+    const fe=new Date(contPk.y,contPk.m,d); const past=fe<hoy;
+    const esHoy=fe.getTime()===hoy.getTime(); const on=contPk.d===d;
+    celdas.push(`<button class="cpk-d${on?" on":""}${esHoy?" today":""}"${past?" disabled":""} onclick="contPkDia(${d})">${d}</button>`);
+  }
+  const horas=[]; for(let h=0;h<24;h++)for(const mm of ["00","30"]){ const t=String(h).padStart(2,"0")+":"+mm; horas.push(`<button class="cpk-h${contPk.hora===t?" on":""}" data-t="${t}" onclick="contPkHora('${t}')">${t}</button>`); }
+  const res=(contPk.d&&contPk.hora)?`${String(contPk.d).padStart(2,"0")}/${String(contPk.m+1).padStart(2,"0")}/${contPk.y} · ${contPk.hora} hs`:"Elegí día y hora";
+  const html=`<style>
+    #cpkov .cpk-d{width:36px;height:36px;border-radius:50%;border:1px solid transparent;background:transparent;color:var(--fg);cursor:pointer;font-size:13px;margin:0 auto;display:flex;align-items:center;justify-content:center;transition:all .12s}
+    #cpkov .cpk-d:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+    #cpkov .cpk-d.today{border-color:var(--hair)}
+    #cpkov .cpk-d.on{background:var(--accent);color:#1b1105;font-weight:700;border-color:var(--accent)}
+    #cpkov .cpk-d:disabled{opacity:.25;cursor:default}
+    #cpkov .cpk-h{width:100%;padding:8px 0;margin-bottom:6px;border-radius:9px;border:1px solid var(--hair2);background:transparent;color:var(--fg);cursor:pointer;font-size:12.5px;font-family:var(--mono,inherit);transition:all .12s}
+    #cpkov .cpk-h:hover{border-color:var(--accent);color:var(--accent)}
+    #cpkov .cpk-h.on{background:var(--accent);color:#1b1105;font-weight:700;border-color:var(--accent)}
+    #cpkov .cpk-nav{width:30px;height:30px;border-radius:8px;border:1px solid var(--hair2);background:transparent;color:var(--fg);cursor:pointer;font-size:15px}
+    #cpkov .cpk-nav:hover{border-color:var(--accent);color:var(--accent)}
+  </style>
+  <div style="background:var(--card);border:1px solid var(--hair2);border-radius:18px;padding:22px;width:min(620px,94vw)" onclick="event.stopPropagation()">
+    <div style="display:flex;gap:22px;flex-wrap:wrap">
+      <div style="flex:1;min-width:270px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <b style="font-size:14px">${CPK_MES[contPk.m]} ${contPk.y}</b>
+          <span style="display:flex;gap:6px"><button class="cpk-nav" onclick="contPkNav(-1)">&#8249;</button><button class="cpk-nav" onclick="contPkNav(1)">&#8250;</button></span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px">${["LU","MA","MI","JU","VI","SA","DO"].map(x=>`<span style="text-align:center;font-size:9.5px;letter-spacing:.8px;color:var(--muted)">${x}</span>`).join("")}</div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">${celdas.join("")}</div>
+      </div>
+      <div style="width:150px;flex:none">
+        <div style="font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Hora</div>
+        <div id="cpk-hs" style="height:296px;overflow-y:auto;padding-right:4px">${horas.join("")}</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;border-top:1px solid var(--hair2);padding-top:14px;gap:10px;flex-wrap:wrap">
+      <span class="bs" style="color:${(contPk.d&&contPk.hora)?"var(--accent)":"var(--muted)"}">${res}</span>
+      <span style="display:flex;gap:10px"><button class="btn sm ghost" onclick="contPkClose()">Cancelar</button><button class="btn sm" onclick="contPkOk()">Programar ✓</button></span>
+    </div>
+  </div>`;
+  let ov=document.getElementById('cpkov'); const habia=!!ov;
+  const prevScroll=habia?((document.getElementById('cpk-hs')||{}).scrollTop||0):null;
+  if(!ov){ ov=document.createElement('div'); ov.id='cpkov'; ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:99999'; ov.onclick=function(){ contPkClose(); }; document.body.appendChild(ov); }
+  ov.innerHTML=html;
+  const hs=document.getElementById('cpk-hs');
+  if(hs){
+    if(prevScroll!=null){ hs.scrollTop=prevScroll; }
+    else{ const tg=hs.querySelector('.cpk-h.on')||hs.querySelector('[data-t="18:00"]'); if(tg) hs.scrollTop=Math.max(0,tg.offsetTop-hs.offsetTop-80); }
+  }
 }
 async function contBorrar(id){
   const {error}=await sb.from("contenido_piezas").delete().eq("id",id);
@@ -1489,12 +1559,11 @@ function renderContenido(){
       <div class="bs" style="margin-bottom:14px;color:var(--fg)"><b>Idea:</b> ${esc(sel.idea||"")}</div>
       ${contPreviewIG(sel)}
       <label class="bs" style="display:block;margin-bottom:6px">Descripción del post</label>
-      <textarea id="cdesc" style="width:100%;min-height:120px">${esc(sel.descripcion||"")}</textarea>
+      <textarea id="cdesc" oninput="contDescLive(this.value)" style="width:100%;min-height:120px">${esc(sel.descripcion||"")}</textarea>
       <button class="btn sm ghost" style="margin-top:8px" onclick="contDesc('${sel.id}')">Guardar descripción</button>
-      <div style="display:flex;gap:12px;align-items:flex-end;margin-top:18px;flex-wrap:wrap">
-        <div><label class="bs" style="display:block;margin-bottom:6px">Día</label><input id="cprog-d" type="date" value="${esc(sel.fecha_pub||"")}" style="padding:8px"></div>
-        <div><label class="bs" style="display:block;margin-bottom:6px">Hora</label><input id="cprog-h" type="time" value="${esc(sel.hora_pub||"")}" style="padding:8px"></div>
-        <button class="btn sm" onclick="contProg('${sel.id}')">Programar</button>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:18px;flex-wrap:wrap">
+        <button class="btn sm" onclick="contProgOpen('${sel.id}')">📅 ${sel.fecha_pub?"Reprogramar":"Programar"}</button>
+        ${sel.fecha_pub?`<span class="bs" style="border:1px solid var(--hair2);border-radius:20px;padding:7px 14px;color:var(--fg)">${esc(sel.fecha_pub)}${sel.hora_pub?" · "+esc(String(sel.hora_pub).slice(0,5))+" hs":""}</span>`:`<span class="bs" style="color:var(--muted)">Sin fecha</span>`}
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
         <button class="btn sm" style="background:var(--ok);color:#0c1a0e;border:none" onclick="contDecide('${sel.id}','aprobado')">Aprobar ✓</button>
