@@ -1402,7 +1402,7 @@ function calProximosHtml(){
 /* ============================ CONTENIDO (Instagram) ============================ */
 async function contCargar(){ if(!sb) return; const r=await sb.from("contenido_piezas").select("*").order("orden",{ascending:true}); contenidoPiezas=(r&&!r.error&&r.data)?r.data:[]; }
 function contSetCuenta(c){ if(c==='pe' && !contPeUnlock){ contPinModal(); return; } contCuenta=c; contSel=null; renderContenido(); }
-function contPinModal(){var ov=document.createElement('div');ov.id='cpinov';ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:99999';ov.innerHTML='<div style="background:var(--card);border:1px solid var(--hair2);border-radius:16px;padding:26px;width:300px;text-align:center"><div style="font-size:28px;margin-bottom:6px">\u{1F512}</div><div style="font-weight:700;margin-bottom:4px">Cuenta personal</div><div class="bs" style="margin-bottom:16px">Ingres\u00e1 el c\u00f3digo</div><input id="cpinin" type="password" inputmode="numeric" maxlength="8" placeholder="\u2022\u2022\u2022\u2022" style="width:100%;text-align:center;letter-spacing:6px;font-size:20px;padding:12px"><div id="cpinerr" style="color:var(--bad);font-size:12px;height:16px;margin-top:8px"></div><div style="display:flex;gap:10px;margin-top:10px"><button class="btn sm ghost" style="flex:1" onclick="contPinClose()">Cancelar</button><button class="btn sm" style="flex:1" onclick="contPinCheck()">Entrar</button></div></div>';document.body.appendChild(ov);setTimeout(function(){var el=document.getElementById('cpinin');if(el){el.focus();el.onkeydown=function(e){if(e.key==="Enter")contPinCheck();};}},30);}
+function contPinModal(){var ov=document.createElement('div');ov.id='cpinov';ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.84);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);display:flex;align-items:center;justify-content:center;z-index:99999';ov.innerHTML='<div style="background:#131316;border:1px solid var(--hair2);border-radius:16px;padding:26px;width:300px;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.55)"><div style="font-size:28px;margin-bottom:6px">\u{1F512}</div><div style="font-weight:700;margin-bottom:4px">Cuenta personal</div><div class="bs" style="margin-bottom:16px">Ingres\u00e1 el c\u00f3digo</div><input id="cpinin" type="password" inputmode="numeric" maxlength="8" placeholder="\u2022\u2022\u2022\u2022" style="width:100%;text-align:center;letter-spacing:6px;font-size:20px;padding:12px"><div id="cpinerr" style="color:var(--bad);font-size:12px;height:16px;margin-top:8px"></div><div style="display:flex;gap:10px;margin-top:10px"><button class="btn sm ghost" style="flex:1" onclick="contPinClose()">Cancelar</button><button class="btn sm" style="flex:1" onclick="contPinCheck()">Entrar</button></div></div>';document.body.appendChild(ov);setTimeout(function(){var el=document.getElementById('cpinin');if(el){el.focus();el.onkeydown=function(e){if(e.key==="Enter")contPinCheck();};}},30);}
 function contPinClose(){var o=document.getElementById('cpinov');if(o)o.remove();}
 function contPinCheck(){var el=document.getElementById('cpinin');var v=el?el.value:"";if(v===CONT_PIN){contPeUnlock=true;contPinClose();contCuenta='pe';contSel=null;renderContenido();}else{var e=document.getElementById('cpinerr');if(e)e.textContent="C\u00f3digo incorrecto";if(el){el.value="";el.focus();}}}
 function contIdea(i,v){ if(contLote[i]) contLote[i].idea=v; }
@@ -1490,7 +1490,7 @@ function contPkRender(){
     #cpkov .cpk-nav{width:30px;height:30px;border-radius:8px;border:1px solid var(--hair2);background:transparent;color:var(--fg);cursor:pointer;font-size:15px}
     #cpkov .cpk-nav:hover{border-color:var(--accent);color:var(--accent)}
   </style>
-  <div style="background:var(--card);border:1px solid var(--hair2);border-radius:18px;padding:22px;width:min(620px,94vw)" onclick="event.stopPropagation()">
+  <div style="background:#131316;border:1px solid var(--hair2);border-radius:18px;padding:22px;width:min(620px,94vw);box-shadow:0 18px 60px rgba(0,0,0,.55)" onclick="event.stopPropagation()">
     <div style="display:flex;gap:22px;flex-wrap:wrap">
       <div style="flex:1;min-width:270px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -1512,7 +1512,7 @@ function contPkRender(){
   </div>`;
   let ov=document.getElementById('cpkov'); const habia=!!ov;
   const prevScroll=habia?((document.getElementById('cpk-hs')||{}).scrollTop||0):null;
-  if(!ov){ ov=document.createElement('div'); ov.id='cpkov'; ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:99999'; ov.onclick=function(){ contPkClose(); }; document.body.appendChild(ov); }
+  if(!ov){ ov=document.createElement('div'); ov.id='cpkov'; ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.84);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);display:flex;align-items:center;justify-content:center;z-index:99999'; ov.onclick=function(){ contPkClose(); }; document.body.appendChild(ov); }
   ov.innerHTML=html;
   const hs=document.getElementById('cpk-hs');
   if(hs){
