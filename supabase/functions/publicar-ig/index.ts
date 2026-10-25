@@ -70,7 +70,7 @@ async function publicarPieza(admin: any, pieza: any, token: string, igUser: stri
     creationId = car.id;
   }
   const pub = await igPost(`/${igUser}/media_publish`, { creation_id: creationId, access_token: token });
-  await admin.from("contenido_piezas").update({ estado: "publicado", updated_at: new Date().toISOString() }).eq("id", pieza.id);
+  await admin.from("contenido_piezas").update({ estado: "publicado", ig_media_id: String(pub.id || "") || null, updated_at: new Date().toISOString() }).eq("id", pieza.id);
   return String(pub.id || "");
 }
 
