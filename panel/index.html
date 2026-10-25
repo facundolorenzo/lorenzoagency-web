@@ -1527,6 +1527,19 @@ function contPkRender(){
     else{ const tg=hs.querySelector('.cpk-h.on')||hs.querySelector('[data-t="18:00"]'); if(tg) hs.scrollTop=Math.max(0,tg.offsetTop-hs.offsetTop-80); }
   }
 }
+function contPubAsk(btn,id){
+  if(btn.dataset.arm==="1"){ btn.dataset.arm=""; btn.textContent="📤 Publicando…"; btn.disabled=true; contPublicar(id); return; }
+  btn.dataset.arm="1"; btn.textContent="¿Publicar en Instagram?"; btn.style.borderColor="var(--accent)"; btn.style.color="var(--accent)";
+  setTimeout(function(){ if(btn&&btn.isConnected&&btn.dataset.arm==="1"){ btn.dataset.arm=""; btn.textContent="📤 Publicar ahora"; btn.style.borderColor=""; btn.style.color=""; } },3200);
+}
+async function contPublicar(id){
+  note("📤 Publicando en Instagram… (tarda un minuto)");
+  try{
+    const r=await callFn("publicar-ig",{pieza_id:id});
+    if(r&&r.ok){ await contCargar(); renderContenido(); note("✅ Publicado en Instagram"); }
+    else { renderContenido(); note("Publicar: "+((r&&r.error)||"error desconocido")); }
+  }catch(e){ renderContenido(); note("Publicar falló: "+(e&&e.message?e.message:e)); }
+}
 function contBorrarAsk(btn,id){
   if(btn.dataset.arm==="1"){ contBorrar(id); return; }
   btn.dataset.arm="1"; btn.textContent="¿Borrar?";
@@ -1584,6 +1597,7 @@ function renderContenido(){
       <div style="display:flex;gap:10px;margin-top:20px">
         <button class="btn sm" style="background:var(--ok);color:#0c1a0e;border:none" onclick="contDecide('${sel.id}','aprobado')">Aprobar ✓</button>
         <button class="btn sm ghost" style="border-color:var(--bad);color:var(--bad)" onclick="contDecide('${sel.id}','rechazado')">Rechazar</button>
+        ${(contCuenta==="ag"&&Array.isArray(sel.imagenes)&&sel.imagenes.length&&sel.estado!=="publicado")?`<button class="btn sm ghost" onclick="contPubAsk(this,'${sel.id}')">📤 Publicar ahora</button>`:""}
       </div>
     </div>`:`<div class="empty"><b>Elegí una pieza de la cola</b><br>para editarla y programarla.</div>`;
   $app().innerHTML=`<div class="bar"><h2><span class="tick"></span>Contenido — Instagram</h2></div>
