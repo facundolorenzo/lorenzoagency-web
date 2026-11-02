@@ -67,8 +67,10 @@ Deno.serve(async (req) => {
     if (!allowed) return json({ error: "No autorizado" }, 403);
 
     const admin = createClient(SB_URL, SERVICE || SB_ANON);
-    const IG_TOKEN = Deno.env.get("IG_ACCESS_TOKEN");
-    if (!IG_TOKEN) return json({ error: "Falta IG_ACCESS_TOKEN en los secrets" }, 500);
+    let IG_TOKEN = "";
+    try { const { data: tk } = await admin.from("ig_tokens").select("access_token").eq("id", 1).maybeSingle(); if (tk?.access_token) IG_TOKEN = tk.access_token; } catch { /* tabla puede no existir todavía */ }
+    if (!IG_TOKEN) IG_TOKEN = Deno.env.get("IG_ACCESS_TOKEN") || "";
+    if (!IG_TOKEN) return json({ error: "Falta el token de Instagram (ig_tokens o IG_ACCESS_TOKEN)" }, 500);
     const IG_USER = Deno.env.get("IG_USER_ID") || "17841453364210675";
 
     // 1) Posts publicados en la cuenta (los últimos 50)
