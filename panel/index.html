@@ -754,7 +754,7 @@ const FROM = {
                   vendedorId:r.vendedor_id||null, montoVenta:(r.monto_venta==null?null:Number(r.monto_venta)), fechaCierre:r.fecha_cierre||null}),
   vendedores:r=>({id:r.id,nombre:r.nombre,email:r.email||null,meta:Number(r.meta_mensual)||0,activo:r.activo!==false,createdAt:r.created_at}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
-  busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
+  busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,modo:r.modo||"nicho",lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,idioma:r.idioma||null,visitaDia:r.visita_dia||null,visitado:r.visitado===true,visitadoFecha:r.visitado_fecha||null,visitaNota:r.visita_nota||null,visitaHora:r.visita_hora||null,gcalEventId:r.gcal_event_id||null,importante:r.importante===true,
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,puntoFlojo:r.punto_flojo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,
@@ -764,7 +764,7 @@ const TO = {
   proposals: d=>({number:d.number,client_id:d.clientId||null,client_free:d.clientFree||null,title:d.title,amount:Number(d.amount)||0,status:d.status,date:d.date||null,notes:d.notes||null,file_url:d.fileUrl||null,file_name:d.fileName||null,updated_at:new Date().toISOString()}),
   invoices:  d=>({number:d.number,client_id:d.clientId||null,amount:Number(d.amount)||0,status:d.status,issued:d.issued||null,due:d.due||null,notes:d.notes||null,stripe_link:d.stripeLink||null,updated_at:new Date().toISOString()}),
   clients:   d=>({name:d.name,company:d.company||null,contact:d.contact||null,email:d.email||null,phone:d.phone||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
-  busquedas: d=>({rubro:d.rubro,zona:d.zona||null,target:d.target||null,cantidad:Number(d.cantidad)||null,detalles:d.detalles||null,lat:d.lat?Number(d.lat):null,lng:d.lng?Number(d.lng):null,radio_millas:d.radio?Number(d.radio):null,status:"pendiente",updated_at:new Date().toISOString()}),
+  busquedas: d=>({rubro:d.rubro,zona:d.zona||null,target:d.target||null,cantidad:Number(d.cantidad)||null,detalles:d.detalles||null,modo:d.modo||"nicho",lat:d.lat?Number(d.lat):null,lng:d.lng?Number(d.lng):null,radio_millas:d.radio?Number(d.radio):null,status:"pendiente",updated_at:new Date().toISOString()}),
   prospectos:d=>({empresa:d.empresa,contacto:d.contacto||null,email:d.email||null,email_directo:d.emailDirecto||null,phone:d.phone||null,phone_directo:d.phoneDirecto||null,web:d.web||null,
                   instagram:d.instagram||null,nicho:d.nicho||null,ciudad:d.ciudad||null,fuente:d.fuente||null,
                   notas:d.notas||null,status:d.status||"encontrado",prioridad:d.prioridad||null,
@@ -2395,7 +2395,7 @@ function renderProspeccion(){
       const renovable=(Date.now()-new Date(b.createdAt).getTime())>120*24*3600*1000;
       const minutos=ms=>Math.max(1,Math.round(ms/60000));
       const timing=!b.inicio?"":(b.status==="buscando"?"⏱ "+minutos(Date.now()-new Date(b.inicio).getTime())+" min":(b.status==="lista"&&b.updatedAt?"tardó "+minutos(new Date(b.updatedAt).getTime()-new Date(b.inicio).getTime())+" min":""));
-      return `<div class="brow" data-busqrow="${b.id}"><span>🔎 <b>${esc(b.rubro)}</b>${b.zona?" — "+esc(b.zona):""}
+      return `<div class="brow" data-busqrow="${b.id}"><span>${b.modo==="especifico"?"📍":"🔎"} <b>${esc(b.rubro)}</b>${b.zona?" — "+esc(b.zona):""}
         <span class="bs" style="margin-left:6px">${esc(String(b.createdAt||"").slice(0,10))} · ${enc} encontrados · ${gan} ganados${timing?" · "+timing:""}</span></span>
       <span style="display:flex;gap:10px;align-items:center">
         ${renovable?`<button class="btn sm ghost" data-renovar="${b.id}" title="Pasaron 4+ meses — repetir para captar empresas nuevas">↻ Renovar</button>`:""}
@@ -2513,13 +2513,25 @@ async function abrirMapa(){
   } else start(25.890,-80.186);
 }
 
+function busqModo(m){
+  const esp=m==="especifico";
+  const lbl=document.getElementById("lbl-rubro");
+  const f=document.getElementById("f-busquedas");
+  if(lbl) lbl.textContent=esp?"Nombre del lugar":"Rubro";
+  if(f&&f.rubro) f.rubro.placeholder=esp?"ej: Mica, Coral Gables":"gimnasios / lounges / dealers de autos";
+  // En modo puntual, tipo de empresa y detalles de nicho no aplican
+  if(f){ ["target","detalles"].forEach(n=>{ const el=f.querySelector('[name="'+n+'"]'); if(el){ const lab=el.closest('label'); if(lab) lab.style.display=esp?"none":""; } }); }
+}
 function busquedaForm(){
   return `<div class="panel">
     <button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button>
     <form id="f-busquedas" class="form">
     <div class="full" style="font-family:var(--disp);font-weight:800;color:#fff;font-size:15px">🔎 Pedir una búsqueda</div>
-    <div class="full bs">La estructura (fuentes, filtro, prioridad) ya está armada — acá solo definís el nicho. Cuanto más específico, mejor sale la lista.</div>
-    <label><span class="fl">Rubro</span><input name="rubro" required placeholder="gimnasios / lounges / dealers de autos"></label>
+    <div class="full bs">La estructura (fuentes, filtro, prioridad) ya está armada. Elegí el modo y definí qué buscar.</div>
+    <label class="full"><span class="fl">Modo</span><select name="modo" onchange="busqModo(this.value)">
+      <option value="nicho">Por nicho — traé varios negocios</option>
+      <option value="especifico">Lugar puntual — un negocio por su nombre</option></select></label>
+    <label><span class="fl" id="lbl-rubro">Rubro</span><input name="rubro" required placeholder="gimnasios / lounges / dealers de autos"></label>
     <label><span class="fl">Zona</span><div style="display:flex;gap:8px;align-items:center"><input name="zona" style="flex:1" placeholder="Miami · Brickell · toda Florida">
       <button class="btn ghost" type="button" data-abrirmapa="1" title="Elegir en el mapa con un radio en millas" style="height:40px;white-space:nowrap;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;line-height:1"><span style="color:var(--bad);display:inline-flex">${ICON_PIN}</span> Mapa</button></div>
       <input type="hidden" name="lat"><input type="hidden" name="lng"><input type="hidden" name="radio"></label>
@@ -3657,7 +3669,7 @@ document.addEventListener("submit", async e=>{
       const prev=(col==="proposals"?proposals:col==="invoices"?invoices:clients).find(x=>x.id===editing.id);
       if(prev && prev.fileUrl){ data.fileUrl=prev.fileUrl; data.fileName=prev.fileName||""; }
     }
-    if(col==="busquedas"){
+    if(col==="busquedas" && data.modo!=="especifico"){
       const VENTANA=120*24*3600*1000; // 4 meses
       const toR=x=>x*Math.PI/180;
       const dup=busquedas.find(b=>{
