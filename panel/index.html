@@ -2921,29 +2921,34 @@ function prospModalHtml(){
   const p=prospectos.find(x=>x.id===openProspId); if(!p) return "";
   const tel=p.phoneDirecto||p.phone, em=p.emailDirecto||p.email;
   const url=p.web?(String(p.web).startsWith("http")?p.web:"https://"+p.web):"";
-  const kv=(k,v)=>v?`<div style="display:flex;gap:10px;margin-top:8px;font-size:13px"><span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;min-width:84px;padding-top:2px">${k}</span><span style="min-width:0;overflow-wrap:anywhere">${v}</span></div>`:"";
-  return `<div class="cpop-bg" data-closeprosp="1"><div class="cpop" style="max-width:480px">
+  const sec=t=>`<div style="font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--accent);text-transform:uppercase;margin:18px 0 9px;padding-bottom:6px;border-bottom:1px solid var(--hair2)">${t}</div>`;
+  const fila=(k,v)=>v?`<div style="display:flex;gap:10px;margin-top:7px;font-size:13px;line-height:1.55"><span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;min-width:84px;padding-top:3px;flex:none">${k}</span><span style="min-width:0;word-break:break-word">${v}</span></div>`:"";
+  // Contactos: una línea por persona (el principal primero, en negrita)
+  const personas=String(p.contacto||"").split(";").map(s=>s.trim()).filter(Boolean);
+  const contHtml=personas.map((s,i)=>`<div style="margin-top:${i?6:0}px;font-size:13px;line-height:1.5">${i?esc(s):`<b>${esc(s)}</b>`}</div>`).join("");
+  // Notas: segmentadas en puntos (separador " · " o saltos de línea)
+  const notas=String(p.notas||"").split(/\s·\s|\n/).map(s=>s.trim()).filter(s=>s&&s!=="DEMO");
+  const notasHtml=notas.map(n=>`<div style="display:flex;gap:9px;margin-top:6px;font-size:12.5px;line-height:1.6;color:var(--muted)"><span style="color:var(--accent);flex:none">•</span><span style="min-width:0;word-break:break-word">${esc(n)}</span></div>`).join("");
+  return `<div class="cpop-bg" data-closeprosp="1"><div class="cpop" style="max-width:520px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-      <div style="font-family:var(--disp);font-size:16px;font-weight:800;color:#fff">${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="${esc(PR_EXPL[p.prioridad]||"")}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}${p.puntoFlojo?`<span style="margin-left:9px">${pfTag(p.puntoFlojo)}</span>`:""}</div>
+      <div style="font-family:var(--disp);font-size:16px;font-weight:800;color:#fff">${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="${esc(PR_EXPL[p.prioridad]||"")}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}${p.puntoFlojo?`<span style="margin-left:8px;vertical-align:2px">${pfTag(p.puntoFlojo)}</span>`:""}</div>
       <button class="btn ghost sm" data-closeprosp="1" style="flex:none">← Volver</button>
     </div>
     <div class="bs" style="margin-top:2px">${esc([p.nicho,p.ciudad].filter(Boolean).join(" · "))}</div>
-    ${p.prioridadMotivo?`<div class="goalmsg" style="margin-top:10px">${esc(p.prioridadMotivo)}</div>`:""}
-    ${p.entrada?`<div style="margin-top:12px;padding:10px 12px;border:1px solid var(--hair2);border-radius:10px;background:rgba(255,255,255,.02)">
-      <div style="font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin-bottom:6px">Qué está pasando — por dónde entrar</div>
-      <div style="font-size:13px;line-height:1.6;white-space:pre-wrap">${esc(p.entrada)}</div></div>`:""}
-    <div style="margin-top:6px">
-      ${kv("Contacto", p.contacto?esc(p.contacto):"")}
-      ${kv("⭐ Directo", [p.emailDirecto?`<span style="font-family:var(--mono);font-size:12px;color:var(--accent)">${esc(p.emailDirecto)}</span>`:"",p.phoneDirecto?`<span style="font-family:var(--mono);font-size:12px;color:var(--accent)">${esc(p.phoneDirecto)}</span>`:""].filter(Boolean).join(" · "))}
-      ${kv("Email", p.email?`<span style="font-family:var(--mono);font-size:12px">${esc(p.email)}</span>`:"")}
-      ${kv("Teléfono", p.phone?`<span style="font-family:var(--mono);font-size:12px">${esc(p.phone)}</span>`:"")}
-      ${kv("Web", url?`<a class="linkbtn" href="${esc(url)}" target="_blank" rel="noopener">${esc(p.web)} ↗</a>`:"")}
-      ${kv("Instagram", p.instagram?esc(p.instagram):"")}
-      ${kv("Fuente", p.fuente?esc(p.fuente):"")}
-      ${p.apolloEstado?kv("⚡ Apollo",(p.apolloEstado==="hecho"?"✓ ":"")+esc(p.apolloNota||p.apolloEstado)+(p.apolloAt?" · "+String(p.apolloAt).slice(0,10):"")):""}
-      ${p.notas&&p.notas!=="DEMO"?kv("Notas",esc(p.notas)):""}
-    </div>
-    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+    ${p.prioridadMotivo?`<div class="goalmsg" style="margin-top:12px;line-height:1.55">${esc(p.prioridadMotivo)}</div>`:""}
+    ${p.entrada?sec("Qué está pasando — por dónde entrar")+`<div style="font-size:13px;line-height:1.7;white-space:pre-wrap">${esc(p.entrada)}</div>`:""}
+    ${(contHtml||em||tel)?sec("Contactos")+contHtml+`<div style="margin-top:${contHtml?"10":"0"}px">
+      ${fila("⭐ Directo",[p.emailDirecto?`<a class="linkbtn" style="font-family:var(--mono);font-size:12px;color:var(--accent)" href="mailto:${esc(p.emailDirecto)}">${esc(p.emailDirecto)}</a>`:"",p.phoneDirecto?`<span style="font-family:var(--mono);font-size:12px;color:var(--accent)">${esc(p.phoneDirecto)}</span>`:""].filter(Boolean).join(" · "))}
+      ${fila("Email del local",p.email?`<a class="linkbtn" style="font-family:var(--mono);font-size:12px" href="mailto:${esc(p.email)}">${esc(p.email)}</a>`:"")}
+      ${fila("Tel del local",p.phone?`<span style="font-family:var(--mono);font-size:12px">${esc(p.phone)}</span>`:"")}</div>`:""}
+    ${sec("El lugar")}
+    ${fila("Web",url?`<a class="linkbtn" href="${esc(url)}" target="_blank" rel="noopener">${esc(p.web)} ↗</a>`:"")}
+    ${fila("Instagram",p.instagram?esc(p.instagram):"")}
+    ${fila("Zona",p.ciudad?esc(p.ciudad):"")}
+    ${fila("Fuente",p.fuente?esc(p.fuente):"")}
+    ${notasHtml?sec("Datos del lugar")+notasHtml:""}
+    ${p.apolloEstado?sec("⚡ Refuerzo Apollo")+`<div style="font-size:12.5px;line-height:1.6;color:${p.apolloEstado==="hecho"?"var(--ok)":"var(--muted)"}">${p.apolloEstado==="hecho"?"✓ ":""}${esc(p.apolloNota||p.apolloEstado)}${p.apolloAt?` <span style="color:var(--faint)">· ${String(p.apolloAt).slice(0,10)}</span>`:""}</div>`:""}
+    <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">
       ${tel?`<a class="btn sm" style="text-decoration:none;background:var(--ok)" href="tel:${esc(String(tel).replace(/[^+\d]/g,""))}">${ICON_PHONE} Llamar</a>`:""}
       ${em?`<a class="btn sm ghost" style="text-decoration:none" href="mailto:${esc(em)}">✉ Email</a>`:""}
       <a class="btn sm ghost" style="text-decoration:none" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([p.empresa,p.ciudad].filter(Boolean).join(" "))}" target="_blank" rel="noopener">📍 Ver en Maps</a>
