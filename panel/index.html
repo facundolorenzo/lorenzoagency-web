@@ -429,7 +429,7 @@ let rankingPublico = []; // ranking del mes para la vista del vendedor (via RPC,
 let proposals = [], invoices = [], clients = [], leads = [];
 let tab = "resumen";
 let editing = null, confirmDel = null, formOpen = null, openLeadId = null;
-let openProspId = null, hlProspId = null, fbAsk = null, visitaReg = null, horaPicker = null;
+let openProspId = null, hlProspId = null, fbAsk = null, apolloAsk = null, visitaReg = null, horaPicker = null;
 let agendaPick=null, agendaMonth=0, agendaDay=null, agendaHora=null;
 let visitaVista="lista", visitaMes=0, resumenMes=0;
 let plantillas = [], plantSel = null, tandaEdit = false, tandaPrev = null, tandaEnviando = false;
@@ -764,7 +764,7 @@ const FROM = {
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,modo:r.modo||"nicho",lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
   prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,idioma:r.idioma||null,visitaDia:r.visita_dia||null,visitado:r.visitado===true,visitadoFecha:r.visitado_fecha||null,visitaNota:r.visita_nota||null,visitaHora:r.visita_hora||null,gcalEventId:r.gcal_event_id||null,importante:r.importante===true,
-                  busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,puntoFlojo:r.punto_flojo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,
+                  busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,puntoFlojo:r.punto_flojo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,apolloEstado:r.apollo_estado||null,apolloNota:r.apollo_nota||null,apolloAt:r.apollo_at||null,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
 };
 const TO = {
@@ -2290,6 +2290,8 @@ function renderVisitas(){
 function renderProspeccion(){
   const d = editing && editing.col==="prospectos" ? prospectos.find(p=>p.id===editing.id) : null;
   const conEmail=prospectos.filter(p=>p.email||p.emailDirecto).length;
+  const mkeyAp=new Date().toISOString().slice(0,7);
+  const apolloMes=prospectos.filter(p=>p.apolloEstado==="hecho"&&String(p.apolloAt||"").slice(0,7)===mkeyAp).length;
   const env=prospectos.filter(p=>p.status==="enviado").length;
   const resp=prospectos.filter(p=>p.status==="respondio"||p.leadId).length;
   const tile=(lbl,val)=>`<div style="flex:1;min-width:120px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px">
@@ -2322,19 +2324,22 @@ function renderProspeccion(){
       <td style="font-size:12px">${esc(p.nicho||"—")}</td>
       <td style="font-size:12px;color:var(--muted)">${esc(p.fuente||"—")}</td>
       <td><select class="lsel" data-prstatus="${p.id}">${PR_STATES.map(st=>`<option value="${st}" ${p.status===st?"selected":""}>${esc(PR_LABELS[st])}</option>`).join("")}</select></td>
-      <td class="r" style="white-space:nowrap"><span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><button class="actico" data-visitar="${p.id}" title="Ir a visitar en persona" style="${p.visitar?"color:var(--accent);border-color:var(--accent);":""}">${ICON_PERSON}</button><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">Visitar</span></span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><button class="actico" data-fbok="${p.id}" title="Sirve — el buscador aprende y trae más de estos" style="${p.feedback==="ok"?"color:var(--ok);border-color:var(--ok);":""}">✓</button><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">Sirve</span></span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><button class="actico" data-fbno="${p.id}" title="No sirve — el buscador deja de traer de estos" style="${p.feedback==="no"?"color:var(--bad);border-color:var(--bad);":""}">✗</button><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">No sirve</span></span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><a class="actico nar" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([p.empresa,p.ciudad].filter(Boolean).join(" "))}" target="_blank" rel="noopener" title="Ver el lugar en Google Maps (fotos, reseñas, ubicación)">${ICON_MAPPIN}</a><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">Mapa</span></span>${url?`<span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><a class="actico nar" href="${esc(url)}" target="_blank" rel="noopener" title="Abrir la web del negocio">${ICON_GLOBE}</a><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">Web</span></span>`:""}${p.leadId?`<button class="linkbtn" data-openlead="${p.leadId}">En Leads →</button>`:`<button class="btn sm ghost" data-prosplead="${p.id}" title="Crea el lead y lo sigue el Agente 1">→ Lead</button>`}
+      <td class="r" style="white-space:nowrap"><span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><button class="actico" data-visitar="${p.id}" title="Ir a visitar en persona" style="${p.visitar?"color:var(--accent);border-color:var(--accent);":""}">${ICON_PERSON}</button><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">Visitar</span></span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><button class="actico" data-fbok="${p.id}" title="Sirve — el buscador aprende y trae más de estos" style="${p.feedback==="ok"?"color:var(--ok);border-color:var(--ok);":""}">✓</button><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">Sirve</span></span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><button class="actico" data-fbno="${p.id}" title="No sirve — el buscador deja de traer de estos" style="${p.feedback==="no"?"color:var(--bad);border-color:var(--bad);":""}">✗</button><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">No sirve</span></span>${(function(){const st=p.apolloEstado;const W='<span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle">';const L='<span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">';
+      if(st==="hecho") return W+`<span class="actico" style="color:var(--ok);border-color:var(--ok);cursor:default" title="Reforzado con Apollo${p.apolloAt?" el "+String(p.apolloAt).slice(0,10):""}${p.apolloNota?" — "+esc(p.apolloNota):""}">⚡</span>`+L+"Apollo ✓</span></span>";
+      if(st==="pendiente") return W+`<span class="actico" style="color:var(--accent);border-color:var(--accent);cursor:default" title="Apollo lo está buscando — el motor lo procesa en ~1 min (ventana del Agente 4 abierta)">⚡</span>`+L+"buscando…</span></span>";
+      return W+`<button class="actico" data-apolloask="${p.id}" title="Reforzar con Apollo: busca el email directo de la persona de contacto. Usa 1 crédito (75 gratis por mes).${st==="sin_resultado"?" La última vez no encontró.":""}">⚡</button>`+L+(st==="sin_resultado"?"Apollo –":"Apollo")+"</span></span>";})()}<span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><a class="actico nar" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([p.empresa,p.ciudad].filter(Boolean).join(" "))}" target="_blank" rel="noopener" title="Ver el lugar en Google Maps (fotos, reseñas, ubicación)">${ICON_MAPPIN}</a><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">Mapa</span></span>${url?`<span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><a class="actico nar" href="${esc(url)}" target="_blank" rel="noopener" title="Abrir la web del negocio">${ICON_GLOBE}</a><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">Web</span></span>`:""}${p.leadId?`<button class="linkbtn" data-openlead="${p.leadId}">En Leads →</button>`:`<button class="btn sm ghost" data-prosplead="${p.id}" title="Crea el lead y lo sigue el Agente 1">→ Lead</button>`}
         <button class="btn sm ghost" data-edit="prospectos:${p.id}">Editar</button>
         <button class="btn sm ghost btn-del" data-del="prospectos:${p.id}" title="Borrar">${ICON_TRASH}</button></td>
     </tr>${fbAsk===p.id?`<tr><td colspan="6" style="padding:4px 18px 16px"><span class="bs" style="margin-right:10px">¿Por qué no sirve? (el buscador aprende de esto)</span>
       ${["Cadena grande","Muy chico","No es el target","Mala zona","Otro"].map(m=>`<button class="btn sm ghost" data-fbmotivo="${p.id}|${esc(m)}" style="margin-right:6px">${esc(m)}</button>`).join("")}
-      <button class="linkbtn" data-fbcancel="1" style="margin-left:6px;color:var(--faint)">Cancelar</button></td></tr>`:""}`;};
+      <button class="linkbtn" data-fbcancel="1" style="margin-left:6px;color:var(--faint)">Cancelar</button></td></tr>`:""}${apolloAsk===p.id?`<tr><td colspan="6" style="padding:4px 18px 16px"><span class="bs" style="margin-right:12px">⚡ ¿Reforzar con Apollo? Busca el email directo de ${p.contacto?esc(String(p.contacto).split(/[—(,]/)[0].trim()):"la persona de contacto"} — usa 1 de tus 75 búsquedas gratis del mes.</span><button class="btn sm" data-apolloconfirm="${p.id}" style="margin-right:8px">Confirmar</button><button class="btn sm ghost" data-apollocancel="1">Cancelar</button></td></tr>`:""}`;};
   const tablas = Object.entries(grupos).map(([k,arr])=>`
     ${k?`<div class="sect">${esc(k)} <span style="font-weight:600;color:var(--faint);font-size:12.5px">· ${arr.length}</span></div>`:""}
     <div class="tablewrap" style="padding:10px 20px 14px"><table class="captable">
       <tr><th>Empresa</th><th>Contacto</th><th>Nicho</th><th>Fuente</th><th>Estado</th><th class="r"></th></tr>${arr.map(row).join("")}</table></div>`).join("");
   $app().innerHTML = `
   <div class="bar"><h2><span class="tick"></span>Captación de clientes — salir a buscarlos</h2>
-    ${canWrite?`<div style="display:flex;gap:12px;align-items:center"><button class="linkbtn" data-new="prospectos" style="color:var(--faint)">+ cargar a mano</button><button class="btn" data-new="busquedas">🔎 Buscar</button></div>`:""}</div>
+    ${canWrite?`<div style="display:flex;gap:12px;align-items:center"><span class="bs" style="border:1px solid var(--hair2);border-radius:20px;padding:5px 12px" title="Búsquedas de Apollo usadas este mes (cuenta las que encontraron email; se renuevan todos los meses — el número exacto está en developer.apollo.io)">⚡ Apollo ${apolloMes}/75</span><button class="linkbtn" data-new="prospectos" style="color:var(--faint)">+ cargar a mano</button><button class="btn" data-new="busquedas">🔎 Buscar</button></div>`:""}</div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">${tile("Encontrados",prospectos.length)}${tile("Con email",conEmail)}${tile("Enviados",env)}${tile("Respondieron",resp)}${(function(){
     const pr = env>=5 ? Math.round(resp/env*100) : null;
     const col = pr==null?"var(--fg)":(pr>=5?"var(--ok)":(pr>=3?"var(--warn)":"var(--bad)"));
@@ -2928,6 +2933,7 @@ function prospModalHtml(){
       ${kv("Web", url?`<a class="linkbtn" href="${esc(url)}" target="_blank" rel="noopener">${esc(p.web)} ↗</a>`:"")}
       ${kv("Instagram", p.instagram?esc(p.instagram):"")}
       ${kv("Fuente", p.fuente?esc(p.fuente):"")}
+      ${p.apolloEstado?kv("⚡ Apollo",(p.apolloEstado==="hecho"?"✓ ":"")+esc(p.apolloNota||p.apolloEstado)+(p.apolloAt?" · "+String(p.apolloAt).slice(0,10):"")):""}
       ${p.notas&&p.notas!=="DEMO"?kv("Notas",esc(p.notas)):""}
     </div>
     <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
@@ -3337,6 +3343,17 @@ document.addEventListener("click", async e=>{
   if(t.dataset.visitreabrir){
     await sb.from("prospectos").update({visitado:false,visitado_fecha:null,updated_at:new Date().toISOString()}).eq("id",t.dataset.visitreabrir);
     await loadAll(); return;
+  }
+  if(t.dataset.apolloask){ apolloAsk=(apolloAsk===t.dataset.apolloask)?null:t.dataset.apolloask; fbAsk=null; renderApp(); return; }
+  if(t.dataset.apollocancel){ apolloAsk=null; renderApp(); return; }
+  if(t.dataset.apolloconfirm){
+    const p=prospectos.find(x=>x.id===t.dataset.apolloconfirm); if(!p) return;
+    if(!p.contacto||!String(p.contacto).split(/[—(,]/)[0].trim().includes(" ")){ apolloAsk=null; renderApp(); note("Apollo necesita nombre y apellido de una persona, y esta ficha no lo tiene. Cargale el contacto con Editar y volvé a intentar."); return; }
+    const {error}=await sb.from("prospectos").update({apollo_estado:"pendiente",updated_at:new Date().toISOString()}).eq("id",p.id);
+    if(error){ note("No se pudo pedir: "+error.message); return; }
+    apolloAsk=null; await loadAll();
+    note("⚡ Pedido a Apollo — el motor lo busca en ~1 min (dejá abierta la ventana del Agente 4).");
+    return;
   }
   if(t.dataset.fbok){
     const p=prospectos.find(x=>x.id===t.dataset.fbok); if(!p) return;
