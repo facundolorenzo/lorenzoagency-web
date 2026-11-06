@@ -2399,9 +2399,9 @@ function renderProspeccion(){
         <span class="bs" style="margin-left:6px">${esc(String(b.createdAt||"").slice(0,10))} · ${enc} encontrados · ${gan} ganados${timing?" · "+timing:""}</span></span>
       <span style="display:flex;gap:10px;align-items:center">
         ${renovable?`<button class="btn sm ghost" data-renovar="${b.id}" title="Pasaron 4+ meses — repetir para captar empresas nuevas">↻ Renovar</button>`:""}
-        ${b.status==="buscando"?`<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:84px;height:6px;border-radius:4px;background:var(--hair2);overflow:hidden">
-          <span style="display:block;height:100%;width:${Math.max(4,Math.min(100,Number(b.progreso)||0))}%;background:var(--accent);border-radius:4px;transition:width .6s"></span></span>
-          <b style="color:var(--accent);font-family:var(--mono);font-size:10px;letter-spacing:.12em">${b.progreso!=null?b.progreso+"%":"BUSCANDO"}</b></span>`
+        ${b.status==="buscando"?`<span style="display:inline-flex;align-items:center;gap:10px"><span style="width:220px;height:9px;border-radius:5px;background:var(--hair2);overflow:hidden">
+          <span style="display:block;height:100%;width:${Math.max(4,Math.min(100,Number(b.progreso)||0))}%;background:var(--accent);border-radius:5px;transition:width .6s"></span></span>
+          <b style="color:var(--accent);font-family:var(--mono);font-size:12px;letter-spacing:.12em">${b.progreso!=null?b.progreso+"%":"BUSCANDO"}</b></span>`
         :`<b style="color:${b.status==="lista"?"var(--ok)":"var(--warn)"};font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase">${esc(b.status)}</b>`}
         <button class="btn-trash" data-del="busquedas:${b.id}" title="Cancelar la búsqueda">${ICON_TRASH}</button></span></div>`;}).join("")}
     <div class="bs" style="margin-top:10px">Cada nicho + zona queda guardado y no se repite hasta los 4 meses — ahí aparece ↻ Renovar para captar las empresas nuevas que abrieron.</div>
