@@ -2291,7 +2291,7 @@ function renderProspeccion(){
   const d = editing && editing.col==="prospectos" ? prospectos.find(p=>p.id===editing.id) : null;
   const conEmail=prospectos.filter(p=>p.email||p.emailDirecto).length;
   const mkeyAp=new Date().toISOString().slice(0,7);
-  const apolloMes=prospectos.filter(p=>p.apolloEstado==="hecho"&&String(p.apolloAt||"").slice(0,7)===mkeyAp).length;
+  const apolloMes=prospectos.filter(p=>(p.apolloEstado==="hecho"&&String(p.apolloAt||"").slice(0,7)===mkeyAp)||p.apolloEstado==="pendiente").length;
   const env=prospectos.filter(p=>p.status==="enviado").length;
   const resp=prospectos.filter(p=>p.status==="respondio"||p.leadId).length;
   const tile=(lbl,val)=>`<div style="flex:1;min-width:120px;border:1px solid var(--hair2);border-radius:16px;padding:14px 16px">
@@ -2332,7 +2332,9 @@ function renderProspeccion(){
         <button class="btn sm ghost btn-del" data-del="prospectos:${p.id}" title="Borrar">${ICON_TRASH}</button></td>
     </tr>${fbAsk===p.id?`<tr><td colspan="6" style="padding:4px 18px 16px"><span class="bs" style="margin-right:10px">¿Por qué no sirve? (el buscador aprende de esto)</span>
       ${["Cadena grande","Muy chico","No es el target","Mala zona","Otro"].map(m=>`<button class="btn sm ghost" data-fbmotivo="${p.id}|${esc(m)}" style="margin-right:6px">${esc(m)}</button>`).join("")}
-      <button class="linkbtn" data-fbcancel="1" style="margin-left:6px;color:var(--faint)">Cancelar</button></td></tr>`:""}${apolloAsk===p.id?`<tr><td colspan="6" style="padding:4px 18px 16px"><span class="bs" style="margin-right:12px">⚡ ¿Reforzar con Apollo? Busca el email directo de ${p.contacto?esc(String(p.contacto).split(/[—(,]/)[0].trim()):"la persona de contacto"} — usa 1 de tus 75 búsquedas gratis del mes.</span><button class="btn sm" data-apolloconfirm="${p.id}" style="margin-right:8px">Confirmar</button><button class="btn sm ghost" data-apollocancel="1">Cancelar</button></td></tr>`:""}`;};
+      <button class="linkbtn" data-fbcancel="1" style="margin-left:6px;color:var(--faint)">Cancelar</button></td></tr>`:""}${apolloAsk===p.id?`<tr><td colspan="6" style="padding:4px 18px 16px">
+      <div style="font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--accent);margin-bottom:7px">⚡ ${apolloMes}/75 USADAS ESTE MES</div>
+      <span class="bs" style="margin-right:12px">¿Reforzar con Apollo? Busca el email directo de ${p.contacto?esc(String(p.contacto).split(/[—(,]/)[0].trim()):"la persona de contacto"} — va a usar 1 más.</span><button class="btn sm" data-apolloconfirm="${p.id}" style="margin-right:8px">Confirmar</button><button class="btn sm ghost" data-apollocancel="1">Cancelar</button></td></tr>`:""}`;};
   const tablas = Object.entries(grupos).map(([k,arr])=>`
     ${k?`<div class="sect">${esc(k)} <span style="font-weight:600;color:var(--faint);font-size:12.5px">· ${arr.length}</span></div>`:""}
     <div class="tablewrap" style="padding:10px 20px 14px"><table class="captable">
