@@ -635,7 +635,7 @@ const I_STATES = ["pendiente","pagada","vencida"];
 /* Embudo de leads — 6 estados */
 const L_STATES = ["nuevo","enviado","respondio","sin_respuesta","ganado","perdido"];
 const PR_STATES = ["encontrado","contactable","enviado","respondio","descartado"];
-const PR_LABELS = {encontrado:"Encontrado",contactable:"Con email ✓",enviado:"Enviado",respondio:"Respondió 🔥",descartado:"Descartado"};
+const PR_LABELS = {encontrado:"Sin email · llamar",contactable:"Para contactar ✓",enviado:"Enviado",respondio:"Respondió 🔥",descartado:"Descartado"};
 const L_LABELS = {nuevo:"Nuevos",enviado:"Enviados",respondio:"Respondieron",sin_respuesta:"Sin respuesta",ganado:"Ganado",perdido:"Perdido"};
 const ETAPAS = [["contactado","Contactado"],["interesado","Interesado"],["reunion","Reunión/Visita"],["propuesta","Propuesta"],["negociando","Negociando"]];
 const ETAPA_LBL = Object.fromEntries(ETAPAS);
@@ -2313,10 +2313,11 @@ function renderProspeccion(){
       </div></td>
       <td style="font-size:12.5px">${p.contacto?esc(p.contacto):(p.emailDirecto||p.phoneDirecto||p.email||p.phone?"":`<span style="color:var(--faint)">sin contacto</span>`)}
         ${(function(){ const pl=[];
-          if(p.emailDirecto) pl.push(`<a class="cpill dir" href="mailto:${esc(p.emailDirecto)}" title="Contacto directo — ${esc(p.emailDirecto)}">★ ${esc(p.emailDirecto)}</a>`);
-          if(p.phoneDirecto) pl.push(`<a class="cpill dir" href="tel:${esc(String(p.phoneDirecto).replace(/[^+\d]/g,""))}" title="Contacto directo — ${esc(p.phoneDirecto)}">★ ${esc(p.phoneDirecto)}</a>`);
-          if(p.email) pl.push(`<a class="cpill" href="mailto:${esc(p.email)}" title="${esc(p.email)}">${esc(p.email)}</a>`);
-          if(p.phone) pl.push(`<a class="cpill" href="tel:${esc(String(p.phone).replace(/[^+\d]/g,""))}" title="${esc(p.phone)}">${esc(p.phone)}</a>`);
+          const quien=p.contacto?esc(String(p.contacto).split(/[—(,]/)[0].trim()):"el contacto";
+          if(p.emailDirecto) pl.push(`<a class="cpill dir" href="mailto:${esc(p.emailDirecto)}" title="Email personal de ${quien}">★ de ${quien} · ${esc(p.emailDirecto)}</a>`);
+          if(p.phoneDirecto) pl.push(`<a class="cpill dir" href="tel:${esc(String(p.phoneDirecto).replace(/[^+\d]/g,""))}" title="Teléfono personal de ${quien}">★ de ${quien} · ${esc(p.phoneDirecto)}</a>`);
+          if(p.email) pl.push(`<a class="cpill" href="mailto:${esc(p.email)}" title="Email general del negocio">del local · ${esc(p.email)}</a>`);
+          if(p.phone) pl.push(`<a class="cpill" href="tel:${esc(String(p.phone).replace(/[^+\d]/g,""))}" title="Teléfono general del negocio">del local · ${esc(p.phone)}</a>`);
           return pl.length?`<div class="cpills">${pl.join("")}</div>`:""; })()}</td>
       <td style="font-size:12px">${esc(p.nicho||"—")}</td>
       <td style="font-size:12px;color:var(--muted)">${esc(p.fuente||"—")}</td>
