@@ -61,7 +61,11 @@ Deno.serve(async (req) => {
       '<a href="https://lorenzoagency.tech" style="color:#DD7D47;text-decoration:none">lorenzoagency.tech</a>' +
       '<img src="https://lorenzoagency.tech/email/firma-bigote.png" alt="LORENZO Agency" width="130" height="17" style="display:block;margin-top:11px;border:0;outline:none">' +
       '</div>';
-    const bodyHtml = String(body).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>");
+    const _lineas = String(body).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>").split("\n");
+    for (let i = 0; i < _lineas.length; i++) { if (_lineas[i].trim()) { if (!_lineas[i].includes("<b>")) _lineas[i] = "<b>" + _lineas[i] + "</b>"; break; } }
+    const bodyHtml = _lineas.join("<br>");
+    const bodyPlano = String(body).replace(/\*\*/g, "");
 
     // Enviar por SMTP — Private Email: mail.privateemail.com, 465 SSL
     const client = new SMTPClient({
@@ -74,7 +78,7 @@ Deno.serve(async (req) => {
       from: FROM,
       to,
       subject: subject || "Respuesta — LORENZO Agency",
-      content: body + FIRMA_TXT,
+      content: bodyPlano + FIRMA_TXT,
       html: bodyHtml + FIRMA_HTML,
       ...(attachments.length ? { attachments } : {}),
     });

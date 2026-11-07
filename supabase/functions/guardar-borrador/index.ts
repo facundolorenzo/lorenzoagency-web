@@ -24,6 +24,13 @@ function jwtRole(t: string): string | null {
 const b64 = (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 const b64lines = (s: string) => (b64(s).match(/.{1,76}/g) || []).join("\r\n");
 const qsubj = (s: string) => "=?UTF-8?B?" + b64(s) + "?=";
+// Texto -> HTML: escapa, **asi** = negrita, y el saludo (primera linea) sale en negrita solo
+function aHtml(txt: string): string {
+  const lineas = txt.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>").split("\n");
+  for (let i = 0; i < lineas.length; i++) { if (lineas[i].trim()) { if (!lineas[i].includes("<b>")) lineas[i] = "<b>" + lineas[i] + "</b>"; break; } }
+  return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#222">' + lineas.join("<br>") + "</div>";
+}
 const iquote = (s: string) => '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
 
 // APPEND por IMAP (una conexión, comandos mínimos). Devuelve la carpeta donde quedó.
@@ -98,9 +105,9 @@ Deno.serve(async (req) => {
       const B = "----=_LZA_" + Math.random().toString(36).slice(2);
       let partes =
         "--" + B + "\r\n" +
-        "Content-Type: text/plain; charset=utf-8\r\n" +
+        "Content-Type: text/html; charset=utf-8\r\n" +
         "Content-Transfer-Encoding: base64\r\n\r\n" +
-        b64lines(texto) + "\r\n";
+        b64lines(aHtml(texto)) + "\r\n";
       for (const a of adjuntos) {
         partes +=
           "--" + B + "\r\n" +
@@ -113,10 +120,10 @@ Deno.serve(async (req) => {
       msg = cab + "Content-Type: multipart/mixed; boundary=\"" + B + "\"\r\n\r\n" + partes;
     } else {
       msg = cab +
-        "Content-Type: text/plain; charset=utf-8\r\n" +
+        "Content-Type: text/html; charset=utf-8\r\n" +
         "Content-Transfer-Encoding: base64\r\n" +
         "\r\n" +
-        b64lines(texto) + "\r\n";
+        b64lines(aHtml(texto)) + "\r\n";
     }
 
     const carpetas = DRAFTS ? [DRAFTS] : ["Drafts", "INBOX.Drafts", "Borradores"];
