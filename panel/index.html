@@ -221,6 +221,14 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .apbar{width:42px;height:2px;border-radius:2px;background:var(--hair2);overflow:hidden;margin-top:1px}
 .apbar i{display:block;width:45%;height:100%;border-radius:2px;background:var(--accent);animation:apbarmove 1.1s linear infinite}
 @keyframes apbarmove{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+.btnpro{display:inline-flex;align-items:center;gap:9px;padding:9px 16px;border-radius:12px;cursor:pointer;
+ font-family:var(--disp);font-size:13.5px;font-weight:700;color:#fff;letter-spacing:.01em;
+ background:linear-gradient(180deg,#2c2c31,#1a1a1e);border:1px solid rgba(255,255,255,.09);
+ box-shadow:0 2px 7px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);transition:all .15s;user-select:none}
+.btnpro:hover{transform:translateY(-1px);background:linear-gradient(180deg,#35353c,#202025);box-shadow:0 4px 12px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.1)}
+.btnpro:active{transform:translateY(0);box-shadow:0 1px 3px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05)}
+.btnpro .bpi{width:19px;height:19px;border-radius:50%;border:1.6px solid currentColor;display:inline-flex;align-items:center;justify-content:center;flex:none}
+
 .actico{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--hair2);border-radius:50%;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;padding:0;font-size:13px;line-height:1;text-decoration:none}
 .actico:hover{border-color:var(--accent);color:var(--accent)}
 .actico.nar{border-color:rgba(221,125,71,.55);color:var(--accent)}
@@ -724,6 +732,8 @@ const ICON_PIN = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" st
 const ICON_TRASH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;pointer-events:none"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v6M14 11v6"/></svg>';
 const ICON_PHONE = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1.5px;pointer-events:none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
 const ICON_PERSON = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;pointer-events:none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+const BPI_OPEN='<span class="bpi"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M7 17 17 7M9 7h8v8"/></svg></span>';
+const BPI_BACK='<span class="bpi"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M15 18l-6-6 6-6"/></svg></span>';
 const ICON_TARGET = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="pointer-events:none"><circle cx="12" cy="12" r="6.2"/><line x1="12" y1="2.6" x2="12" y2="7.2"/><line x1="12" y1="16.8" x2="12" y2="21.4"/><line x1="2.6" y1="12" x2="7.2" y2="12"/><line x1="16.8" y1="12" x2="21.4" y2="12"/></svg>';
 const ICON_GLOBE = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="pointer-events:none"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.8 2.8 2.8 15.2 0 18"/><path d="M12 3c-2.8 2.8-2.8 15.2 0 18"/></svg>';
 const ICON_MAPPIN = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M12 21s-7-5.1-7-11a7 7 0 0 1 14 0c0 5.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>';
@@ -946,7 +956,7 @@ function renderLlamadas(){
         <td style="font-size:12px">${esc(vendDe(c.texto))}</td>
         <td style="font-size:12px">${esc(CALL_RES[c.resultado]||c.resultado||"—")}</td>
         <td style="font-family:var(--mono);font-size:11px">${esc(durDe(c.texto))}</td>
-        <td>${l?`<button class="btn sm ghost" data-openlead="${l.id}">Abrir</button>`:""}</td>
+        <td>${l?`<button class="btnpro" data-openlead="${l.id}">${BPI_OPEN}Abrir</button>`:""}</td>
       </tr>`; }).join("")}
     </table></div>`
     : `<div class="empty"><b>Sin llamadas registradas todavía.</b><br>Cada llamada que registres (con su transcripción y análisis) aparece acá.</div>`;
@@ -1299,7 +1309,7 @@ function renderMisClientes(){
         <div style="font-size:11.5px;color:var(--muted);margin-top:2px">${esc(L_LABELS[l.status]||l.status)}${l.service?` · ${esc(l.service)}`:''}${l.mailsEnviados?` · ${l.mailsEnviados} mail(s)`:''}</div>
       </div>
       ${interestBar(l.respuestas)}
-      <button class="btn sm ghost" data-openlead="${l.id}">Abrir</button>
+      <button class="btnpro" data-openlead="${l.id}">${BPI_OPEN}Abrir</button>
     </div>`;
   const body = mis.length
     ? `<div style="display:flex;flex-direction:column;gap:9px">${mis.map(fila).join("")}</div>`
@@ -2032,7 +2042,7 @@ function renderProposals(){
 }
 function proposalForm(d){
   const num = d? d.number : nextNumber(proposals,"LA");
-  return `<div class="panel"><button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button><form id="f-proposals" class="form">
+  return `<div class="panel"><button class="btnpro" type="button" data-cancel="1" style="margin-bottom:14px">${BPI_BACK}Volver</button><form id="f-proposals" class="form">
     <label><span class="fl">Número</span><input name="number" value="${esc(num)}" required></label>
     <label><span class="fl">Cliente</span><select name="clientId"><option value="">— elegir —</option>
       ${clients.map(c=>`<option value="${esc(c.id)}" ${d&&d.clientId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
@@ -2103,7 +2113,7 @@ function renderInvoices(){
 }
 function invoiceForm(d){
   const num = d? d.number : nextNumber(invoices,"INV");
-  return `<div class="panel"><button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button><form id="f-invoices" class="form">
+  return `<div class="panel"><button class="btnpro" type="button" data-cancel="1" style="margin-bottom:14px">${BPI_BACK}Volver</button><form id="f-invoices" class="form">
     <label><span class="fl">Número</span><input name="number" value="${esc(num)}" required></label>
     <label><span class="fl">Cliente</span><select name="clientId"><option value="">— elegir —</option>
       ${clients.map(c=>`<option value="${esc(c.id)}" ${d&&d.clientId===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
@@ -2486,7 +2496,7 @@ window.prospFotoLeer = async function(inp){
 };
 
 function prospForm(d){
-  return `<div class="panel"><button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button>
+  return `<div class="panel"><button class="btnpro" type="button" data-cancel="1" style="margin-bottom:14px">${BPI_BACK}Volver</button>
     ${d?"":`<div style="margin-bottom:16px;padding:13px 15px;border:1px dashed rgba(221,125,71,.45);border-radius:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <span style="font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:12px"><span style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(221,125,71,.55);display:inline-flex;align-items:center;justify-content:center;color:var(--accent);flex:none;background:rgba(221,125,71,.08)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 8.5a2 2 0 0 1 2-2h2l1.4-2h7.2l1.4 2h2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.6"/></svg></span><span><b style="color:#fff">¿Tenés una foto con los datos?</b> Tarjeta, flyer o captura — la leo y completo los campos solos.</span></span>
       <label class="btn sm ghost" style="cursor:pointer;margin:0;display:inline-flex;align-items:center;gap:7px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5a2 2 0 0 1 2-2h2l1.4-2h7.2l1.4 2h2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.6"/></svg>Subir foto<input type="file" accept="image/*" style="display:none" onchange="prospFotoLeer(this)"></label>
@@ -2543,7 +2553,7 @@ async function abrirMapa(){
   wrap.innerHTML=`<div style="background:#141519;border:1px solid rgba(255,255,255,.14);border-radius:16px;max-width:780px;width:100%;padding:16px 18px;box-shadow:0 30px 90px rgba(0,0,0,.55)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <span style="font-family:var(--disp);font-weight:800;color:#fff;display:inline-flex;align-items:center;gap:8px">${ICON_PIN} Zona de búsqueda</span>
-      <button class="btn ghost sm" id="mapcerrar" type="button">← Volver</button></div>
+      <button class="btnpro" id="mapcerrar" type="button">${BPI_BACK}Volver</button></div>
     <div id="mapa" style="height:52vh;min-height:300px;border-radius:12px;overflow:hidden"></div>
     <div style="display:flex;gap:14px;align-items:center;margin-top:12px;flex-wrap:wrap">
       <input type="range" id="mapradio" min="1" max="200" value="10" style="flex:1;min-width:160px;accent-color:#DD7D47">
@@ -2607,7 +2617,7 @@ function busqModo(m){
 }
 function busquedaForm(){
   return `<div class="panel">
-    <button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button>
+    <button class="btnpro" type="button" data-cancel="1" style="margin-bottom:14px">${BPI_BACK}Volver</button>
     <form id="f-busquedas" class="form">
     <div class="full" style="font-family:var(--disp);font-weight:800;color:#fff;font-size:15px">🔎 Pedir una búsqueda</div>
     <div class="full bs">La estructura (fuentes, filtro, prioridad) ya está armada. Elegí el modo y definí qué buscar.</div>
@@ -2631,7 +2641,7 @@ function busquedaForm(){
 }
 function prospImportForm(){
   return `<div class="panel">
-    <button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button>
+    <button class="btnpro" type="button" data-cancel="1" style="margin-bottom:14px">${BPI_BACK}Volver</button>
     <div style="font-family:var(--disp);font-weight:800;color:#fff;margin-bottom:6px">Importar lista</div>
     <div class="bs" style="margin-bottom:10px">Una línea por negocio, separando con <b>|</b> :&nbsp; empresa | email | web | ciudad | nicho</div>
     <input id="prospbusq" placeholder="Título de la búsqueda (ej: Lounges Fort Lauderdale — oct 2026)" style="width:100%;margin-bottom:8px">
@@ -2666,7 +2676,7 @@ function renderClients(){
     '<div class="empty"><b>Sin clientes todavía.</b></div>'}`;
 }
 function clientForm(d){
-  return `<div class="panel"><button class="linkbtn" type="button" data-cancel="1" style="margin-bottom:12px">← Volver</button><form id="f-clients" class="form">
+  return `<div class="panel"><button class="btnpro" type="button" data-cancel="1" style="margin-bottom:14px">${BPI_BACK}Volver</button><form id="f-clients" class="form">
     <label><span class="fl">Nombre</span><input name="name" value="${esc(d?d.name:"")}" required placeholder="Compass"></label>
     <label><span class="fl">Empresa / división</span><input name="company" value="${esc(d?d.company:"")}"></label>
     <label><span class="fl">Contacto</span><input name="contact" value="${esc(d?d.contact:"")}" placeholder="Nombre y rol"></label>
@@ -2746,7 +2756,7 @@ function leadRowHtml(l){
     <td style="max-width:240px"><button class="linkbtn" data-openlead="${l.id}">${short}</button>${l.mailsEnviados?`<br><span style="font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.1em">${l.mailsEnviados} mail(s) enviado(s)</span>`:""}</td>
     <td><select class="lsel" data-lstatus="${l.id}">${L_STATES.map(s=>`<option value="${s}" ${l.status===s?"selected":""}>${esc(L_LABELS[s])}</option>`).join("")}</select></td>
     <td><div class="rowactions">
-      <button class="btn sm ghost" data-openlead="${l.id}">Abrir</button>
+      <button class="btnpro" data-openlead="${l.id}">${BPI_OPEN}Abrir</button>
       <button class="btn-trash" data-del="leads:${l.id}" title="Borrar (spam)">${ICON_TRASH}</button></div></td>
   </tr>`;
 }
@@ -2829,7 +2839,7 @@ function renderHoy(){
       <td style="font-size:12px">${l.email?esc(l.email):''}${l.phone?`<br><a href="tel:${esc(String(l.phone).replace(/[^\\d+]/g,''))}" class="telink">${ICON_PHONE} ${esc(l.phone)}</a>`:''}</td>
       <td><div class="rowactions">
         ${a.tipo==='llamada'?`<button class="btn sm" data-calllead="${l.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">${ICON_PHONE} Llamar</button>`:''}
-        <button class="btn sm ${a.hot?'':'ghost'}" data-openlead="${l.id}">Abrir</button>
+        <button class="btnpro" data-openlead="${l.id}"${a.hot?' style="border-color:rgba(221,125,71,.6)"':''}>${BPI_OPEN}Abrir</button>
       </div></td>
     </tr>`).join('')}
     </table></div>`
@@ -2905,7 +2915,7 @@ function leadModalHtml(){
     <div class="lhead">
       <div><div class="lname">${esc(l.name||"—")} &nbsp;${langChip(l)}</div>
         <div class="lmeta">${esc(String(l.createdAt||"").slice(0,10))}${l.service?` &nbsp;·&nbsp; <span class="lrubro">${esc(l.service)}</span>`:""} &nbsp;·&nbsp; ${interestBar(l.respuestas)}</div></div>
-      <button class="btn ghost sm" data-closelead="1">← Volver</button>
+      <button class="btnpro" data-closelead="1">${BPI_BACK}Volver</button>
     </div>
     <div class="lcontact">
       ${l.email?`<a class="cpill" href="mailto:${esc(l.email)}" title="${esc(l.email)}">${esc(l.email)}</a>`:""}
@@ -3001,7 +3011,7 @@ function prospModalHtml(){
   return `<div class="cpop-bg" data-closeprosp="1"><div class="cpop" style="max-width:520px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
       <div style="font-family:var(--disp);font-size:16px;font-weight:800;color:#fff">${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="${esc(PR_EXPL[p.prioridad]||"")}">${esc(p.prioridad)}</span>`:""}${esc(p.empresa||"—")}${p.puntoFlojo?`<span style="margin-left:8px;vertical-align:2px">${pfTag(p.puntoFlojo)}</span>`:""}</div>
-      <button class="btn ghost sm" data-closeprosp="1" style="flex:none">← Volver</button>
+      <button class="btnpro" data-closeprosp="1" style="flex:none">${BPI_BACK}Volver</button>
     </div>
     <div class="bs" style="margin-top:2px">${esc([p.nicho,p.ciudad].filter(Boolean).join(" · "))}</div>
     ${p.prioridadMotivo?`<div class="goalmsg" style="margin-top:12px;line-height:1.55">${esc(p.prioridadMotivo)}</div>`:""}
