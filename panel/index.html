@@ -2346,7 +2346,9 @@ function renderProspeccion(){
   const esPunt = e=>espKeys.has(String(e[0]).toLowerCase().trim());
   const punt = entradas.filter(esPunt), nichoGr = entradas.filter(e=>!esPunt(e));
   const maxAt = arr=>Math.max(...arr.map(p=>new Date(p.createdAt||0).getTime()));
-  punt.sort((a,b)=>maxAt(b[1])-maxAt(a[1]));
+  const espAt = {}; busquedas.filter(b=>b.modo==="especifico").forEach(b=>{ espAt[String((b.rubro||"")+" — "+(b.zona||"")).toLowerCase().trim()]=new Date(b.createdAt||0).getTime(); });
+  const atDe = e=>espAt[String(e[0]).toLowerCase().trim()]||maxAt(e[1]);
+  punt.sort((a,b)=>atDe(b)-atDe(a));
   nichoGr.sort((a,b)=>maxAt(b[1])-maxAt(a[1]));
   const seccion = t=>`<div style="font-family:var(--disp);font-size:17px;font-weight:800;color:#fff;letter-spacing:.02em;margin:34px 0 6px;display:flex;align-items:center;gap:14px">${t}<span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(221,125,71,.5),var(--hair2))"></span></div>`;
   const tabla = ([k,arr])=>`
@@ -3638,7 +3640,7 @@ document.addEventListener("click", async e=>{
   if(t.dataset.closelead || t.dataset.closeleadbg){ openLeadId=null; tradActivo=false; tradOriginal=""; tradShown=""; cierreAjuste=false; renderApp(); return; }
   if(t.dataset.new){ formOpen=t.dataset.new; editing=null; renderApp(); return; }
   if(t.dataset.cancel){ formOpen=null; editing=null; renderApp(); return; }
-  if(t.dataset.edit){ const[col,id]=t.dataset.edit.split(":"); editing={col,id}; formOpen=col; confirmDel=null; renderApp(); return; }
+  if(t.dataset.edit){ const[col,id]=t.dataset.edit.split(":"); editing={col,id}; formOpen=col; confirmDel=null; renderApp(); const f=document.querySelector("form[id^=f-]"); if(f) f.scrollIntoView({behavior:"smooth",block:"start"}); else window.scrollTo({top:0,behavior:"smooth"}); return; }
   if(t.dataset.del){ const[col,id]=t.dataset.del.split(":"); confirmDel={col,id}; renderApp(); return; }
   if(t.dataset.delno){ confirmDel=null; renderApp(); return; }
   if(t.dataset.delyes){
