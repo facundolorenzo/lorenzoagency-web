@@ -308,6 +308,13 @@
   .p-music .bigtitle .rw > span{display:inline-block;transform:translateY(112%)}
   .p-music.play .bigtitle .rw > span{animation:riseUp .8s cubic-bezier(.22,1,.36,1) both}
   .p-music .btext{font-family:var(--serif);font-size:clamp(18px,4.2vw,23px);line-height:1.5;color:var(--fg);max-width:32ch;margin:0;opacity:0;transform:translateY(10px)}
+  .mstrat{margin-top:clamp(26px,5vw,38px);max-width:52ch;opacity:0;transform:translateY(10px)}
+  .p-music.play .mstrat{animation:fadeUp .9s ease .62s both}
+  .msrow{display:flex;gap:16px;align-items:baseline;padding:13px 0;border-top:1px solid var(--line)}
+  .msrow:last-child{border-bottom:1px solid var(--line)}
+  .msk{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--accent);flex:none;padding-top:2px}
+  .msv{font-family:var(--serif);font-size:clamp(15px,3.6vw,17.5px);line-height:1.55;color:var(--muted)}
+  .msv b{color:var(--fg);font-weight:600}
   .p-music.play .btext{animation:fadeUp .9s ease .45s both}
   @keyframes riseUp{from{transform:translateY(112%)}to{transform:translateY(0)}}
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:.92;transform:translateY(0)}}
@@ -524,6 +531,11 @@
       <h2 class="bigtitle"><span class="rw"><span style="animation-delay:.05s">Experience</span></span> <span class="rw"><span style="animation-delay:.18s">Engineering</span></span></h2>
       <p class="btext">Production, sound and experience engineered per venue. We read the room&#39;s concept, design the night hour by hour and drive consumption.</p>
       <p class="pfine">Sound programming · by venue</p>
+      <div class="mstrat">
+        <div class="msrow"><span class="msk">01</span><span class="msv"><b>We read</b> — your niche, your audience, your brand, your business goals.</span></div>
+        <div class="msrow"><span class="msk">02</span><span class="msv"><b>We design</b> — finely selected DJs, sets built by hour and by purpose.</span></div>
+        <div class="msrow"><span class="msk">03</span><span class="msv"><b>We drive</b> — emotion that turns into consumption, night after night.</span></div>
+      </div>
       <div class="editor brief" data-service="Experience Engineering" style="margin-top:clamp(30px,6vw,46px)">
         <div class="ed-bar"><i></i><i></i><i></i><span class="nm">experience.ts</span></div>
         <p class="pline1" data-q="// What experience do you want to create in your venue?"></p>
