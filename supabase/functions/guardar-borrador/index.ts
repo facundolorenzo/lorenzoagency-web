@@ -72,8 +72,8 @@ Deno.serve(async (req) => {
     if (!allowed) { const { data: isAdmin } = await supa.rpc("is_admin"); allowed = !!isAdmin; }
     if (!allowed) return json({ error: "No autorizado" }, 403);
 
-    const USER = Deno.env.get("MAIL_USER") || "";
-    const PASS = Deno.env.get("MAIL_PASS") || "";
+    const USER = Deno.env.get("MAIL_USER") || Deno.env.get("SMTP_USER") || "";
+    const PASS = Deno.env.get("MAIL_PASS") || Deno.env.get("SMTP_PASS") || "";
     if (!USER || !PASS) return json({ error: "Faltan los secrets MAIL_USER y MAIL_PASS en Supabase" }, 500);
     const HOST = Deno.env.get("MAIL_HOST") || "mail.privateemail.com";
     const DRAFTS = Deno.env.get("MAIL_DRAFTS") || "";
@@ -84,17 +84,40 @@ Deno.serve(async (req) => {
     const texto = String(body.body || "").trim();
     if (!to || !to.includes("@")) return json({ error: "Falta el destinatario" }, 400);
     if (!texto) return json({ error: "Falta el texto del mail" }, 400);
+    const adjuntos = (Array.isArray(body.adjuntos) ? body.adjuntos : []).slice(0, 5)
+      .filter((a: Record<string, string>) => a && a.nombre && a.base64);
 
-    const msg =
+    const cab =
       "From: LORENZO Agency <" + USER + ">\r\n" +
       "To: " + to + "\r\n" +
       "Subject: " + qsubj(subject) + "\r\n" +
       "Date: " + new Date().toUTCString() + "\r\n" +
-      "MIME-Version: 1.0\r\n" +
-      "Content-Type: text/plain; charset=utf-8\r\n" +
-      "Content-Transfer-Encoding: base64\r\n" +
-      "\r\n" +
-      b64lines(texto) + "\r\n";
+      "MIME-Version: 1.0\r\n";
+    let msg: string;
+    if (adjuntos.length) {
+      const B = "----=_LZA_" + Math.random().toString(36).slice(2);
+      let partes =
+        "--" + B + "\r\n" +
+        "Content-Type: text/plain; charset=utf-8\r\n" +
+        "Content-Transfer-Encoding: base64\r\n\r\n" +
+        b64lines(texto) + "\r\n";
+      for (const a of adjuntos) {
+        partes +=
+          "--" + B + "\r\n" +
+          "Content-Type: " + String(a.tipo || "application/octet-stream") + "; name=\"" + String(a.nombre).replace(/"/g, "") + "\"\r\n" +
+          "Content-Disposition: attachment; filename=\"" + String(a.nombre).replace(/"/g, "") + "\"\r\n" +
+          "Content-Transfer-Encoding: base64\r\n\r\n" +
+          (String(a.base64).replace(/[^A-Za-z0-9+/=]/g, "").match(/.{1,76}/g) || []).join("\r\n") + "\r\n";
+      }
+      partes += "--" + B + "--\r\n";
+      msg = cab + "Content-Type: multipart/mixed; boundary=\"" + B + "\"\r\n\r\n" + partes;
+    } else {
+      msg = cab +
+        "Content-Type: text/plain; charset=utf-8\r\n" +
+        "Content-Transfer-Encoding: base64\r\n" +
+        "\r\n" +
+        b64lines(texto) + "\r\n";
+    }
 
     const carpetas = DRAFTS ? [DRAFTS] : ["Drafts", "INBOX.Drafts", "Borradores"];
     const donde = await imapAppendDraft(HOST, USER, PASS, carpetas, msg);

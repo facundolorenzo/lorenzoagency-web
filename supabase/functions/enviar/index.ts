@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     // Con service_role conviene un cliente que no herede el JWT (bypassa RLS en las escrituras)
     const db = (SERVICE && token === SERVICE) ? createClient(SB_URL, SERVICE) : supa;
 
-    const { lead_id, to, subject, body, suggestion = "" } = await req.json();
+    const { lead_id, to, subject, body, suggestion = "", adjuntos = [] } = await req.json();
     if (!to || !body) return json({ error: "Falta destinatario o cuerpo" }, 400);
 
     const USER = Deno.env.get("SMTP_USER")!;          // email completo de la compañía
@@ -67,12 +67,16 @@ Deno.serve(async (req) => {
     const client = new SMTPClient({
       connection: { hostname: "mail.privateemail.com", port: 465, tls: true, auth: { username: USER, password: PASS } },
     });
+    const attachments = (Array.isArray(adjuntos) ? adjuntos : []).slice(0, 5)
+      .filter((a: any) => a && a.nombre && a.base64)
+      .map((a: any) => ({ filename: String(a.nombre), contentType: String(a.tipo || "application/octet-stream"), encoding: "base64" as const, content: String(a.base64) }));
     await client.send({
       from: FROM,
       to,
       subject: subject || "Respuesta — LORENZO Agency",
       content: body + FIRMA_TXT,
       html: bodyHtml + FIRMA_HTML,
+      ...(attachments.length ? { attachments } : {}),
     });
     await client.close();
 

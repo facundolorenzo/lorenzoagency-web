@@ -549,6 +549,20 @@ function contPreviewIG(sel){
   </div>`;
 }
 let callLeadId = null, closeLeadId = null;
+let leadAdj = []; // adjuntos del mail del lead abierto [{nombre,tipo,base64}]
+function leadAdjRender(){ const d=document.getElementById("ladj"); if(!d) return;
+  d.innerHTML = leadAdj.map((a,i)=>`<span style="display:inline-flex;align-items:center;gap:7px;border:1px solid var(--hair2);border-radius:16px;padding:4px 7px 4px 12px;font-size:12px;color:var(--muted);margin:0 8px 6px 0">📎 ${esc(a.nombre)} <span style="color:var(--faint)">${(a.kb/1024>=1?(a.kb/1024).toFixed(1)+" MB":Math.round(a.kb)+" KB")}</span><button onclick="leadAdjDel(${i})" style="background:transparent;border:none;color:var(--bad);cursor:pointer;font-size:13px;padding:0 3px;line-height:1">✕</button></span>`).join(""); }
+window.leadAdjDel = function(i){ leadAdj.splice(i,1); leadAdjRender(); };
+window.leadAdjAdd = function(inp){
+  const files=[...(inp.files||[])]; inp.value="";
+  const tot = leadAdj.reduce((s,a)=>s+a.kb,0) + files.reduce((s,f)=>s+f.size/1024,0);
+  if(tot > 10*1024){ note("Máximo 10 MB en adjuntos por mail."); return; }
+  files.slice(0, 5-leadAdj.length).forEach(f=>{
+    const r=new FileReader();
+    r.onload=()=>{ leadAdj.push({ nombre:f.name, tipo:f.type||"application/octet-stream", base64:String(r.result).split(",")[1]||"", kb:f.size/1024 }); leadAdjRender(); };
+    r.readAsDataURL(f);
+  });
+};
 let callLang = null; // idioma del micrófono en la llamada (es/en); por defecto, el del lead
 let verLlamadaId = null; // visor de transcripción abierto
 let fichaTab = "email";  // pestaña activa dentro de la ficha del lead
@@ -2932,8 +2946,10 @@ function leadModalHtml(){
           <button class="btn ghost sm" data-replyfull="1" style="padding:3px 10px;font-size:10px;letter-spacing:.08em">⛶ Agrandar</button></div>
         <div id="tradhint" class="tradhint" style="display:none">⇄ En español · podés editar · se envía en el idioma del lead</div>
         <textarea class="lreply" id="lreply" placeholder="Tocá ↻ Rehacer para que el agente redacte una respuesta, o escribí vos directamente.">${esc(l.borrador||"")}</textarea>
+        <div id="ladj" style="margin-top:8px"></div>
         <div class="lreplyactions">
           <button class="btn ghost sm" data-rehacer="${l.id}">↻ Rehacer</button>
+          <label class="btn ghost sm" style="cursor:pointer;display:inline-flex;align-items:center" title="Adjuntar archivos al mail (presskit, PDF, imágenes — hasta 5, 10 MB total)">📎 Adjuntar<input type="file" multiple style="display:none" onchange="leadAdjAdd(this)"></label>
           <button class="btn ghost sm btn-trad" data-traducir="1" title="Traducir al español (podés editar)">⇄ Traducir</button>
           <span class="lsent">${sent}</span>
           ${l.email?`<button class="btn ghost sm" data-borradormail="${l.id}" title="Guarda este texto en los Borradores de tu casilla (Private Mail) para retocarlo y mandarlo desde ahí">📝 A mis borradores</button><button class="btn" data-enviarmail="${l.id}" style="margin-left:4px">Enviar →</button>`:`<span style="color:var(--muted);font-size:12px">Sin email para enviar</span>`}
@@ -3161,7 +3177,8 @@ document.addEventListener("click", async e=>{
     if(!l.email){ note("Este lead no tiene email."); return; }
     t.disabled=true; const prev=t.textContent; t.textContent="Guardando…";
     try{
-      const r=await callFn("guardar-borrador",{ to:l.email, subject: l.service?("Re: "+l.service+" — LORENZO"):"LORENZO Agency", body:bodyTxt });
+      const r=await callFn("guardar-borrador",{ to:l.email, subject: l.service?("Re: "+l.service+" — LORENZO"):"LORENZO Agency", body:bodyTxt, adjuntos: leadAdj.map(a=>({nombre:a.nombre,tipo:a.tipo,base64:a.base64})) });
+      leadAdj=[];
       note("📝 Quedó en "+((r&&r.carpeta)||"Borradores")+" de tu casilla — abrilo en Private Mail, retocá y mandá.");
     }catch(err){ note("No pude guardarlo en tu casilla: "+err.message); }
     t.disabled=false; t.textContent=prev; return;
@@ -3189,8 +3206,10 @@ document.addEventListener("click", async e=>{
         lead_id:id, to:l.email,
         subject: l.service?("Re: "+l.service+" — LORENZO"):"Gracias por tu consulta — LORENZO",
         body: bodyTxt,
-        suggestion: ta && ta.dataset.orig ? ta.dataset.orig : ""
+        suggestion: ta && ta.dataset.orig ? ta.dataset.orig : "",
+        adjuntos: leadAdj.map(a=>({nombre:a.nombre,tipo:a.tipo,base64:a.base64}))
       });
+      leadAdj=[];
       try{ await sb.from("touches").insert({lead_id:id,tipo:"mail",texto:bodyTxt}); }catch(e){}
       try{ await sb.from("leads").update(avanzarCadencia(l.cadenciaPaso)).eq("id",id); }catch(e){}
       note("✅ Enviado a "+l.email);
@@ -3649,7 +3668,7 @@ document.addEventListener("click", async e=>{
     window.open("https://privateemail.com/","_blank","noopener");
     return;
   }
-  if(t.dataset.openlead){
+  if(t.dataset.openlead){ leadAdj=[];
     openLeadId=t.dataset.openlead; confirmDel=null; tradActivo=false; tradOriginal=""; tradShown=""; cierreAjuste=false; fichaTab="email"; renderApp();
     const ol = leads.find(x=>x.id===openLeadId);
     if(ol && !(ol.borrador && String(ol.borrador).trim())) runDraft(openLeadId, false);
