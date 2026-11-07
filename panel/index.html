@@ -2936,7 +2936,7 @@ function leadModalHtml(){
           <button class="btn ghost sm" data-rehacer="${l.id}">↻ Rehacer</button>
           <button class="btn ghost sm btn-trad" data-traducir="1" title="Traducir al español (podés editar)">⇄ Traducir</button>
           <span class="lsent">${sent}</span>
-          ${l.email?`<button class="btn" data-enviarmail="${l.id}" style="margin-left:4px">Enviar →</button>`:`<span style="color:var(--muted);font-size:12px">Sin email para enviar</span>`}
+          ${l.email?`<button class="btn ghost sm" data-borradormail="${l.id}" title="Guarda este texto en los Borradores de tu casilla (Private Mail) para retocarlo y mandarlo desde ahí">📝 A mis borradores</button><button class="btn" data-enviarmail="${l.id}" style="margin-left:4px">Enviar →</button>`:`<span style="color:var(--muted);font-size:12px">Sin email para enviar</span>`}
         </div>
       </div>
     </div>
@@ -3151,6 +3151,20 @@ document.addEventListener("click", async e=>{
       } else { note("No pude traducir."); t.innerHTML="⇄ Traducir"; }
     }catch(err){ note("No pude traducir: "+err.message); t.innerHTML="⇄ Traducir"; }
     t.disabled=false; return;
+  }
+  if(t.dataset.borradormail){
+    const id=t.dataset.borradormail; const l=leads.find(x=>x.id===id); if(!l) return;
+    const ta=document.getElementById("lreply");
+    let bodyTxt=(ta?ta.value:"").trim();
+    if(tradActivo && bodyTxt===tradShown.trim()) bodyTxt=tradOriginal.trim(); // sin editar -> el original en el idioma del lead
+    if(!bodyTxt){ note("Escribí o generá la respuesta antes de guardarla."); return; }
+    if(!l.email){ note("Este lead no tiene email."); return; }
+    t.disabled=true; const prev=t.textContent; t.textContent="Guardando…";
+    try{
+      const r=await callFn("guardar-borrador",{ to:l.email, subject: l.service?("Re: "+l.service+" — LORENZO"):"LORENZO Agency", body:bodyTxt });
+      note("📝 Quedó en "+((r&&r.carpeta)||"Borradores")+" de tu casilla — abrilo en Private Mail, retocá y mandá.");
+    }catch(err){ note("No pude guardarlo en tu casilla: "+err.message); }
+    t.disabled=false; t.textContent=prev; return;
   }
   if(t.dataset.enviarmail){
     const id=t.dataset.enviarmail; const l=leads.find(x=>x.id===id); if(!l) return;
