@@ -766,7 +766,7 @@ const FROM = {
   vendedores:r=>({id:r.id,nombre:r.nombre,email:r.email||null,meta:Number(r.meta_mensual)||0,activo:r.activo!==false,createdAt:r.created_at}),
   touches:   r=>({id:r.id,leadId:r.lead_id,tipo:r.tipo,resultado:r.resultado,texto:r.texto,createdAt:r.created_at}),
   busquedas: r=>({id:r.id,rubro:r.rubro,zona:r.zona,target:r.target,cantidad:r.cantidad,detalles:r.detalles,modo:r.modo||"nicho",lat:r.lat,lng:r.lng,radioMillas:r.radio_millas,status:r.status||"pendiente",progreso:(r.progreso==null?null:Number(r.progreso)),inicio:r.inicio,updatedAt:r.updated_at,createdAt:r.created_at}),
-  prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
+  prospectos:r=>({id:r.id,empresa:r.empresa,contacto:r.contacto,email:r.email,emailDirecto:r.email_directo||null,contactoDirecto:r.contacto_directo||null,phone:r.phone,phoneDirecto:r.phone_directo||null,hoyHecho:r.hoy_hecho||null,web:r.web,instagram:r.instagram,
                   nicho:r.nicho,ciudad:r.ciudad,fuente:r.fuente,notas:r.notas,status:r.status||"encontrado",visitar:r.visitar===true,direccion:r.direccion||null,lat:r.lat||null,lng:r.lng||null,horario:r.horario||null,idioma:r.idioma||null,visitaDia:r.visita_dia||null,visitado:r.visitado===true,visitadoFecha:r.visitado_fecha||null,visitaNota:r.visita_nota||null,visitaHora:r.visita_hora||null,gcalEventId:r.gcal_event_id||null,importante:r.importante===true,
                   busqueda:r.busqueda||null,prioridad:r.prioridad||null,prioridadMotivo:r.prioridad_motivo||null,puntoFlojo:r.punto_flojo||null,entrada:r.entrada||null,feedback:r.feedback||null,feedbackMotivo:r.feedback_motivo||null,apolloEstado:r.apollo_estado||null,apolloNota:r.apollo_nota||null,apolloAt:r.apollo_at||null,updatedAt:r.updated_at,
                   borrador:r.borrador||null,leadId:r.lead_id||null,createdAt:r.created_at}),
@@ -776,7 +776,7 @@ const TO = {
   invoices:  d=>({number:d.number,client_id:d.clientId||null,amount:Number(d.amount)||0,status:d.status,issued:d.issued||null,due:d.due||null,notes:d.notes||null,stripe_link:d.stripeLink||null,updated_at:new Date().toISOString()}),
   clients:   d=>({name:d.name,company:d.company||null,contact:d.contact||null,email:d.email||null,phone:d.phone||null,notes:d.notes||null,updated_at:new Date().toISOString()}),
   busquedas: d=>({rubro:d.rubro,zona:d.zona||null,target:d.target||null,cantidad:Number(d.cantidad)||null,detalles:d.detalles||null,modo:d.modo||"nicho",lat:d.lat?Number(d.lat):null,lng:d.lng?Number(d.lng):null,radio_millas:d.radio?Number(d.radio):null,status:"pendiente",updated_at:new Date().toISOString()}),
-  prospectos:d=>({empresa:d.empresa,contacto:d.contacto||null,email:d.email||null,email_directo:d.emailDirecto||null,phone:d.phone||null,phone_directo:d.phoneDirecto||null,web:d.web||null,
+  prospectos:d=>({empresa:d.empresa,contacto:d.contacto||null,email:d.email||null,email_directo:d.emailDirecto||null,contacto_directo:d.contactoDirecto||null,phone:d.phone||null,phone_directo:d.phoneDirecto||null,web:d.web||null,
                   instagram:d.instagram||null,nicho:d.nicho||null,ciudad:d.ciudad||null,fuente:d.fuente||null,
                   notas:d.notas||null,status:d.status||"encontrado",prioridad:d.prioridad||null,
                   prioridad_motivo:d.prioridadMotivo||null,busqueda:d.busqueda||null,updated_at:new Date().toISOString()}),
@@ -2319,7 +2319,7 @@ function renderProspeccion(){
       </div></td>
       <td style="font-size:12.5px">${p.contacto?esc(p.contacto):(p.emailDirecto||p.phoneDirecto||p.email||p.phone?"":`<span style="color:var(--faint)">sin contacto</span>`)}
         ${(function(){ const pl=[];
-          const quien=p.contacto?esc(String(p.contacto).split(/[—(,]/)[0].trim()):"el contacto";
+          const quien=esc(String(p.contactoDirecto||p.contacto||"el contacto").split(/[—(,]/)[0].trim());
           if(p.emailDirecto) pl.push(`<a class="cpill dir" href="mailto:${esc(p.emailDirecto)}" title="Email personal de ${quien}">★ de ${quien} · ${esc(p.emailDirecto)}</a>`);
           if(p.phoneDirecto) pl.push(`<a class="cpill dir" href="tel:${esc(String(p.phoneDirecto).replace(/[^+\d]/g,""))}" title="Teléfono personal de ${quien}">★ de ${quien} · ${esc(p.phoneDirecto)}</a>`);
           if(p.email) pl.push(`<a class="cpill" href="mailto:${esc(p.email)}" title="Email general del negocio">del local · ${esc(p.email)}</a>`);
@@ -2480,6 +2480,7 @@ function prospForm(d){
     <label><span class="fl">Contacto</span><input name="contacto" value="${esc(d?d.contacto:"")}" placeholder="Nombre y rol (si se sabe)"></label>
     <label><span class="fl">Email genérico</span><input name="email" type="email" value="${esc(d?d.email:"")}" placeholder="info@lugar.com"></label>
     <label><span class="fl">⭐ Contacto directo</span><input name="emailDirecto" type="email" value="${esc(d?d.emailDirecto:"")}" placeholder="Email"></label>
+    <label><span class="fl">⭐ De quién es</span><input name="contactoDirecto" value="${esc(d?d.contactoDirecto:"")}" placeholder="Nombre — rol (ej: Christian Lozan — marketing)"></label>
     <label><span class="fl">⭐ Contacto directo</span><input name="phoneDirecto" value="${esc(d?d.phoneDirecto:"")}" placeholder="Número de teléfono"></label>
     <label><span class="fl">Teléfono</span><input name="phone" value="${esc(d?d.phone:"")}"></label>
     <label><span class="fl">Web</span><input name="web" value="${esc(d?d.web:"")}" placeholder="sitio.com"></label>
@@ -2986,7 +2987,7 @@ function prospModalHtml(){
     ${p.prioridadMotivo?`<div class="goalmsg" style="margin-top:12px;line-height:1.55">${esc(p.prioridadMotivo)}</div>`:""}
     ${p.entrada?sec("Qué está pasando — por dónde entrar")+`<div style="font-size:13px;line-height:1.7;white-space:pre-wrap">${esc(p.entrada)}</div>`:""}
     ${(contHtml||em||tel)?sec("Contactos")+contHtml+`<div style="margin-top:${contHtml?"10":"0"}px">
-      ${fila("⭐ Directo",[p.emailDirecto?`<a class="linkbtn" style="font-family:var(--mono);font-size:12px;color:var(--accent)" href="mailto:${esc(p.emailDirecto)}">${esc(p.emailDirecto)}</a>`:"",p.phoneDirecto?`<span style="font-family:var(--mono);font-size:12px;color:var(--accent)">${esc(p.phoneDirecto)}</span>`:""].filter(Boolean).join(" · "))}
+      ${fila("⭐ Directo",[p.contactoDirecto?`<b>${esc(p.contactoDirecto)}</b>`:"",p.emailDirecto?`<a class="linkbtn" style="font-family:var(--mono);font-size:12px;color:var(--accent)" href="mailto:${esc(p.emailDirecto)}">${esc(p.emailDirecto)}</a>`:"",p.phoneDirecto?`<span style="font-family:var(--mono);font-size:12px;color:var(--accent)">${esc(p.phoneDirecto)}</span>`:""].filter(Boolean).join(" · "))}
       ${fila("Email del local",p.email?`<a class="linkbtn" style="font-family:var(--mono);font-size:12px" href="mailto:${esc(p.email)}">${esc(p.email)}</a>`:"")}
       ${fila("Tel del local",p.phone?`<span style="font-family:var(--mono);font-size:12px">${esc(p.phone)}</span>`:"")}</div>`:""}
     ${sec("El lugar")}
