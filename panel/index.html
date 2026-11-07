@@ -2345,7 +2345,7 @@ function renderProspeccion(){
   const entradas = Object.entries(grupos);
   const esPunt = e=>espKeys.has(String(e[0]).toLowerCase().trim());
   const punt = entradas.filter(esPunt), nichoGr = entradas.filter(e=>!esPunt(e));
-  const seccion = t=>`<div style="font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase;margin:28px 0 2px;display:flex;align-items:center;gap:12px">${t}<span style="flex:1;height:1px;background:var(--hair2)"></span></div>`;
+  const seccion = t=>`<div style="font-family:var(--disp);font-size:17px;font-weight:800;color:#fff;letter-spacing:.02em;margin:34px 0 6px;display:flex;align-items:center;gap:14px">${t}<span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(221,125,71,.5),var(--hair2))"></span></div>`;
   const tabla = ([k,arr])=>`
     ${k?`<div class="sect">${esc(k)} <span style="font-weight:600;color:var(--faint);font-size:12.5px">· ${arr.length}</span></div>`:""}
     <div class="tablewrap" style="padding:10px 20px 14px"><table class="captable">
