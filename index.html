@@ -308,10 +308,10 @@
   .p-music .bigtitle .rw > span{display:inline-block;transform:translateY(112%)}
   .p-music.play .bigtitle .rw > span{animation:riseUp .8s cubic-bezier(.22,1,.36,1) both}
   .p-music .btext{font-family:var(--serif);font-size:clamp(18px,4.2vw,23px);line-height:1.5;color:var(--fg);max-width:46ch;margin:0;opacity:0;transform:translateY(10px)}
-  .mstrat{margin-top:clamp(26px,5vw,38px);max-width:52ch;opacity:0;transform:translateY(10px)}
+  .mstrat{margin-top:clamp(26px,5vw,38px);max-width:78ch;display:grid;grid-template-columns:1fr 1fr;column-gap:clamp(24px,5vw,52px);opacity:0;transform:translateY(10px)}
   .p-music.play .mstrat{animation:fadeUp .9s ease .62s both}
-  .msrow{display:flex;gap:16px;align-items:baseline;padding:13px 0;border-top:1px solid var(--line)}
-  .msrow:last-child{border-bottom:1px solid var(--line)}
+  .msrow{display:flex;gap:16px;align-items:baseline;padding:15px 0;border-top:1px solid var(--line)}
+  @media(max-width:640px){.mstrat{grid-template-columns:1fr}}
   .msk{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--accent);flex:none;padding-top:2px}
   .msv{font-family:var(--serif);font-size:clamp(15px,3.6vw,17.5px);line-height:1.55;color:var(--muted)}
   .msv b{color:var(--fg);font-weight:600}
