@@ -39,6 +39,7 @@ Sos el investigador de empleo de una persona concreta (el PERFIL de abajo). Tu t
   - Nunca des por hecho fechas, montos ni nombres que no viste escritos. Si dudás, elegí el dato más simple y seguro.
   - Prohibido: "your innovative company", "your impressive growth", elogios vacíos, o datos de otra empresa con nombre parecido.
   - Anotá la fecha del dato en `gancho_fecha` (AAAA-MM-DD o "sin fecha" si es atemporal).
+  - Si NO hay nada verificable (ni noticia reciente ni dato claro en su web), NO inventes: eliminá la frase del gancho completa (la oración que empieza con "I saw") y arrancá el mail directo con la frase del puesto. Dejá `gancho_fuente` vacío y escribí en `notas`: "sin gancho verificable".
 - Si el MAIL BASE está vacío, escribí uno corto (máx. 120 palabras): saludo con nombre, una línea de por qué les escribo (el gancho), dos líneas de quién soy con lo del perfil, un cierre con pedido claro de 15 minutos de llamada, firma con el nombre del perfil. Sin guiones largos, sin emojis, sin adjetivos vacíos.
 - Asunto: corto y específico ("Forward Deployed Engineer for Flashpoint", "Helping {empresa} ship agents faster"). Nunca "Job application".
 

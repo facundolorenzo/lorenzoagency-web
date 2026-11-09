@@ -2465,7 +2465,9 @@ const empDe = (pid)=> empleos.filter(e=>e.perfil_id===pid);
 // Completa la plantilla del perfil con los datos de la empresa
 function empRellenar(txt, e, pf){
   const nom = (e.decisor_nombre||"").split(/\s+/)[0] || "there";
-  return String(txt||"")
+  txt = String(txt||"");
+  if(!e.descripcion) txt = txt.replace(/[^.\n]*\{gancho\}[^.\n]*\.\s*/g, ""); // sin gancho verificable: se saca la oración entera
+  return txt
     .replace(/\{nombre\}/g, nom).replace(/\{empresa\}/g, e.empresa||"").replace(/\{rol\}/g, e.rol||"")
     .replace(/\{gancho\}/g, e.descripcion||"").replace(/\{yo\}/g, pf ? pf.nombre : "");
 }
