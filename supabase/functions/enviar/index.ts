@@ -45,31 +45,42 @@ Deno.serve(async (req) => {
     // Con service_role conviene un cliente que no herede el JWT (bypassa RLS en las escrituras)
     const db = (SERVICE && token === SERVICE) ? createClient(SB_URL, SERVICE) : supa;
 
-    const { lead_id, to, subject, body, suggestion = "", adjuntos = [] } = await req.json();
+    const { lead_id, to, subject, body, suggestion = "", adjuntos = [], cuenta = "agencia" } = await req.json();
     if (!to || !body) return json({ error: "Falta destinatario o cuerpo" }, 400);
 
-    const USER = Deno.env.get("SMTP_USER")!;          // email completo de la compañía
-    const PASS = Deno.env.get("SMTP_PASS")!;          // contraseña del buzón Private Email
-    const FROM = Deno.env.get("SMTP_FROM") || ("LORENZO Agency <" + USER + ">");
+    // Dos cuentas: "agencia" (Private Email, talk@) y "empleo" (Gmail personal, para la pestaña Empleo)
+    const esEmpleo = cuenta === "empleo";
+    const USER = (esEmpleo ? Deno.env.get("EMPLEO_MAIL_USER") : Deno.env.get("SMTP_USER")) || "";
+    const PASS = (esEmpleo ? Deno.env.get("EMPLEO_MAIL_PASS") : Deno.env.get("SMTP_PASS")) || "";
+    if (!USER || !PASS) return json({ error: esEmpleo ? "Faltan los secrets EMPLEO_MAIL_USER y EMPLEO_MAIL_PASS (Gmail)" : "Faltan SMTP_USER y SMTP_PASS" }, 500);
+    const NOMBRE_EMPLEO = Deno.env.get("EMPLEO_MAIL_NOMBRE") || "Facundo Lorenzo";
+    const FROM = esEmpleo ? (NOMBRE_EMPLEO + " <" + USER + ">") : (Deno.env.get("SMTP_FROM") || ("LORENZO Agency <" + USER + ">"));
+    const SMTP_HOST = esEmpleo ? "smtp.gmail.com" : "mail.privateemail.com";
 
-    // Firma fija al pie de todos los mails (vendedor de contacto)
-    const FIRMA_TXT = "\n\n—\nNicolás Ferrer\nVentas · LORENZO Agency\nlorenzoagency.tech";
-    const FIRMA_HTML =
-      '<br><br><div style="margin-top:18px;padding-top:14px;border-top:1px solid #e5e5e5;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#444">' +
-      '<strong style="color:#111">Nicolás Ferrer</strong><br>' +
-      'Ventas · LORENZO Agency<br>' +
-      '<a href="https://lorenzoagency.tech" style="color:#DD7D47;text-decoration:none">lorenzoagency.tech</a>' +
-      '<img src="https://lorenzoagency.tech/email/firma-bigote.png" alt="LORENZO Agency" width="130" height="17" style="display:block;margin-top:11px;border:0;outline:none">' +
-      '</div>';
+    // Firma al pie: agencia (vendedor) o empleo (candidato)
+    const FIRMA_TXT = esEmpleo
+      ? "\n\n" + NOMBRE_EMPLEO + "\nlorenzoagency.tech"
+      : "\n\n—\nNicolás Ferrer\nVentas · LORENZO Agency\nlorenzoagency.tech";
+    const FIRMA_HTML = esEmpleo
+      ? '<br><br><div style="margin-top:18px;padding-top:14px;border-top:1px solid #e5e5e5;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#444">' +
+        '<strong style="color:#111">' + NOMBRE_EMPLEO + '</strong><br>' +
+        '<a href="https://lorenzoagency.tech" style="color:#DD7D47;text-decoration:none">lorenzoagency.tech</a>' +
+        '</div>'
+      : '<br><br><div style="margin-top:18px;padding-top:14px;border-top:1px solid #e5e5e5;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#444">' +
+        '<strong style="color:#111">Nicolás Ferrer</strong><br>' +
+        'Ventas · LORENZO Agency<br>' +
+        '<a href="https://lorenzoagency.tech" style="color:#DD7D47;text-decoration:none">lorenzoagency.tech</a>' +
+        '<img src="https://lorenzoagency.tech/email/firma-bigote.png" alt="LORENZO Agency" width="130" height="17" style="display:block;margin-top:11px;border:0;outline:none">' +
+        '</div>';
     const _lineas = String(body).replace(/&/g, "&amp;").replace(/</g, "&lt;")
       .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>").split("\n");
     for (let i = 0; i < _lineas.length; i++) { if (_lineas[i].trim()) { if (!_lineas[i].includes("<b>")) _lineas[i] = "<b>" + _lineas[i] + "</b>"; break; } }
     const bodyHtml = _lineas.join("<br>");
     const bodyPlano = String(body).replace(/\*\*/g, "");
 
-    // Enviar por SMTP — Private Email: mail.privateemail.com, 465 SSL
+    // Enviar por SMTP (465 SSL): Private Email o Gmail según la cuenta
     const client = new SMTPClient({
-      connection: { hostname: "mail.privateemail.com", port: 465, tls: true, auth: { username: USER, password: PASS } },
+      connection: { hostname: SMTP_HOST, port: 465, tls: true, auth: { username: USER, password: PASS } },
     });
     const attachments = (Array.isArray(adjuntos) ? adjuntos : []).slice(0, 5)
       .filter((a: any) => a && a.nombre && a.base64)

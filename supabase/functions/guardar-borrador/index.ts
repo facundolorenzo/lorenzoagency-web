@@ -79,13 +79,16 @@ Deno.serve(async (req) => {
     if (!allowed) { const { data: isAdmin } = await supa.rpc("is_admin"); allowed = !!isAdmin; }
     if (!allowed) return json({ error: "No autorizado" }, 403);
 
-    const USER = Deno.env.get("MAIL_USER") || Deno.env.get("SMTP_USER") || "";
-    const PASS = Deno.env.get("MAIL_PASS") || Deno.env.get("SMTP_PASS") || "";
-    if (!USER || !PASS) return json({ error: "Faltan los secrets MAIL_USER y MAIL_PASS en Supabase" }, 500);
-    const HOST = Deno.env.get("MAIL_HOST") || "mail.privateemail.com";
-    const DRAFTS = Deno.env.get("MAIL_DRAFTS") || "";
-
     const body = await req.json().catch(() => ({}));
+    // Dos cuentas: "agencia" (Private Email) y "empleo" (Gmail personal, pestaña Empleo)
+    const esEmpleo = body.cuenta === "empleo";
+    const USER = (esEmpleo ? Deno.env.get("EMPLEO_MAIL_USER") : (Deno.env.get("MAIL_USER") || Deno.env.get("SMTP_USER"))) || "";
+    const PASS = (esEmpleo ? Deno.env.get("EMPLEO_MAIL_PASS") : (Deno.env.get("MAIL_PASS") || Deno.env.get("SMTP_PASS"))) || "";
+    if (!USER || !PASS) return json({ error: esEmpleo ? "Faltan los secrets EMPLEO_MAIL_USER y EMPLEO_MAIL_PASS (Gmail)" : "Faltan los secrets MAIL_USER y MAIL_PASS en Supabase" }, 500);
+    const HOST = esEmpleo ? "imap.gmail.com" : (Deno.env.get("MAIL_HOST") || "mail.privateemail.com");
+    const DRAFTS = esEmpleo ? "" : (Deno.env.get("MAIL_DRAFTS") || "");
+    const NOMBRE = esEmpleo ? (Deno.env.get("EMPLEO_MAIL_NOMBRE") || "Facundo Lorenzo") : "LORENZO Agency";
+
     const to = String(body.to || "").trim();
     const subject = String(body.subject || "").trim() || "LORENZO Agency";
     const texto = String(body.body || "").trim();
@@ -95,7 +98,7 @@ Deno.serve(async (req) => {
       .filter((a: Record<string, string>) => a && a.nombre && a.base64);
 
     const cab =
-      "From: LORENZO Agency <" + USER + ">\r\n" +
+      "From: " + NOMBRE + " <" + USER + ">\r\n" +
       "To: " + to + "\r\n" +
       "Subject: " + qsubj(subject) + "\r\n" +
       "Date: " + new Date().toUTCString() + "\r\n" +
@@ -126,7 +129,7 @@ Deno.serve(async (req) => {
         b64lines(aHtml(texto)) + "\r\n";
     }
 
-    const carpetas = DRAFTS ? [DRAFTS] : ["Drafts", "INBOX.Drafts", "Borradores"];
+    const carpetas = DRAFTS ? [DRAFTS] : (esEmpleo ? ["[Gmail]/Drafts", "[Gmail]/Borradores", "Drafts"] : ["Drafts", "INBOX.Drafts", "Borradores"]);
     const donde = await imapAppendDraft(HOST, USER, PASS, carpetas, msg);
     return json({ ok: true, carpeta: donde, nota: "Borrador guardado en tu casilla (" + USER + ")" });
   } catch (e) {
