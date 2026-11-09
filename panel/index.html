@@ -333,8 +333,13 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .eform label{display:flex;flex-direction:column;gap:6px;min-width:0}
 .eform .fl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eform input,.eform select,.eform textarea{width:100%;box-sizing:border-box}
-.eform .efile{display:flex;align-items:center;min-height:40px;padding:0 10px;border:1px dashed var(--hair);border-radius:8px;background:var(--bg1)}
-.eform .efile input{border:none;background:none;padding:0;font-size:12.5px;color:var(--muted)}
+.eform .efile{position:relative;display:flex;align-items:center;gap:10px;min-height:42px;padding:0 6px 0 12px;border:1px dashed var(--hair);border-radius:10px;background:var(--bg1);cursor:pointer;transition:border-color .15s}
+.eform .efile:hover,.eform .efile.has{border-color:var(--accent);border-style:solid}
+.eform .efile input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.eform .efico{color:var(--accent);font-size:14px;flex:none}
+.eform .efname{flex:1;min-width:0;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eform .efile.has .efname{color:var(--fg)}
+.eform .efbtn{flex:none;font-family:var(--disp);font-size:11.5px;font-weight:700;color:#fff;background:linear-gradient(180deg,#2c2c31,#1a1a1e);border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:6px 11px}
 .eform .echips{display:flex;flex-wrap:wrap;gap:6px;min-height:40px;align-items:center}
 .eform .echip{display:inline-flex;align-items:center;padding:7px 11px;border:1px solid var(--hair);border-radius:999px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none;flex-direction:row;gap:0;white-space:nowrap}
 .eform .echip input{display:none}
@@ -2622,8 +2627,7 @@ function empPerfilesHtml(){
         <label><span class="fl">Proyectos (separados por ;)</span><input name="proyectos" value="${esc(d?d.proyectos||"":"")}" placeholder="Cronos · agentes; Priztine · app members; Hi Dr · 2018"></label>
       </div>
       <div class="eg3">
-        <label><span class="fl">Presskit (PDF)</span><span class="efile"><input type="file" name="presskit" accept="application/pdf"></span>${d&&d.presskit_url?`<span class="bs">actual: ${esc(d.presskit_nombre||"presskit.pdf")}</span>`:""}</label>
-        <label><span class="fl">CV (PDF)</span><span class="efile"><input type="file" name="cv" accept="application/pdf"></span>${d&&d.cv_url?`<span class="bs">actual: ${esc(d.cv_nombre||"cv.pdf")}</span>`:""}</label>
+        ${[["presskit","Presskit (PDF)",d&&d.presskit_nombre,d&&d.presskit_url],["cv","CV (PDF)",d&&d.cv_nombre,d&&d.cv_url]].map(([n,l,nom,url])=>`<label class="efilebox"><span class="fl">${l}</span><span class="efile"><span class="efico">📎</span><span class="efname" data-def="${nom?esc(nom):"Sin archivo · tocá para subir"}">${nom?esc(nom):"Sin archivo · tocá para subir"}</span><span class="efbtn">${nom?"Cambiar":"Subir"}</span><input type="file" name="${n}" accept="application/pdf" onchange="const f=this.files[0];const t=this.parentNode.querySelector('.efname');t.textContent=f?f.name:t.dataset.def;this.parentNode.classList.toggle('has',!!f)"></span></label>`).join("")}
       </div>
       <div class="esec">El mail <span>· el motor completa {nombre} {empresa} {rol} {gancho}</span></div>
       <div class="eg1">
