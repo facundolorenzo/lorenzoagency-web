@@ -33,7 +33,12 @@ Sos el investigador de empleo de una persona concreta (el PERFIL de abajo). Tu t
 
 ## EL MAIL (campos `mail_asunto` y `mail_cuerpo`), en inglés
 - Partí del MAIL BASE del perfil. Mantené su estructura, tono y largo; solo reemplazá `{nombre}` (primer nombre del decisor), `{empresa}`, `{rol}` y `{gancho}`.
-- `{gancho}` es UNA frase concreta y verificable sobre la empresa (qué construyen, la ronda, un producto, una cita del fundador). Nada genérico tipo "your innovative company".
+- `{gancho}` es UNA frase concreta y verificable sobre la empresa, y tiene reglas estrictas porque abre el mail:
+  - Tiene que salir de una fuente que abriste y leíste (web de la empresa, aviso, prensa, blog, LinkedIn de la empresa). Anotá la URL en `gancho_fuente`.
+  - Tiene que ser RECIENTE: de los últimos 90 días (ronda, lanzamiento, aviso publicado, nota de prensa, post). Si lo más reciente que encontrás tiene más de 90 días, usá en su lugar algo atemporal y seguro sacado de su propia web (qué construyen y para quién), nunca una noticia vieja.
+  - Nunca des por hecho fechas, montos ni nombres que no viste escritos. Si dudás, elegí el dato más simple y seguro.
+  - Prohibido: "your innovative company", "your impressive growth", elogios vacíos, o datos de otra empresa con nombre parecido.
+  - Anotá la fecha del dato en `gancho_fecha` (AAAA-MM-DD o "sin fecha" si es atemporal).
 - Si el MAIL BASE está vacío, escribí uno corto (máx. 120 palabras): saludo con nombre, una línea de por qué les escribo (el gancho), dos líneas de quién soy con lo del perfil, un cierre con pedido claro de 15 minutos de llamada, firma con el nombre del perfil. Sin guiones largos, sin emojis, sin adjetivos vacíos.
 - Asunto: corto y específico ("Forward Deployed Engineer for Flashpoint", "Helping {empresa} ship agents faster"). Nunca "Job application".
 
@@ -64,6 +69,8 @@ Devolvé SOLO un bloque así, con un array JSON (sin markdown alrededor):
     "por_que": "Buscan alguien que arme agentes con clientes reales y escriba código; el perfil ya construyó un motor de agentes y viene de operar negocios. Entrada: mail directo al cofundador, no postulación.",
     "mail_asunto": "Forward Deployed Engineer for Flashpoint",
     "mail_cuerpo": "Hi Christian,\n\n…",
+    "gancho_fuente": "https://techcrunch.com/…",
+    "gancho_fecha": "2026-09-30",
     "notas": "Email publicado en el post de la ronda en TechCrunch."
   }
 ]

@@ -131,7 +131,8 @@ async function correr(perfil, motivo) {
       decisor_nombre: limpio(r.decisor_nombre), decisor_cargo: limpio(r.decisor_cargo), decisor_email: email, decisor_email_verificado: verif, decisor_linkedin: limpio(r.decisor_linkedin),
       match: Number.isFinite(Number(r.match)) ? Math.max(0, Math.min(100, Math.round(Number(r.match)))) : null,
       por_que: limpio(r.por_que), mail_asunto: limpio(r.mail_asunto), mail_cuerpo: limpio(r.mail_cuerpo),
-      status: "nuevo", apollo_estado: apEst, apollo_nota: apEst === "sin_resultado" ? "Apollo no encontró email verificado" : null, notas: nota,
+      status: "nuevo", apollo_estado: apEst, apollo_nota: apEst === "sin_resultado" ? "Apollo no encontró email verificado" : null,
+      notas: [nota, limpio(r.gancho_fuente) ? "Gancho: " + r.gancho_fuente + (limpio(r.gancho_fecha) ? " (" + r.gancho_fecha + ")" : "") : null].filter(Boolean).join(" · ") || null,
       created_at: new Date().toISOString(),
     });
   }
