@@ -322,6 +322,20 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .ecard.prof .stat{display:flex;gap:18px;margin-top:4px}
 .ecard.prof .stat div{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
 .ecard.prof .stat b{display:block;color:var(--fg);font-size:18px;font-weight:600}
+.eform{max-width:980px}
+.eform .esec{font-family:var(--disp);font-size:14.5px;font-weight:800;color:#fff;margin:22px 0 10px;display:flex;align-items:center;gap:12px}
+.eform .esec:first-child{margin-top:0}
+.eform .esec span{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--accent);letter-spacing:.02em}
+.eform .esec:after{content:"";flex:1;height:1px;background:var(--hair2)}
+.eform .eg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 14px}
+.eform .eg1{display:grid;grid-template-columns:1fr;gap:12px}
+@media(max-width:820px){.eform .eg3{grid-template-columns:1fr}.eform .eg3 label{grid-column:auto!important}}
+.eform label{display:flex;flex-direction:column;gap:6px;min-width:0}
+.eform .fl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eform input,.eform select,.eform textarea{width:100%;box-sizing:border-box}
+.eform .efile{display:flex;align-items:center;min-height:40px;padding:0 10px;border:1px dashed var(--hair);border-radius:8px;background:var(--bg1)}
+.eform .efile input{border:none;background:none;padding:0;font-size:12.5px;color:var(--muted)}
+
 
 .captable td{padding:18px 12px}
 .captable td:first-child{padding-left:4px}
@@ -2579,25 +2593,39 @@ function empPerfilCard(pf, todos){
 function empPerfilesHtml(){
   const d = empForm && empForm!=="nuevo" ? empPerfiles.find(p=>p.id===empForm) : null;
   const form = empForm ? `<div class="panel" style="margin-bottom:18px"><div style="display:flex;align-items:center;gap:16px;margin-bottom:16px"><button class="btnpro" type="button" data-empcancel="1">${BPI_BACK}Volver</button><div style="font-family:var(--disp);font-size:19px;font-weight:800;color:#fff">${d?"Editando: "+esc(d.nombre):"Nuevo perfil"}</div></div>
-    <form id="femp-perfil" class="form">
-      <label><span class="fl">Nombre y apellido</span><input name="nombre" value="${esc(d?d.nombre:"")}" required placeholder="Facundo Lorenzo"></label>
-      <label><span class="fl">Casilla desde la que salen los mails</span><input name="email_envio" value="${esc(d?d.email_envio||"":"")}" placeholder="tu Gmail (el configurado en Supabase)"></label>
-      <label><span class="fl">Roles que buscás</span><input name="roles" value="${esc(d?d.roles||"":"")}" placeholder="Forward Deployed Engineer · AI Engineer · Full-stack"></label>
-      <label><span class="fl">País</span><select name="pais" class="lsel">${["Estados Unidos","España","Argentina","Reino Unido","Canadá","Remoto global"].map(x=>`<option ${d&&d.pais===x||(!d&&x==="Estados Unidos")?"selected":""}>${x}</option>`).join("")}</select></label>
-      <label><span class="fl">Ubicación / modalidad</span><input name="ubicacion" value="${esc(d?d.ubicacion||"":"")}" placeholder="remoto o Miami"></label>
-      <label><span class="fl">Salario mínimo (miles USD/año)</span><input name="salario_min" type="number" value="${esc(d&&d.salario_min!=null?d.salario_min:"")}" placeholder="110"></label>
-      <label><span class="fl">Etapas de empresa</span><input name="etapas" value="${esc(d?d.etapas||"":"")}" placeholder="Pre-seed · Seed · Serie A"></label>
-      <label><span class="fl">Contrato</span><input name="contrato" value="${esc(d?d.contrato||"":"")}" placeholder="W2 o 1099 · fraccional OK"></label>
-      <label><span class="fl">LinkedIn</span><input name="linkedin" value="${esc(d?d.linkedin||"":"")}" placeholder="linkedin.com/in/..."></label>
-      <label style="grid-column:1/-1"><span class="fl">Experiencia (resumen para el motor)</span><textarea name="experiencia" rows="3" placeholder="6 años produciendo eventos (25k comunidad, 2.000 por evento, Miami NY Houston DC); hoy construyo agentes de IA…">${esc(d?d.experiencia||"":"")}</textarea></label>
-      <label style="grid-column:1/-1"><span class="fl">Lo que me hace distinto (2 líneas)</span><textarea name="distinto" rows="2">${esc(d?d.distinto||"":"")}</textarea></label>
-      <label style="grid-column:1/-1"><span class="fl">Proyectos (separados por ;)</span><input name="proyectos" value="${esc(d?d.proyectos||"":"")}" placeholder="Cronos · agentes; Priztine · app members; Hi Dr · 2018"></label>
-      <label><span class="fl">Presskit (PDF)</span><input type="file" name="presskit" accept="application/pdf">${d&&d.presskit_url?`<span class="bs">actual: ${esc(d.presskit_nombre||"presskit.pdf")}</span>`:""}</label>
-      <label><span class="fl">CV (PDF)</span><input type="file" name="cv" accept="application/pdf">${d&&d.cv_url?`<span class="bs">actual: ${esc(d.cv_nombre||"cv.pdf")}</span>`:""}</label>
-      <label style="grid-column:1/-1"><span class="fl">Asunto base · admite {rol} {empresa} {nombre}</span><input name="mail_asunto" value="${esc(d?d.mail_asunto||"":"")}" placeholder="{rol} at {empresa}"></label>
-      <label style="grid-column:1/-1"><span class="fl">Mail base · el motor completa {nombre} {empresa} {rol} {gancho}</span><textarea name="mail_base" rows="10" placeholder="Hi {nombre},&#10;&#10;I'm writing short and direct. I saw {gancho} and I think I can help as {rol}.&#10;&#10;…&#10;&#10;Facundo Lorenzo">${esc(d?d.mail_base||"":"")}</textarea></label>
-      <label><span class="fl">Estado</span><select name="activo" class="lsel"><option value="true" ${!d||d.activo?"selected":""}>Activo (el motor busca)</option><option value="false" ${d&&!d.activo?"selected":""}>Pausado</option></select></label>
-      <div style="grid-column:1/-1;display:flex;gap:10px;margin-top:4px"><button class="btn" type="submit" ${empBusy==="perfil"?"disabled":""}>${empBusy==="perfil"?"Guardando…":"Guardar perfil"}</button><button class="btn ghost" type="button" data-empcancel="1">Cancelar</button>${d?`<button class="btn ghost btn-del" type="button" data-empdelperfil="${d.id}" style="margin-left:auto">${ICON_TRASH} Borrar perfil</button>`:""}</div>
+    <form id="femp-perfil" class="eform">
+      <div class="esec">Quién sos</div>
+      <div class="eg3">
+        <label><span class="fl">Nombre y apellido</span><input name="nombre" value="${esc(d?d.nombre:"")}" required placeholder="Facundo Lorenzo"></label>
+        <label><span class="fl">Casilla de envío (Gmail)</span><input name="email_envio" value="${esc(d?d.email_envio||"":"")}" placeholder="tu@gmail.com"></label>
+        <label><span class="fl">LinkedIn</span><input name="linkedin" value="${esc(d?d.linkedin||"":"")}" placeholder="linkedin.com/in/..."></label>
+      </div>
+      <div class="esec">Qué buscás</div>
+      <div class="eg3">
+        <label style="grid-column:span 2"><span class="fl">Roles</span><input name="roles" value="${esc(d?d.roles||"":"")}" placeholder="Forward Deployed Engineer · AI Engineer · Full-stack"></label>
+        <label><span class="fl">País</span><select name="pais" class="lsel">${["Estados Unidos","España","Argentina","Reino Unido","Canadá","Remoto global"].map(x=>`<option ${d&&d.pais===x||(!d&&x==="Estados Unidos")?"selected":""}>${x}</option>`).join("")}</select></label>
+        <label><span class="fl">Ubicación / modalidad</span><input name="ubicacion" value="${esc(d?d.ubicacion||"":"")}" placeholder="remoto o Miami"></label>
+        <label><span class="fl">Salario mínimo (miles USD/año)</span><input name="salario_min" type="number" value="${esc(d&&d.salario_min!=null?d.salario_min:"")}" placeholder="110"></label>
+        <label><span class="fl">Etapas de empresa</span><input name="etapas" value="${esc(d?d.etapas||"":"")}" placeholder="Pre-seed · Seed · Serie A"></label>
+        <label><span class="fl">Contrato</span><input name="contrato" value="${esc(d?d.contrato||"":"")}" placeholder="W2 o 1099 · fraccional OK"></label>
+        <label><span class="fl">Estado</span><select name="activo" class="lsel"><option value="true" ${!d||d.activo?"selected":""}>Activo (el motor busca)</option><option value="false" ${d&&!d.activo?"selected":""}>Pausado</option></select></label>
+      </div>
+      <div class="esec">Tu presentación</div>
+      <div class="eg1">
+        <label><span class="fl">Experiencia (resumen para el motor)</span><textarea name="experiencia" rows="3" placeholder="Construyo agentes de IA de punta a punta; antes 6 años dirigiendo una marca de eventos…">${esc(d?d.experiencia||"":"")}</textarea></label>
+        <label><span class="fl">Lo que te hace distinto (2 líneas)</span><textarea name="distinto" rows="2">${esc(d?d.distinto||"":"")}</textarea></label>
+        <label><span class="fl">Proyectos (separados por ;)</span><input name="proyectos" value="${esc(d?d.proyectos||"":"")}" placeholder="Cronos · agentes; Priztine · app members; Hi Dr · 2018"></label>
+      </div>
+      <div class="eg3">
+        <label><span class="fl">Presskit (PDF)</span><span class="efile"><input type="file" name="presskit" accept="application/pdf"></span>${d&&d.presskit_url?`<span class="bs">actual: ${esc(d.presskit_nombre||"presskit.pdf")}</span>`:""}</label>
+        <label><span class="fl">CV (PDF)</span><span class="efile"><input type="file" name="cv" accept="application/pdf"></span>${d&&d.cv_url?`<span class="bs">actual: ${esc(d.cv_nombre||"cv.pdf")}</span>`:""}</label>
+      </div>
+      <div class="esec">El mail <span>· el motor completa {nombre} {empresa} {rol} {gancho}</span></div>
+      <div class="eg1">
+        <label><span class="fl">Asunto base</span><input name="mail_asunto" value="${esc(d?d.mail_asunto||"":"")}" placeholder="{rol} at {empresa}"></label>
+        <label><span class="fl">Mail base (si lo dejás vacío, el motor escribe uno corto)</span><textarea name="mail_base" rows="9" placeholder="Hi {nombre},&#10;&#10;…&#10;&#10;Facundo Lorenzo">${esc(d?d.mail_base||"":"")}</textarea></label>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px;align-items:center"><button class="btn" type="submit" ${empBusy==="perfil"?"disabled":""}>${empBusy==="perfil"?"Guardando…":"Guardar perfil"}</button><button class="btn ghost" type="button" data-empcancel="1">Cancelar</button>${d?`<button class="btn ghost btn-del" type="button" data-empdelperfil="${d.id}" style="margin-left:auto">${ICON_TRASH} Borrar perfil</button>`:""}</div>
     </form></div>` : "";
   const lista = empForm ? "" : `<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn" data-empnuevo="1">+ Nuevo perfil</button></div>
     <div class="erow" style="grid-template-columns:repeat(auto-fill,minmax(360px,1fr))">${empPerfiles.map(p=>empPerfilCard(p,empDe(p.id))).join("")}</div>`;
