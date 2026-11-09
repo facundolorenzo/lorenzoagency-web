@@ -2504,7 +2504,8 @@ window.prospFotoLeer = async function(inp){
 };
 
 function prospForm(d){
-  return `<div class="panel"><button class="btnpro" type="button" data-cancel="1" style="margin-bottom:14px">${BPI_BACK}Volver</button>
+  return `<div class="panel"><div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap"><button class="btnpro" type="button" data-cancel="1">${BPI_BACK}Volver</button>
+    <div style="font-family:var(--disp);font-size:19px;font-weight:800;color:#fff;letter-spacing:-.01em">${d?"Editando: "+esc(d.empresa||"")+(d.ciudad?` <span style="color:var(--muted);font-weight:500;font-size:14px;margin-left:8px">${esc(d.ciudad)}</span>`:""):"Nuevo lugar"}</div></div>
     ${d?"":`<div style="margin-bottom:16px;padding:13px 15px;border:1px dashed rgba(221,125,71,.45);border-radius:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <span style="font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:12px"><span style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(221,125,71,.55);display:inline-flex;align-items:center;justify-content:center;color:var(--accent);flex:none;background:rgba(221,125,71,.08)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 8.5a2 2 0 0 1 2-2h2l1.4-2h7.2l1.4 2h2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.6"/></svg></span><span><b style="color:#fff">¿Tenés una foto con los datos?</b> Tarjeta, flyer o captura — la leo y completo los campos solos.</span></span>
       <label class="btn sm ghost" style="cursor:pointer;margin:0;display:inline-flex;align-items:center;gap:7px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5a2 2 0 0 1 2-2h2l1.4-2h7.2l1.4 2h2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.6"/></svg>Subir foto<input type="file" accept="image/*" style="display:none" onchange="prospFotoLeer(this)"></label>
@@ -2514,9 +2515,9 @@ function prospForm(d){
     <label><span class="fl">Empresa / negocio</span><input name="empresa" value="${esc(d?d.empresa:"")}" required placeholder="Nombre del venue"></label>
     <label><span class="fl">Contacto</span><input name="contacto" value="${esc(d?d.contacto:"")}" placeholder="Nombre y rol (si se sabe)"></label>
     <label><span class="fl">Email genérico</span><input name="email" type="email" value="${esc(d?d.email:"")}" placeholder="info@lugar.com"></label>
-    <label><span class="fl">⭐ Contacto directo</span><input name="emailDirecto" type="email" value="${esc(d?d.emailDirecto:"")}" placeholder="Email"></label>
+    <label><span class="fl">⭐ Email directo</span><input name="emailDirecto" type="email" value="${esc(d?d.emailDirecto:"")}" placeholder="Email"></label>
     <label><span class="fl">⭐ De quién es</span><input name="contactoDirecto" value="${esc(d?d.contactoDirecto:"")}" placeholder="Nombre — rol (ej: Christian Lozan — marketing)"></label>
-    <label><span class="fl">⭐ Contacto directo</span><input name="phoneDirecto" value="${esc(d?d.phoneDirecto:"")}" placeholder="Número de teléfono"></label>
+    <label><span class="fl">⭐ Teléfono directo</span><input name="phoneDirecto" value="${esc(d?d.phoneDirecto:"")}" placeholder="Número de teléfono"></label>
     <label><span class="fl">Teléfono</span><input name="phone" value="${esc(d?d.phone:"")}"></label>
     <label><span class="fl">Web</span><input name="web" value="${esc(d?d.web:"")}" placeholder="sitio.com"></label>
     <label><span class="fl">Instagram</span><input name="instagram" value="${esc(d?d.instagram:"")}" placeholder="@cuenta"></label>
