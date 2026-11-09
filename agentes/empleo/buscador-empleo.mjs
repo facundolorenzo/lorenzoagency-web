@@ -77,7 +77,7 @@ async function cerebro(perfil, yaTengo) {
     "## PERFIL",
     "NOMBRE: " + perfil.nombre,
     "ROLES QUE BUSCA: " + (perfil.roles || "(no definido)"),
-    "PAÍS: " + (perfil.pais || "Estados Unidos") + " · UBICACIÓN/MODALIDAD: " + (perfil.ubicacion || "cualquiera"),
+    "PAÍS: " + (perfil.pais || "Estados Unidos") + " · VIVE EN: " + (perfil.ubicacion || "(no dice)") + " · MODALIDAD ACEPTADA: " + (perfil.modalidad || "cualquiera") + " (presencial/híbrido solo si la empresa está cerca de donde vive)",
     "SALARIO MÍNIMO: " + (perfil.salario_min ? "$" + perfil.salario_min + "k/año" : "(sin mínimo)"),
     "ETAPAS DE EMPRESA: " + (perfil.etapas || "cualquiera"),
     "CONTRATO: " + (perfil.contrato || "cualquiera"),
