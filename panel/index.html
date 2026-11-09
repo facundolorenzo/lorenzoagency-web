@@ -3075,7 +3075,7 @@ function confirmHtml(){
 }
 
 /* ---------- eventos ---------- */
-function note(msg){
+function note(msg,ms){
   document.querySelectorAll(".lz-toast,.lz-toast-bd").forEach(x=>{ try{x.remove();}catch(e){} });
   const bd=document.createElement("div");
   bd.className="lz-toast-bd";
@@ -3087,10 +3087,10 @@ function note(msg){
   const txt=document.createElement("span"); txt.textContent=msg;
   n.appendChild(ic); n.appendChild(txt);
   document.body.appendChild(bd); document.body.appendChild(n);
-  const cerrar=()=>{ try{ const o=n.animate([{opacity:1,transform:"translate(-50%,-50%) scale(1)"},{opacity:0,transform:"translate(-50%,-50%) scale(.96)"}],{duration:260,easing:"ease-in",fill:"forwards"}); o.onfinish=()=>{ try{n.remove();bd.remove();}catch(e){} }; bd.animate([{opacity:1},{opacity:0}],{duration:260,fill:"forwards"}); }catch(e){ try{n.remove();bd.remove();}catch(_){}} };
+  const cerrar=()=>{ try{ const o=n.animate([{opacity:1,transform:"translate(-50%,-50%) scale(1)"},{opacity:0,transform:"translate(-50%,-50%) scale(.96)"}],{duration:180,easing:"ease-in",fill:"forwards"}); o.onfinish=()=>{ try{n.remove();bd.remove();}catch(e){} }; bd.animate([{opacity:1},{opacity:0}],{duration:180,fill:"forwards"}); }catch(e){ try{n.remove();bd.remove();}catch(_){}} };
   bd.addEventListener("click",cerrar);
   try{ n.animate([{opacity:0,transform:"translate(-50%,-50%) scale(.92)"},{opacity:1,transform:"translate(-50%,-50%) scale(1)"}],{duration:200,easing:"cubic-bezier(.2,.8,.2,1)"}); }catch(e){}
-  setTimeout(cerrar,2800);
+  setTimeout(cerrar,ms||(msg.length>60?2200:900));
 }
 
 document.addEventListener("click", async e=>{
