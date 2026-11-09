@@ -344,6 +344,10 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .eform .echip{display:inline-flex;align-items:center;padding:7px 11px;border:1px solid var(--hair);border-radius:999px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none;flex-direction:row;gap:0;white-space:nowrap}
 .eform .echip input{display:none}
 .eform .echip.on{border-color:var(--accent);color:var(--accent);background:rgba(221,125,71,.1)}
+.eform .ecb{position:absolute;left:0;right:0;top:100%;z-index:50;background:#16181c;border:1px solid var(--hair);border-radius:10px;margin-top:4px;box-shadow:0 14px 40px rgba(0,0,0,.6);overflow:hidden}
+.eform .ecbi{padding:9px 12px;font-size:13px;color:var(--fg);cursor:pointer}
+.eform .ecbi:hover{background:rgba(221,125,71,.14);color:var(--accent)}
+
 
 
 
@@ -2572,6 +2576,15 @@ function empMailEditor(e, pf){
       <button class="linkbtn" data-empmailcerrar="1" style="color:var(--faint);margin-left:auto">Cerrar</button>
     </div></div>`;
 }
+const EMP_PAISES=["Estados Unidos","Remoto global","Canadá","México","Argentina","Brasil","Chile","Colombia","Perú","Uruguay","Costa Rica","Panamá","España","Portugal","Reino Unido","Irlanda","Alemania","Francia","Países Bajos","Bélgica","Suiza","Austria","Suecia","Noruega","Dinamarca","Finlandia","Italia","Polonia","Estonia","Emiratos Árabes Unidos","Arabia Saudita","Israel","Singapur","India","Japón","Corea del Sur","Australia","Nueva Zelanda","Sudáfrica"];
+window.empPaisSug = function(inp){
+  const q=inp.value.trim().toLowerCase();
+  const norm=t=>t.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  const hits=EMP_PAISES.filter(x=>!q||norm(x).includes(norm(q))).slice(0,8);
+  let l=inp.parentNode.querySelector(".ecb"); if(!l){ l=document.createElement("div"); l.className="ecb"; inp.parentNode.appendChild(l); }
+  if(!hits.length){ l.remove(); return; }
+  l.innerHTML=hits.map(x=>`<div class="ecbi" onmousedown="event.preventDefault();const i=this.closest('label').querySelector('input');i.value=${JSON.stringify(x)};this.closest('.ecb').remove()">${x}</div>`).join("");
+};
 window.empAdjAdd = async function(id, inp){
   const f=inp.files&&inp.files[0]; if(!f) return;
   if(f.size>10*1024*1024){ note("Máximo 10 MB por adjunto"); inp.value=""; return; }
@@ -2613,7 +2626,7 @@ function empPerfilesHtml(){
       <div class="esec">Qué buscás</div>
       <div class="eg3">
         <label style="grid-column:span 2"><span class="fl">Roles</span><input name="roles" value="${esc(d?d.roles||"":"")}" placeholder="Forward Deployed Engineer · AI Engineer · Full-stack"></label>
-        <label><span class="fl">País</span><input name="pais" list="emp-paises" value="${esc(d?d.pais||"Estados Unidos":"Estados Unidos")}" placeholder="Escribí el país…" autocomplete="off"><datalist id="emp-paises">${["Estados Unidos","Remoto global","Canadá","México","Argentina","Brasil","Chile","Colombia","Uruguay","España","Portugal","Reino Unido","Irlanda","Alemania","Francia","Países Bajos","Suiza","Suecia","Italia","Emiratos Árabes Unidos","Singapur","Australia","Japón","Israel"].map(x=>`<option value="${x}">`).join("")}</datalist></label>
+        <label style="position:relative"><span class="fl">País</span><input name="q_pais" value="${esc(d?d.pais||"Estados Unidos":"Estados Unidos")}" placeholder="Escribí el país…" autocomplete="one-time-code" spellcheck="false" oninput="empPaisSug(this)" onfocus="empPaisSug(this)" onblur="setTimeout(()=>{const l=this.parentNode.querySelector('.ecb');if(l)l.remove()},180)"></label>
         <label><span class="fl">Dónde vivís (ciudad)</span><input name="ubicacion" value="${esc(d?d.ubicacion||"":"")}" placeholder="Miami, FL"></label>
         <label><span class="fl">Modalidad (elegí varias)</span><span class="echips">${(function(){const sel=new Set(String(d&&d.modalidad||"Remoto · Híbrido").split(/\s*·\s*/).filter(Boolean));return ["Remoto","Híbrido","Presencial"].map(x=>`<label class="echip${sel.has(x)?" on":""}"><input type="checkbox" name="modalidad_chk" value="${x}" ${sel.has(x)?"checked":""} onchange="this.parentNode.classList.toggle('on',this.checked)">${x}</label>`).join("");})()}</span></label>
         <label><span class="fl">Salario mínimo (USD/año)</span><select name="salario_min" class="lsel">${[["","Sin mínimo"],[60,"$60k o más"],[80,"$80k o más"],[100,"$100k o más"],[120,"$120k o más"],[140,"$140k o más"],[160,"$160k o más"],[180,"$180k o más"],[200,"$200k o más"],[250,"$250k o más"]].map(([v,l])=>`<option value="${v}" ${d&&String(d.salario_min||"")===String(v)?"selected":""}>${l}</option>`).join("")}</select></label>
@@ -2644,7 +2657,8 @@ function empPerfilesHtml(){
 // ---- Acciones ----
 async function empGuardarPerfil(form){
   const fd=new FormData(form); const d=empForm!=="nuevo"?empPerfiles.find(p=>p.id===empForm):null;
-  const row={}; for(const k of ["nombre","email_envio","roles","pais","ubicacion","etapas","contrato","linkedin","experiencia","distinto","proyectos","mail_asunto","mail_base"]) row[k]=String(fd.get(k)||"").trim()||null;
+  const row={}; for(const k of ["nombre","email_envio","roles","ubicacion","linkedin","experiencia","distinto","proyectos","mail_asunto","mail_base"]) row[k]=String(fd.get(k)||"").trim()||null;
+  row.pais = String(fd.get("q_pais")||"").trim() || "Estados Unidos";
   row.salario_min = fd.get("salario_min") ? Number(fd.get("salario_min")) : null;
   row.etapas = fd.getAll("etapas_chk").join(" · ") || null;
   row.modalidad = fd.getAll("modalidad_chk").join(" · ") || null;
