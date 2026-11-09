@@ -260,6 +260,69 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .resbar b{color:var(--accent);font-family:var(--disp)}
 .resbar .rs{color:var(--muted)}.resbar .rs i{font-style:normal;color:#fff;font-weight:600}
 .resbar .rn{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+/* ===== EMPLEO ===== */
+.esub{display:flex;gap:22px;border-bottom:1px solid var(--hair2);margin-bottom:18px;flex-wrap:wrap}
+.esub span{padding:0 2px 11px;font-family:var(--disp);font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;user-select:none}
+.esub span.on{color:var(--fg);border-bottom:2px solid var(--accent)}
+.esub span i{font-style:normal;background:var(--accent);color:#1b1105;font-family:var(--mono);font-size:10.5px;padding:1px 6px;border-radius:7px;margin-left:6px;font-weight:600}
+.esub span i.g{background:rgba(255,255,255,.12);color:var(--fg)}
+.erow{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
+@media(max-width:1000px){.erow{grid-template-columns:1fr}}
+.ecard{background:var(--card);border:1px solid var(--hair2);border-radius:16px;padding:18px 20px;margin-bottom:12px}
+.ecard.off{opacity:.45}
+.ecard .job{display:grid;grid-template-columns:78px 1fr auto;gap:18px;align-items:start}
+@media(max-width:760px){.ecard .job{grid-template-columns:60px 1fr}.ecard .acts{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}}
+.ring{width:78px;height:78px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;background:conic-gradient(var(--accent) var(--p),rgba(255,255,255,.07) 0);position:relative;flex:none}
+.ring:after{content:"";position:absolute;inset:6px;border-radius:50%;background:#15161a}
+.ring b{position:relative;z-index:1;font-family:var(--mono);font-size:21px;font-weight:600;line-height:1}
+.ring small{position:relative;z-index:1;font-size:9px;color:var(--muted);letter-spacing:.08em;margin-top:2px}
+.ring.mid{background:conic-gradient(var(--warn) var(--p),rgba(255,255,255,.07) 0)}
+.ring.low{background:conic-gradient(var(--muted) var(--p),rgba(255,255,255,.07) 0)}
+.ecard .co{font-family:var(--disp);font-size:18px;font-weight:800;letter-spacing:-.01em;color:#fff}
+.ecard .co span{color:var(--muted);font-weight:500;font-size:13px;margin-left:10px}
+.ecard .role{font-size:14px;color:var(--fg);margin:3px 0 10px;font-weight:500}
+.ecard .pills{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.ecard .pill{font-family:var(--mono);font-size:11.5px;padding:5px 10px;border-radius:9px;border:1px solid var(--hair);color:var(--fg)}
+.ecard .pill.sal{border-color:rgba(76,195,138,.45);color:var(--ok);font-weight:600}
+.ecard .pill.st{color:var(--info);border-color:rgba(106,165,232,.4)}
+.ecard .pill.hot{color:var(--accent);border-color:rgba(221,125,71,.5)}
+.ecard .dec{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.035);border:1px solid var(--hair2);border-radius:12px;padding:9px 12px;flex-wrap:wrap}
+.ecard .av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#F08C52,#D56E38);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:11px;font-weight:800;color:#1b1105;flex:none}
+.ecard .av.gris{background:#34353b;color:#c9cbd1}
+.ecard .dec .n{font-family:var(--disp);font-weight:700;font-size:13.5px;color:#fff}
+.ecard .dec .c{color:var(--muted);font-size:12px}
+.ecard .dec .m{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--accent);text-decoration:none}
+.ecard .dec .v{font-size:10px;color:var(--ok);border:1px solid rgba(76,195,138,.4);border-radius:6px;padding:2px 6px;font-family:var(--mono)}
+.ecard .acts{display:flex;flex-direction:column;gap:8px;min-width:170px}
+.ecard .acts .btnpro{justify-content:center}
+.btnpro.hot{background:linear-gradient(180deg,#F08C52,#D56E38);color:#1b1105;border-color:rgba(255,255,255,.15)}
+.btnpro.hot:hover{background:linear-gradient(180deg,#F59A62,#DD7D47)}
+.btnpro:disabled{opacity:.5;cursor:default;transform:none}
+.ecard .why{margin-top:12px;padding-top:12px;border-top:1px dashed var(--hair2);font-size:12.5px;color:var(--muted);line-height:1.5}
+.ecard .why b{color:var(--fg);font-weight:600}
+.eficha{margin-top:14px;padding-top:14px;border-top:1px solid var(--hair2);font-size:12.5px;color:var(--fg);line-height:1.6;display:grid;gap:6px}
+.eficha .ek{display:inline-block;min-width:84px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--faint);text-transform:uppercase}
+.eficha a{color:var(--accent);text-decoration:none}
+.emailbox{margin-top:14px;padding:14px;border:1px solid rgba(221,125,71,.35);border-radius:14px;background:rgba(221,125,71,.05)}
+.emailbox input,.emailbox textarea{width:100%;box-sizing:border-box}
+.emailbox textarea{font-size:13.5px;line-height:1.5;min-height:200px}
+.ecard.prof .hd{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+.ecard.prof .av2{width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#F08C52,#D56E38);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:18px;color:#1b1105;flex:none}
+.ecard.prof .hd b{font-family:var(--disp);font-size:16px;display:block;color:#fff}
+.ecard.prof .hd span{font-size:12px;color:var(--muted)}
+.ecard.prof .okdot{font-style:normal;color:var(--ok)}
+.ecard.prof .kv{display:grid;grid-template-columns:110px 1fr;gap:7px 10px;font-size:12.5px}
+.ecard.prof .kv .k{color:var(--faint);font-family:var(--mono);font-size:11px;padding-top:2px}
+.ecard.prof .chip{display:inline-block;font-size:11px;padding:3px 8px;border-radius:7px;background:rgba(255,255,255,.06);margin:0 4px 4px 0}
+.ecard.prof .sec{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--faint);font-weight:700;margin:16px 0 8px}
+.ecard.prof .file{display:flex;align-items:center;gap:10px;font-size:12.5px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.035);border:1px solid var(--hair2);margin-bottom:6px;color:var(--fg);text-decoration:none}
+.ecard.prof .file i{font-style:normal;color:var(--accent)}
+.ecard.prof .mail{font-size:12px;color:var(--muted);line-height:1.55;background:rgba(255,255,255,.03);border:1px solid var(--hair2);border-radius:10px;padding:10px 12px}
+.ecard.prof .mail em{color:var(--accent);font-style:normal;background:rgba(221,125,71,.12);padding:0 4px;border-radius:4px}
+.ecard.prof .stat{display:flex;gap:18px;margin-top:4px}
+.ecard.prof .stat div{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.ecard.prof .stat b{display:block;color:var(--fg);font-size:18px;font-weight:600}
+
 .captable td{padding:18px 12px}
 .captable td:first-child{padding-left:4px}
 .captable th{padding-bottom:12px}
@@ -856,6 +919,7 @@ async function loadAll(){
     plantillas = (pl && !pl.error && pl.data) ? pl.data : [];
     vendedores = (vd && !vd.error && vd.data) ? vd.data.map(FROM.vendedores) : [];
     recetas = (rc && !rc.error && rc.data) ? rc.data : [];
+    try{ await empLoad(); }catch(e){ console.warn("empleo",e); }
     const cpR = await sb.from("contenido_piezas").select("*").order("orden",{ascending:true});
     contenidoPiezas = (cpR && !cpR.error && cpR.data) ? cpR.data : [];
   } else if(esVendedor){
@@ -942,14 +1006,14 @@ async function runDraft(id, isRehacer){
 
 /* ============================ RENDER ============================ */
 function tabsHtml(){
-  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["vendedores","VENDEDORES"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"],["visitas","VISITAS"],["contenido","CONTENIDO"]]
+  const t = isAdmin ? [["hoy","PARA HOY"],["resumen","RESUMEN"],["analisis","ANÁLISIS"],["llamadas","LLAMADAS"],["vendedores","VENDEDORES"],["propuestas","PROPUESTAS"],["facturas","FACTURAS"],["clientes","CLIENTES"],["leads","LEADS"],["prospeccion","CAPTACIÓN CLIENTES"],["visitas","VISITAS"],["empleo","EMPLEO"],["contenido","CONTENIDO"]]
             : esVendedor ? [["hoy","PARA HOY"],["miresumen","MI RESUMEN"],["misclientes","MIS CLIENTES"],["miranking","RANKING"]]
             : [["resumen","RESUMEN"],["propuestas","PROPUESTAS"]];
   const nuevos = leads.filter(x=>x.status==='nuevo').length;
   const hoyN = (isAdmin||esVendedor) ? leadsHoy().length : 0;
   const visN = prospectos.filter(x=>x.visitar && x.status!=="descartado" && x.feedback!=="no").length;
   return `<nav id="tabs">${t.map(([k,l])=>{
-    let b=''; if((k==='leads'||k==='misclientes')&&nuevos) b=`<span class="nbadge">${nuevos}</span>`; if(k==='hoy'&&hoyN) b=`<span class="nbadge">${hoyN}</span>`; if(k==='visitas'&&visN) b=`<span class="nbadge">${visN}</span>`;
+    let b=''; if((k==='leads'||k==='misclientes')&&nuevos) b=`<span class="nbadge">${nuevos}</span>`; if(k==='hoy'&&hoyN) b=`<span class="nbadge">${hoyN}</span>`; if(k==='visitas'&&visN) b=`<span class="nbadge">${visN}</span>`; if(k==='empleo'){const eN=(typeof empleos!=='undefined'?empleos:[]).filter(x=>x.status==='nuevo'&&x.decisor_email&&x.feedback!=='no').length; if(eN) b=`<span class="nbadge">${Math.min(eN,5)}</span>`;}
     return `<button data-t="${k}" class="${tab===k?'on':''}">${l}${b}</button>`;
   }).join("")}</nav>`;
 }
@@ -1415,6 +1479,7 @@ function renderBody(){
   else if(tab==="leads") renderLeads();
   else if(tab==="prospeccion") renderProspeccion();
   else if(tab==="visitas") renderVisitas();
+  else if(tab==="empleo") renderEmpleo();
   else if(tab==="contenido") renderContenido();
   else if(tab==="miresumen") renderMiResumen();
   else if(tab==="misclientes") renderMisClientes();
@@ -2340,6 +2405,277 @@ function renderVisitas(){
     </div>`:""}`}
   </div>`;
 }
+
+/* ---------- EMPLEO (motor que busca empresas que contratan y escribe al decisor) ---------- */
+let empPerfiles = [], empleos = [];
+let empSub = "hoy";          // hoy / empresas / seguimiento / perfiles
+let empForm = null;          // null | "nuevo" | id del perfil que se edita
+let empPerfilId = null;      // perfil seleccionado (si hay varios)
+let empMailOpen = null;      // id del empleo con el editor de mail abierto
+let empFichaOpen = null;     // id del empleo con la ficha desplegada
+let empAdj = {};             // adjuntos extra por empleo (además del presskit)
+let empBusy = null;
+
+async function empLoad(){
+  if(!sb || !isAdmin) return;
+  const [pf, em] = await Promise.all([
+    sb.from("perfiles_empleo").select("*").order("created_at",{ascending:true}),
+    sb.from("empleos").select("*").order("match",{ascending:false,nullsFirst:false}),
+  ]);
+  empPerfiles = (pf && !pf.error && pf.data) ? pf.data : [];
+  empleos = (em && !em.error && em.data) ? em.data : [];
+  if(!empPerfilId || !empPerfiles.some(p=>p.id===empPerfilId)) empPerfilId = empPerfiles[0] ? empPerfiles[0].id : null;
+}
+const empPerfil = ()=> empPerfiles.find(p=>p.id===empPerfilId) || null;
+const empDe = (pid)=> empleos.filter(e=>e.perfil_id===pid);
+
+// Completa la plantilla del perfil con los datos de la empresa
+function empRellenar(txt, e, pf){
+  const nom = (e.decisor_nombre||"").split(/\s+/)[0] || "there";
+  return String(txt||"")
+    .replace(/\{nombre\}/g, nom).replace(/\{empresa\}/g, e.empresa||"").replace(/\{rol\}/g, e.rol||"")
+    .replace(/\{gancho\}/g, e.descripcion||"").replace(/\{yo\}/g, pf ? pf.nombre : "");
+}
+function empMailDe(e){
+  const pf = empPerfiles.find(p=>p.id===e.perfil_id);
+  const asunto = e.mail_asunto || empRellenar(pf && pf.mail_asunto || "{rol} at {empresa}", e, pf);
+  const cuerpo = e.mail_cuerpo || empRellenar(pf && pf.mail_base || "", e, pf);
+  return { asunto, cuerpo };
+}
+const empDias = (iso)=> iso ? Math.floor((Date.now()-new Date(iso).getTime())/86400000) : null;
+
+// ---- Render ----
+function renderEmpleo(){
+  const pf = empPerfil();
+  const todos = pf ? empDe(pf.id) : [];
+  const hoy = todos.filter(e=>e.status==="nuevo" && e.feedback!=="no").sort((a,b)=>(b.match||0)-(a.match||0));
+  const conMail = hoy.filter(e=>e.decisor_email);
+  const paraHoy = conMail.slice(0,5);
+  const env = todos.filter(e=>e.status==="enviado"||e.status==="respondio");
+  const subs = [["hoy","Para hoy",paraHoy.length],["empresas","Empresas",todos.length],["seguimiento","Seguimiento",env.filter(e=>e.status==="enviado").length],["perfiles","Perfiles",empPerfiles.length]];
+  const subHtml = `<div class="esub">${subs.map(([k,l,n])=>`<span data-empsub="${k}" class="${empSub===k?"on":""}">${l}${n?`<i class="${k==="hoy"?"":"g"}">${n}</i>`:""}</span>`).join("")}</div>`;
+  const selPerfil = empPerfiles.length>1 ? `<select class="lsel" id="empsel" style="margin-left:14px">${empPerfiles.map(p=>`<option value="${p.id}" ${p.id===empPerfilId?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>` : "";
+
+  let cuerpo = "";
+  if(!empPerfiles.length && empForm!=="nuevo"){
+    cuerpo = `<div class="empty"><b>Todavía no hay ningún perfil.</b><br>Cargá el tuyo: qué buscás, tu experiencia, el presskit y el mail base. El motor hace el resto todas las mañanas.<br><br><button class="btn" data-empnuevo="1">+ Crear mi perfil</button></div>`;
+  } else if(empSub==="perfiles" || empForm){
+    cuerpo = empPerfilesHtml();
+  } else if(empSub==="hoy"){
+    cuerpo = `${empResumenBar(pf)}<div class="erow"><div>${paraHoy.length?paraHoy.map(e=>empCard(e,pf)).join(""):`<div class="empty">${todos.length?"No quedan empresas con email del decisor para escribir hoy. Mirá <b>Empresas</b>: podés pedirle a Apollo el email de las que faltan.":"El motor todavía no trajo empresas. Tocá <b>Buscar ahora</b> (con el motor prendido en tu compu) o esperá la corrida de mañana 7 AM."}</div>`}${conMail.length>5?`<div style="text-align:center;color:var(--faint);font-size:12px;margin-top:6px">+ ${conMail.length-5} más en Empresas ↓</div>`:""}</div><div>${empPerfilCard(pf,todos)}</div></div>`;
+  } else if(empSub==="empresas"){
+    const ord=[...todos].sort((a,b)=>(b.match||0)-(a.match||0));
+    cuerpo = `${empResumenBar(pf)}${ord.length?ord.map(e=>empCard(e,pf,true)).join(""):`<div class="empty">Todavía no hay empresas para este perfil.</div>`}`;
+  } else if(empSub==="seguimiento"){
+    const ord=[...env].sort((a,b)=>new Date(b.enviado_at||0)-new Date(a.enviado_at||0));
+    cuerpo = ord.length?`<div class="tablewrap" style="padding:10px 20px 14px"><table class="captable"><tr><th>Empresa</th><th>Decisor</th><th>Enviado</th><th>Estado</th><th class="r"></th></tr>${ord.map(e=>{const d=empDias(e.enviado_at);return `<tr>
+      <td><b>${esc(e.empresa)}</b><div class="bs" style="margin-top:4px">${esc(e.rol||"")}</div></td>
+      <td style="font-size:12.5px">${esc(e.decisor_nombre||"—")}<div class="bs">${esc(e.decisor_email||"")}</div></td>
+      <td style="font-size:12.5px">${e.enviado_at?esc(new Date(e.enviado_at).toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"})):"—"}<div class="bs">${d!=null?(d===0?"hoy":"hace "+d+" d"):""}</div></td>
+      <td>${e.status==="respondio"?`<span class="tpill" style="color:var(--ok);border-color:rgba(76,195,138,.45)">✓ respondió</span>`:(d>=5?`<span class="tpill" style="color:var(--warn);border-color:rgba(229,180,84,.45)">sin respuesta · hora de insistir</span>`:`<span class="tpill mut">esperando</span>`)}</td>
+      <td class="r" style="white-space:nowrap">${e.status!=="respondio"?`<button class="btn sm ghost" data-emprespondio="${e.id}" style="color:var(--ok);border-color:rgba(76,195,138,.4)">✓ Respondió</button> <button class="btn sm ghost" data-empseguir="${e.id}" title="Abrir un mail de seguimiento corto">↩ Insistir</button>`:""} <button class="btn sm ghost" data-empficha="${e.id}">Ficha</button></td></tr>`;}).join("")}</table></div>`
+      : `<div class="empty">Todavía no enviaste ningún mail desde Empleo.</div>`;
+  }
+  $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Empleo — que las empresas te encuentren a vos${selPerfil}</h2>
+    ${pf?`<div style="display:flex;gap:10px;align-items:center">${pf.estado_motor==="buscando"||pf.pedido_busqueda?`<span class="bs" style="color:var(--accent)">⏳ el motor está buscando…</span>`:""}<button class="btn" data-empbuscar="${pf.id}" ${pf.pedido_busqueda?"disabled":""}>🔎 Buscar ahora</button></div>`:""}</div>
+    ${subHtml}${cuerpo}`;
+  const s=document.getElementById("empsel"); if(s) s.onchange=()=>{ empPerfilId=s.value; renderApp(); };
+}
+
+function empResumenBar(pf){
+  if(!pf || !pf.ultima_corrida) return `<div class="resbar">☀️ <b>Sin corridas todavía</b><span class="rs">el motor busca solo todas las mañanas a las 7 (con tu compu prendida) o cuando tocás <i>Buscar ahora</i></span></div>`;
+  const f=new Date(pf.ultima_corrida); const hoy=new Date().toISOString().slice(0,10);
+  const cuando=String(pf.ultima_corrida).slice(0,10)===hoy?("hoy "+f.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"})):f.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"});
+  const rec=empDe(pf.id).filter(e=>e.status==="nuevo"&&e.decisor_email).length;
+  return `<div class="resbar">☀️ <b>Búsqueda ${esc(cuando)}</b><span class="rs"><i>${pf.ultima_revisadas||0}</i> empresas revisadas · <i>${pf.ultima_nuevas||0}</i> nuevas · <i>${Math.min(5,rec)}</i> recomendadas para escribir</span><span class="rn">${pf.estado_motor==="buscando"?"⏳ buscando…":"próxima: mañana 7:00"}</span></div>`;
+}
+
+function empCard(e, pf, compacta){
+  const m = e.match==null ? null : Math.max(0,Math.min(100,Number(e.match)));
+  const cls = m==null?"":(m>=70?"":(m>=50?" mid":" low"));
+  const ini = (e.decisor_nombre||"?").split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase();
+  const pills = [
+    e.salario?`<span class="pill sal">${esc(e.salario)}</span>`:"",
+    e.modalidad?`<span class="pill">${esc(e.modalidad)}</span>`:"",
+    e.etapa?`<span class="pill st">${esc(e.etapa)}</span>`:"",
+    e.senal?`<span class="pill hot">⚡ ${esc(e.senal)}</span>`:"",
+    e.publicado?`<span class="pill">${esc(e.publicado)}</span>`:"",
+    !e.decisor_email?`<span class="pill" style="color:var(--warn);border-color:rgba(229,180,84,.45)">decisor sin email</span>`:"",
+  ].filter(Boolean).join("");
+  const ap = e.apollo_estado;
+  const dec = e.decisor_nombre ? `<div class="dec"><div class="av${e.decisor_email?"":" gris"}">${esc(ini)}</div><div><div class="n">${esc(e.decisor_nombre)}</div><div class="c">${esc(e.decisor_cargo||"")}</div></div>
+      ${e.decisor_email?`<span class="v">${e.decisor_email_verificado?"verificado":"directo"}</span><a class="m" href="mailto:${esc(e.decisor_email)}">${esc(e.decisor_email)}</a>`
+        :`<span class="m" style="color:var(--muted)">${e.decisor_linkedin?`<a href="${esc(e.decisor_linkedin)}" target="_blank" rel="noopener" style="color:var(--muted)">LinkedIn</a> · `:""}${ap==="pendiente"?"⚡ Apollo buscando…":ap==="sin_resultado"?`<span style="color:var(--bad)" title="${esc(e.apollo_nota||"")}">⚡ Apollo no lo encontró</span>`:"sin email"}</span>`}</div>`
+    : `<div class="dec" style="color:var(--muted);font-size:12.5px">Decisor no identificado todavía${e.web?` · <a href="${esc(String(e.web).startsWith("http")?e.web:"https://"+e.web)}" target="_blank" rel="noopener" style="color:var(--accent)">ver web</a>`:""}</div>`;
+  const acciones = e.status==="enviado"||e.status==="respondio"
+    ? `<div class="btnpro" style="cursor:default;color:var(--ok)">✓ ${e.status==="respondio"?"Respondió":"Enviado "+(e.enviado_at?new Date(e.enviado_at).toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"}):"")}</div><button class="btnpro" data-empficha="${e.id}">Ficha completa</button>`
+    : `${e.decisor_email?`<button class="btnpro hot" data-empmail="${e.id}">✉ Enviar mail</button>`:`<button class="btnpro" data-empapollo="${e.id}" ${ap==="pendiente"?"disabled":""}>⚡ Buscar email</button>`}<button class="btnpro" data-empficha="${e.id}">${empFichaOpen===e.id?"Cerrar ficha":"Ficha completa"}</button><button class="linkbtn" data-empdesc="${e.id}" style="color:var(--faint);font-size:11.5px;text-align:center">No me interesa</button>`;
+  const ficha = empFichaOpen===e.id ? `<div class="eficha">
+      ${e.descripcion?`<div><span class="ek">Qué hacen</span>${esc(e.descripcion)}</div>`:""}
+      <div><span class="ek">Datos</span>${[e.web?`<a href="${esc(String(e.web).startsWith("http")?e.web:"https://"+e.web)}" target="_blank" rel="noopener">${esc(String(e.web).replace(/^https?:\/\//,""))}</a>`:"",e.ciudad,e.tamano,e.etapa,e.fuente?"fuente: "+esc(e.fuente):""].filter(Boolean).join(" · ")}</div>
+      ${e.url_aviso?`<div><span class="ek">Aviso</span><a href="${esc(e.url_aviso)}" target="_blank" rel="noopener">${esc(e.url_aviso.slice(0,90))}</a></div>`:""}
+      ${e.decisor_linkedin?`<div><span class="ek">LinkedIn</span><a href="${esc(e.decisor_linkedin)}" target="_blank" rel="noopener">${esc(e.decisor_linkedin)}</a></div>`:""}
+      ${e.notas?`<div><span class="ek">Notas</span>${esc(e.notas)}</div>`:""}
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm ghost" data-empfb="${e.id}|ok" style="${e.feedback==="ok"?"color:var(--ok);border-color:var(--ok)":""}">✓ Sirve, más así</button><button class="btn sm ghost" data-empfb="${e.id}|no" style="${e.feedback==="no"?"color:var(--bad);border-color:var(--bad)":""}">✗ No sirve</button><button class="btn sm ghost btn-del" data-empdel="${e.id}" title="Borrar">${ICON_TRASH}</button></div>
+    </div>` : "";
+  const mail = empMailOpen===e.id ? empMailEditor(e,pf) : "";
+  return `<div class="ecard${e.feedback==="no"?" off":""}" id="emp-${e.id}">
+    <div class="job">
+      <div class="ring${cls}" style="--p:${m==null?0:m}%"><b>${m==null?"—":m+"%"}</b><small>MATCH</small></div>
+      <div style="min-width:0">
+        <div class="co">${esc(e.empresa)}<span>${[e.ciudad,e.tamano,e.etapa].filter(Boolean).map(esc).join(" · ")}</span></div>
+        ${e.rol?`<div class="role">${esc(e.rol)}</div>`:""}
+        ${pills?`<div class="pills">${pills}</div>`:""}
+        ${dec}
+        ${e.por_que&&!compacta?`<div class="why"><b>Por qué encaja:</b> ${esc(e.por_que)}</div>`:""}
+      </div>
+      <div class="acts">${acciones}</div>
+    </div>${ficha}${mail}</div>`;
+}
+
+function empMailEditor(e, pf){
+  const {asunto, cuerpo} = empMailDe(e);
+  const adj = empAdj[e.id]||[];
+  return `<div class="emailbox">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><span class="bs">Para</span><b style="font-size:13px">${esc(e.decisor_email)}</b><span class="bs" style="margin-left:auto">sale de <b style="color:var(--fg)">${esc(pf&&pf.email_envio||"tu Gmail")}</b></span></div>
+    <input id="empasunto-${e.id}" value="${esc(asunto)}" placeholder="Asunto" style="margin-bottom:8px">
+    <textarea id="empcuerpo-${e.id}" rows="12">${esc(cuerpo)}</textarea>
+    <div class="bs" style="margin:6px 0 10px">El saludo (primera línea) sale en negrita solo · **así** también. ${pf&&pf.presskit_url?`Adjunto automático: <b style="color:var(--fg)">${esc(pf.presskit_nombre||"presskit.pdf")}</b>`:"Sin presskit cargado en el perfil."}${adj.length?` + ${adj.map(a=>esc(a.nombre)).join(", ")}`:""}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn" data-empenviar="${e.id}" ${empBusy===e.id?"disabled":""}>${empBusy===e.id?"Enviando…":"Enviar →"}</button>
+      <button class="btn ghost" data-empborrador="${e.id}" ${empBusy===e.id?"disabled":""}>📝 A mis borradores</button>
+      <label class="btn sm ghost" style="cursor:pointer;margin:0">📎 Adjuntar<input type="file" style="display:none" onchange="empAdjAdd('${e.id}',this)"></label>
+      <button class="linkbtn" data-empmailcerrar="1" style="color:var(--faint);margin-left:auto">Cerrar</button>
+    </div></div>`;
+}
+window.empAdjAdd = async function(id, inp){
+  const f=inp.files&&inp.files[0]; if(!f) return;
+  if(f.size>10*1024*1024){ note("Máximo 10 MB por adjunto"); inp.value=""; return; }
+  const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=rej;r.readAsDataURL(f);});
+  (empAdj[id]=empAdj[id]||[]).push({nombre:f.name,tipo:f.type||"application/octet-stream",base64:b64});
+  inp.value=""; renderApp();
+};
+
+function empPerfilCard(pf, todos){
+  if(!pf) return "";
+  const env=todos.filter(e=>e.status==="enviado"||e.status==="respondio").length, resp=todos.filter(e=>e.status==="respondio").length;
+  const ini=pf.nombre.split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase();
+  const kv=(k,v)=>v?`<div class="k">${k}</div><div class="v">${esc(v)}</div>`:"";
+  return `<div class="ecard prof">
+    <div class="hd"><div class="av2">${esc(ini)}</div><div><b>${esc(pf.nombre)}</b><span>${pf.activo?"Perfil activo":"Pausado"} · ${esc(pf.email_envio||"sin casilla")} ${pf.email_envio?'<em class="okdot">●</em>':""}</span></div><button class="btn sm ghost" data-empeditar="${pf.id}" style="margin-left:auto">Editar</button></div>
+    <div class="sec">FILTRO</div>
+    <div class="kv">${kv("rol",pf.roles)}${kv("dónde",[pf.pais,pf.ubicacion].filter(Boolean).join(" · "))}${kv("salario mín.",pf.salario_min?"$"+pf.salario_min+"k":"")}${kv("etapa",pf.etapas)}${kv("contrato",pf.contrato)}</div>
+    ${pf.distinto?`<div class="sec">LO QUE ME HACE DISTINTO</div><div style="font-size:12.5px;color:var(--muted);line-height:1.5">${esc(pf.distinto)}</div>`:""}
+    ${pf.proyectos?`<div class="sec">PROYECTOS</div><div>${String(pf.proyectos).split(/[;\n]/).map(x=>x.trim()).filter(Boolean).map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>`:""}
+    <div class="sec">ARCHIVOS</div>
+    ${pf.presskit_url?`<a class="file" href="${esc(pf.presskit_url)}" target="_blank" rel="noopener"><i>📎</i> ${esc(pf.presskit_nombre||"presskit.pdf")}</a>`:`<div class="file" style="color:var(--faint)">Sin presskit · tocá Editar para subirlo</div>`}
+    ${pf.cv_url?`<a class="file" href="${esc(pf.cv_url)}" target="_blank" rel="noopener"><i>📎</i> ${esc(pf.cv_nombre||"cv.pdf")}</a>`:""}
+    ${pf.mail_base?`<div class="sec">MAIL BASE <span style="color:var(--accent);font-weight:500;letter-spacing:0;margin-left:6px">· lo naranja lo completa el motor</span></div><div class="mail">${esc(pf.mail_base).replace(/\{(nombre|empresa|rol|gancho|yo)\}/g,'<em>{$1}</em>').replace(/\n/g,"<br>")}</div>`:""}
+    <div class="sec">ESTE MES</div>
+    <div class="stat"><div><b>${env}</b>mails</div><div><b>${resp}</b>respuestas</div><div><b>${todos.length}</b>empresas</div></div>
+  </div>`;
+}
+
+function empPerfilesHtml(){
+  const d = empForm && empForm!=="nuevo" ? empPerfiles.find(p=>p.id===empForm) : null;
+  const form = empForm ? `<div class="panel" style="margin-bottom:18px"><div style="display:flex;align-items:center;gap:16px;margin-bottom:16px"><button class="btnpro" type="button" data-empcancel="1">${BPI_BACK}Volver</button><div style="font-family:var(--disp);font-size:19px;font-weight:800;color:#fff">${d?"Editando: "+esc(d.nombre):"Nuevo perfil"}</div></div>
+    <form id="femp-perfil" class="form">
+      <label><span class="fl">Nombre y apellido</span><input name="nombre" value="${esc(d?d.nombre:"")}" required placeholder="Facundo Lorenzo"></label>
+      <label><span class="fl">Casilla desde la que salen los mails</span><input name="email_envio" value="${esc(d?d.email_envio||"":"")}" placeholder="tu Gmail (el configurado en Supabase)"></label>
+      <label><span class="fl">Roles que buscás</span><input name="roles" value="${esc(d?d.roles||"":"")}" placeholder="Forward Deployed Engineer · AI Engineer · Full-stack"></label>
+      <label><span class="fl">País</span><select name="pais" class="lsel">${["Estados Unidos","España","Argentina","Reino Unido","Canadá","Remoto global"].map(x=>`<option ${d&&d.pais===x||(!d&&x==="Estados Unidos")?"selected":""}>${x}</option>`).join("")}</select></label>
+      <label><span class="fl">Ubicación / modalidad</span><input name="ubicacion" value="${esc(d?d.ubicacion||"":"")}" placeholder="remoto o Miami"></label>
+      <label><span class="fl">Salario mínimo (miles USD/año)</span><input name="salario_min" type="number" value="${esc(d&&d.salario_min!=null?d.salario_min:"")}" placeholder="110"></label>
+      <label><span class="fl">Etapas de empresa</span><input name="etapas" value="${esc(d?d.etapas||"":"")}" placeholder="Pre-seed · Seed · Serie A"></label>
+      <label><span class="fl">Contrato</span><input name="contrato" value="${esc(d?d.contrato||"":"")}" placeholder="W2 o 1099 · fraccional OK"></label>
+      <label><span class="fl">LinkedIn</span><input name="linkedin" value="${esc(d?d.linkedin||"":"")}" placeholder="linkedin.com/in/..."></label>
+      <label style="grid-column:1/-1"><span class="fl">Experiencia (resumen para el motor)</span><textarea name="experiencia" rows="3" placeholder="6 años produciendo eventos (25k comunidad, 2.000 por evento, Miami NY Houston DC); hoy construyo agentes de IA…">${esc(d?d.experiencia||"":"")}</textarea></label>
+      <label style="grid-column:1/-1"><span class="fl">Lo que me hace distinto (2 líneas)</span><textarea name="distinto" rows="2">${esc(d?d.distinto||"":"")}</textarea></label>
+      <label style="grid-column:1/-1"><span class="fl">Proyectos (separados por ;)</span><input name="proyectos" value="${esc(d?d.proyectos||"":"")}" placeholder="Cronos · agentes; Priztine · app members; Hi Dr · 2018"></label>
+      <label><span class="fl">Presskit (PDF)</span><input type="file" name="presskit" accept="application/pdf">${d&&d.presskit_url?`<span class="bs">actual: ${esc(d.presskit_nombre||"presskit.pdf")}</span>`:""}</label>
+      <label><span class="fl">CV (PDF)</span><input type="file" name="cv" accept="application/pdf">${d&&d.cv_url?`<span class="bs">actual: ${esc(d.cv_nombre||"cv.pdf")}</span>`:""}</label>
+      <label style="grid-column:1/-1"><span class="fl">Asunto base · admite {rol} {empresa} {nombre}</span><input name="mail_asunto" value="${esc(d?d.mail_asunto||"":"")}" placeholder="{rol} at {empresa}"></label>
+      <label style="grid-column:1/-1"><span class="fl">Mail base · el motor completa {nombre} {empresa} {rol} {gancho}</span><textarea name="mail_base" rows="10" placeholder="Hi {nombre},&#10;&#10;I'm writing short and direct. I saw {gancho} and I think I can help as {rol}.&#10;&#10;…&#10;&#10;Facundo Lorenzo">${esc(d?d.mail_base||"":"")}</textarea></label>
+      <label><span class="fl">Estado</span><select name="activo" class="lsel"><option value="true" ${!d||d.activo?"selected":""}>Activo (el motor busca)</option><option value="false" ${d&&!d.activo?"selected":""}>Pausado</option></select></label>
+      <div style="grid-column:1/-1;display:flex;gap:10px;margin-top:4px"><button class="btn" type="submit" ${empBusy==="perfil"?"disabled":""}>${empBusy==="perfil"?"Guardando…":"Guardar perfil"}</button><button class="btn ghost" type="button" data-empcancel="1">Cancelar</button>${d?`<button class="btn ghost btn-del" type="button" data-empdelperfil="${d.id}" style="margin-left:auto">${ICON_TRASH} Borrar perfil</button>`:""}</div>
+    </form></div>` : "";
+  const lista = empForm ? "" : `<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn" data-empnuevo="1">+ Nuevo perfil</button></div>
+    <div class="erow" style="grid-template-columns:repeat(auto-fill,minmax(360px,1fr))">${empPerfiles.map(p=>empPerfilCard(p,empDe(p.id))).join("")}</div>`;
+  return form + lista;
+}
+
+// ---- Acciones ----
+async function empGuardarPerfil(form){
+  const fd=new FormData(form); const d=empForm!=="nuevo"?empPerfiles.find(p=>p.id===empForm):null;
+  const row={}; for(const k of ["nombre","email_envio","roles","pais","ubicacion","etapas","contrato","linkedin","experiencia","distinto","proyectos","mail_asunto","mail_base"]) row[k]=String(fd.get(k)||"").trim()||null;
+  row.salario_min = fd.get("salario_min") ? Number(fd.get("salario_min")) : null;
+  row.activo = String(fd.get("activo"))==="true";
+  row.updated_at = new Date().toISOString();
+  empBusy="perfil"; renderApp();
+  try{
+    for(const [campo,urlk,nomk] of [["presskit","presskit_url","presskit_nombre"],["cv","cv_url","cv_nombre"]]){
+      const f=fd.get(campo); if(f && f.size){
+        if(f.size>10*1024*1024) throw new Error("El "+campo+" pesa más de 10 MB; comprimilo primero");
+        const path=(d?d.id:"nuevo")+"/"+Date.now()+"-"+String(f.name).replace(/[^\w.]+/g,"_");
+        const up=await sb.storage.from("empleo").upload(path,f,{upsert:true}); if(up.error) throw new Error("No pude subir el "+campo+": "+up.error.message);
+        row[urlk]=sb.storage.from("empleo").getPublicUrl(path).data.publicUrl; row[nomk]=f.name;
+      }
+    }
+    let r; if(d) r=await sb.from("perfiles_empleo").update(row).eq("id",d.id); else r=await sb.from("perfiles_empleo").insert(row).select().single();
+    if(r.error) throw new Error(r.error.message);
+    if(!d && r.data) empPerfilId=r.data.id;
+    empForm=null; empSub="hoy"; await empLoad(); note("Perfil guardado ✓");
+  }catch(e){ note("No se guardó: "+String(e.message||e).slice(0,140),3000); }
+  empBusy=null; renderApp();
+}
+async function empPresskitAdjunto(pf){
+  if(!pf||!pf.presskit_url) return null;
+  try{ const r=await fetch(pf.presskit_url); const b=await r.blob(); const b64=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(",")[1]);fr.onerror=rej;fr.readAsDataURL(b);});
+    return {nombre:pf.presskit_nombre||"presskit.pdf",tipo:"application/pdf",base64:b64}; }catch{ return null; }
+}
+async function empEnviar(id, soloBorrador){
+  const e=empleos.find(x=>x.id===id); if(!e) return; const pf=empPerfiles.find(p=>p.id===e.perfil_id);
+  const asunto=(document.getElementById("empasunto-"+id)||{}).value||"", cuerpo=(document.getElementById("empcuerpo-"+id)||{}).value||"";
+  if(!cuerpo.trim()){ note("El mail está vacío"); return; }
+  empBusy=id; renderApp();
+  try{
+    const adj=[]; const pk=await empPresskitAdjunto(pf); if(pk) adj.push(pk); for(const a of (empAdj[id]||[])) adj.push(a);
+    const body={to:e.decisor_email,subject:asunto,body:cuerpo,adjuntos:adj.slice(0,5),cuenta:(pf&&pf.cuenta)||"empleo"};
+    const r=await callFn(soloBorrador?"guardar-borrador":"enviar",body);
+    const upd={mail_asunto:asunto,mail_cuerpo:cuerpo,updated_at:new Date().toISOString()};
+    if(!soloBorrador){ upd.status="enviado"; upd.enviado_at=new Date().toISOString(); }
+    await sb.from("empleos").update(upd).eq("id",id);
+    empMailOpen=null; delete empAdj[id]; await empLoad();
+    note(soloBorrador?("📝 Guardado en tus borradores"+(r&&r.carpeta?" ("+r.carpeta+")":"")):"✓ Enviado a "+e.decisor_email, 1800);
+  }catch(err){ note("No salió: "+String(err.message||err).slice(0,160),3500); }
+  empBusy=null; renderApp();
+}
+async function empSetStatus(id, patch){ await sb.from("empleos").update({...patch,updated_at:new Date().toISOString()}).eq("id",id); await empLoad(); renderApp(); }
+
+document.addEventListener("click", async e=>{
+  const t=e.target; if(!sb||tab!=="empleo") return; const ds=t.dataset||{};
+  if(ds.empsub){ empSub=ds.empsub; empForm=null; renderApp(); return; }
+  if(ds.empnuevo){ empForm="nuevo"; empSub="perfiles"; renderApp(); return; }
+  if(ds.empeditar){ empForm=ds.empeditar; empSub="perfiles"; renderApp(); const f=document.getElementById("femp-perfil"); if(f) f.scrollIntoView({behavior:"smooth",block:"start"}); return; }
+  if(ds.empcancel){ empForm=null; renderApp(); return; }
+  if(ds.empdelperfil){ if(!confirm("¿Borrar este perfil y todas sus empresas?")) return; await sb.from("perfiles_empleo").delete().eq("id",ds.empdelperfil); empForm=null; await empLoad(); renderApp(); return; }
+  if(ds.empbuscar){ await sb.from("perfiles_empleo").update({pedido_busqueda:true,updated_at:new Date().toISOString()}).eq("id",ds.empbuscar); await empLoad(); renderApp(); note("Pedido al motor. Tiene que estar prendido en tu compu (EMPLEO-VIGILAR.bat)",2600); return; }
+  if(ds.empmail){ empMailOpen=ds.empmail; empFichaOpen=null; renderApp(); const el=document.getElementById("empcuerpo-"+ds.empmail); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); return; }
+  if(ds.empmailcerrar){ empMailOpen=null; renderApp(); return; }
+  if(ds.empficha){ empFichaOpen = empFichaOpen===ds.empficha?null:ds.empficha; if(empSub==="seguimiento"){ empSub="empresas"; } renderApp(); const el=document.getElementById("emp-"+ds.empficha); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); return; }
+  if(ds.empenviar){ await empEnviar(ds.empenviar,false); return; }
+  if(ds.empborrador){ await empEnviar(ds.empborrador,true); return; }
+  if(ds.empdesc){ await empSetStatus(ds.empdesc,{status:"descartado",feedback:"no"}); note("Descartada"); return; }
+  if(ds.emprespondio){ await empSetStatus(ds.emprespondio,{status:"respondio",respondio_at:new Date().toISOString()}); note("✓ Marcado como respondió"); return; }
+  if(ds.empseguir){ const em=empleos.find(x=>x.id===ds.empseguir); if(!em) return; const pf=empPerfiles.find(p=>p.id===em.perfil_id);
+    const nom=(em.decisor_nombre||"").split(/\s+/)[0]||"there";
+    await sb.from("empleos").update({mail_asunto:"Re: "+(em.mail_asunto||""),mail_cuerpo:`Hi ${nom},\n\nQuick follow-up on my note from last week. Still very interested in helping ${em.empresa} as ${em.rol||"an engineer"}. Happy to jump on a 15-minute call whenever works for you.\n\n${pf?pf.nombre:""}`,status:"nuevo",updated_at:new Date().toISOString()}).eq("id",em.id);
+    await empLoad(); empSub="empresas"; empMailOpen=em.id; renderApp(); return; }
+  if(ds.empfb){ const [id,v]=ds.empfb.split("|"); await empSetStatus(id,{feedback:v}); note(v==="ok"?"✓ Anotado, más así":"✗ Anotado"); return; }
+  if(ds.empdel){ if(!confirm("¿Borrar esta empresa?")) return; await sb.from("empleos").delete().eq("id",ds.empdel); await empLoad(); renderApp(); return; }
+  if(ds.empapollo){ await empSetStatus(ds.empapollo,{apollo_estado:"pendiente"}); note("⚡ Pedido a Apollo. El motor lo procesa cuando corre.",2200); return; }
+});
+document.addEventListener("submit", async e=>{ if(e.target && e.target.id==="femp-perfil"){ e.preventDefault(); await empGuardarPerfil(e.target); } });
 
 /* ---------- PROSPECCIÓN (Agente 4 — outbound) ---------- */
 function renderProspeccion(){
