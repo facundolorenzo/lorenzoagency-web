@@ -3404,7 +3404,7 @@ function prospModalHtml(){
     ${p.apolloEstado?sec("⚡ Refuerzo Apollo")+`<div style="font-size:12.5px;line-height:1.6;color:${p.apolloEstado==="hecho"?"var(--ok)":"var(--muted)"}">${p.apolloEstado==="hecho"?"✓ ":""}${esc(p.apolloNota||p.apolloEstado)}${p.apolloAt?` <span style="color:var(--faint)">· ${String(p.apolloAt).slice(0,10)}</span>`:""}</div>`:""}
     <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">
       ${tel?`<a class="btn sm" style="text-decoration:none;background:var(--ok)" href="tel:${esc(String(tel).replace(/[^+\d]/g,""))}">${ICON_PHONE} Llamar</a>`:""}
-      ${em?`<a class="btn sm ghost" style="text-decoration:none" href="mailto:${esc(em)}">✉ Email</a>`:""}
+      ${em?`<button class="btn sm ghost" data-prospmail="${p.id}" title="Abre el mail acá en el panel, con ${esc(em)} como destinatario">✉ Escribir mail a ${esc(String(em).split("@")[0])}</button>`:`<span class="btn sm ghost" style="opacity:.5;cursor:default" title="Este lugar no tiene email todavía — pedile a Apollo ⚡ en Captación">✉ Sin email</span>`}
       <a class="btn sm ghost" style="text-decoration:none" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([p.empresa,p.ciudad].filter(Boolean).join(" "))}" target="_blank" rel="noopener">📍 Ver en Maps</a>
       <button class="btn sm ghost" data-vercap="${p.id}">Ver en Captación</button>
     </div>
@@ -4074,12 +4074,14 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.prospmail){
     const p=prospectos.find(x=>x.id===t.dataset.prospmail); if(!p) return;
+    openProspId=null;
+    if(p.leadId && leads.some(l=>l.id===p.leadId)){ openLeadId=p.leadId; fichaTab="email"; tab="leads"; renderApp(); return; }
     const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.contacto?("Contacto: "+p.contacto):"",p.puntoFlojo?("PUNTO FLOJO (entrá el mail por acá): "+p.puntoFlojo):"",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.notas||""].filter(Boolean).join("\n");
     const {data:nl,error}=await sb.from("leads").insert({name:p.empresa||p.contacto,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"captación",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
     if(error){ note("No se pudo preparar: "+error.message); return; }
     try{ await sb.from("prospectos").update({lead_id:nl.id,updated_at:new Date().toISOString()}).eq("id",p.id); }catch(err){}
-    openLeadId=nl.id; fichaTab="email";
-    await loadAll(); return;
+    openLeadId=nl.id; fichaTab="email"; tab="leads";
+    await loadAll(); renderApp(); return;
   }
   if(t.dataset.prosplead){
     const p=prospectos.find(x=>x.id===t.dataset.prosplead); if(!p) return;
