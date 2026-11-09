@@ -244,6 +244,22 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cpill:hover{border-color:var(--muted)}
 .cpill.dir{color:var(--accent);border-color:rgba(221,125,71,.35);background:rgba(221,125,71,.07)}
+/* Tarjeta del decisor (Captación) */
+.dcard{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.035);border:1px solid var(--hair2);border-radius:12px;padding:8px 11px;max-width:300px}
+.dcard .dav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#F08C52,#D56E38);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:11px;font-weight:800;color:#1b1105;flex:none}
+.dcard .dav.gris{background:#34353b;color:#c9cbd1}
+.dcard .dn{font-family:var(--disp);font-weight:700;font-size:13.5px;color:#fff;line-height:1.2}
+.dcard .dc{color:var(--muted);font-size:11.5px;line-height:1.3;margin-top:2px}
+.dcard .dm{font-family:var(--mono);font-size:11.5px;color:var(--accent);margin-top:4px;text-decoration:none;display:block;word-break:break-all}
+.dcard .dm:hover{text-decoration:underline}
+.dv{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--ok);border:1px solid rgba(76,195,138,.4);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.dv.dir{color:var(--accent);border-color:rgba(221,125,71,.45)}
+.tpill{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:3px 8px;border-radius:8px;border:1px solid var(--hair2);color:var(--fg);margin:0 4px 4px 0;white-space:nowrap}
+.tpill.mut{color:var(--muted)}
+.resbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(221,125,71,.07);border:1px solid rgba(221,125,71,.28);border-radius:14px;padding:11px 16px;margin-bottom:16px;font-size:13px}
+.resbar b{color:var(--accent);font-family:var(--disp)}
+.resbar .rs{color:var(--muted)}.resbar .rs i{font-style:normal;color:#fff;font-weight:600}
+.resbar .rn{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
 .captable td{padding:18px 12px}
 .captable td:first-child{padding-left:4px}
 .captable th{padding-bottom:12px}
@@ -2352,16 +2368,25 @@ function renderProspeccion(){
         ${p.prioridad?`<span class="prchip ${esc(p.prioridad)}" title="${esc(PR_EXPL[p.prioridad]||"Prioridad "+p.prioridad)}${p.prioridadMotivo?" · Motivo de ESTE negocio: "+esc(p.prioridadMotivo):""}">${esc(p.prioridad)}</span>`:""}
         <div style="min-width:0"><b data-openprosp="${p.id}" style="cursor:pointer;line-height:1.3" title="Ver la ficha completa del negocio">${esc(p.empresa||"—")}</b>${p.puntoFlojo?`<div style="margin-top:7px">${pfTag(p.puntoFlojo)}</div>`:""}${sub?`<div class="bs" data-openprosp="${p.id}" style="margin-top:7px;line-height:1.5;max-width:230px;cursor:pointer" title="Ver el análisis completo">${esc(sub.slice(0,90))}${sub.length>90?"…":""}</div>`:""}<button class="linkbtn" data-openprosp="${p.id}" style="margin-top:6px;font-size:11px;padding:0">Ver análisis completo ▾</button></div>
       </div></td>
-      <td style="font-size:12.5px">${p.contacto?esc(p.contacto):(p.emailDirecto||p.phoneDirecto||p.email||p.phone?"":`<span style="color:var(--faint)">sin contacto</span>`)}
-        ${(function(){ const pl=[];
-          const quien=esc(String(p.contactoDirecto||p.contacto||"el contacto").split(/[—(,]/)[0].trim());
-          if(p.emailDirecto) pl.push(`<a class="cpill dir" href="mailto:${esc(p.emailDirecto)}" title="Email personal de ${quien}">★ de ${quien} · ${esc(p.emailDirecto)}</a>`);
-          if(p.phoneDirecto) pl.push(`<a class="cpill dir" href="tel:${esc(String(p.phoneDirecto).replace(/[^+\d]/g,""))}" title="Teléfono personal de ${quien}">★ de ${quien} · ${esc(p.phoneDirecto)}</a>`);
+      <td style="font-size:12.5px">${(function(){
+          // Tarjeta del decisor: iniciales, nombre, cargo, email directo (verificado si vino de Apollo)
+          const parse=t=>{ t=String(t||"").trim(); const m=t.match(/^([^—(,]+)(?:\s*[—(,]\s*(.*))?$/); return m?{n:m[1].trim(),c:(m[2]||"").replace(/[()]/g,"").replace(/\s+/g," ").trim()}:{n:t,c:""}; };
+          const per=parse(p.contactoDirecto||p.contacto);
+          const dirDeOtro = p.contactoDirecto && p.contacto && parse(p.contacto).n.toLowerCase()!==per.n.toLowerCase();
+          const ini=per.n?per.n.split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase():"?";
+          const tieneDir=!!(p.emailDirecto||p.phoneDirecto);
+          const badge=p.emailDirecto?(p.apolloEstado==="hecho"?'<span class="dv" title="Email verificado por Apollo">verificado</span>':'<span class="dv dir" title="Email directo de la persona">directo</span>'):"";
+          let h="";
+          if(per.n){
+            h+=`<div class="dcard"><div class="dav${tieneDir?"":" gris"}">${esc(ini)}</div><div style="min-width:0"><div class="dn">${esc(per.n)}${badge}</div>${per.c?`<div class="dc" title="${esc(per.c)}">${esc(per.c.length>70?per.c.slice(0,70)+"…":per.c)}</div>`:""}${p.emailDirecto?`<a class="dm" href="mailto:${esc(p.emailDirecto)}">${esc(p.emailDirecto)}</a>`:""}${p.phoneDirecto?`<a class="dm" href="tel:${esc(String(p.phoneDirecto).replace(/[^+\d]/g,""))}">${esc(p.phoneDirecto)}</a>`:""}</div></div>`;
+            if(dirDeOtro){ const o=parse(p.contacto); h+=`<div class="bs" style="margin-top:6px;font-size:11.5px">${esc(o.n)}${o.c?` <span style="color:var(--faint)">· ${esc(o.c.length>50?o.c.slice(0,50)+"…":o.c)}</span>`:""}</div>`; }
+          } else if(!(p.email||p.phone)) h+=`<span style="color:var(--faint)">sin contacto</span>`;
+          const pl=[];
           if(p.email) pl.push(`<a class="cpill" href="mailto:${esc(p.email)}" title="Email general del negocio">del local · ${esc(p.email)}</a>`);
           if(p.phone) pl.push(`<a class="cpill" href="tel:${esc(String(p.phone).replace(/[^+\d]/g,""))}" title="Teléfono general del negocio">del local · ${esc(p.phone)}</a>`);
-          return pl.length?`<div class="cpills">${pl.join("")}</div>`:""; })()}</td>
-      <td style="font-size:12px">${esc(p.nicho||"—")}</td>
-      <td style="font-size:12px;color:var(--muted)">${esc(p.fuente||"—")}</td>
+          return h+(pl.length?`<div class="cpills">${pl.join("")}</div>`:""); })()}</td>
+      <td style="font-size:12px">${p.nicho?String(p.nicho).split(/\s*[\/·+]\s*/).filter(Boolean).slice(0,4).map(x=>`<span class="tpill">${esc(x)}</span>`).join(""):"—"}</td>
+      <td style="font-size:12px">${p.fuente?String(p.fuente).split(/\s*\/\s*/).filter(Boolean).slice(0,4).map(x=>`<span class="tpill mut">${esc(x.length>22?x.slice(0,22)+"…":x)}</span>`).join(""):"—"}</td>
       <td><select class="lsel" data-prstatus="${p.id}">${PR_STATES.map(st=>`<option value="${st}" ${p.status===st?"selected":""}>${esc(PR_LABELS[st])}</option>`).join("")}</select></td>
       <td class="r" style="white-space:nowrap"><span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><button class="actico" data-visitar="${p.id}" title="Ir a visitar en persona" style="${p.visitar?"color:var(--accent);border-color:var(--accent);":""}">${ICON_PERSON}</button><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">Visitar</span></span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><button class="actico" data-fbok="${p.id}" title="Sirve — el buscador aprende y trae más de estos" style="${p.feedback==="ok"?"color:var(--ok);border-color:var(--ok);":""}">✓</button><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">Sirve</span></span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle"><button class="actico" data-fbno="${p.id}" title="No sirve — el buscador deja de traer de estos" style="${p.feedback==="no"?"color:var(--bad);border-color:var(--bad);":""}">✗</button><span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">No sirve</span></span>${(function(){const st=p.apolloEstado;const W='<span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin-right:9px;vertical-align:middle">';const L='<span style="font-size:8.5px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase;line-height:1;pointer-events:none">';
       if(st==="hecho") return W+`<span class="actico" style="color:var(--ok);border-color:var(--ok);cursor:default" title="Reforzado con Apollo${p.apolloAt?" el "+String(p.apolloAt).slice(0,10):""}${p.apolloNota?" — "+esc(p.apolloNota):""}">⚡</span>`+L+"Apollo ✓</span></span>";
@@ -2396,6 +2421,11 @@ function renderProspeccion(){
   $app().innerHTML = `
   <div class="bar"><h2><span class="tick"></span>Captación de clientes — salir a buscarlos</h2>
     ${canWrite?`<div style="display:flex;gap:12px;align-items:center"><span class="bs" style="border:1px solid var(--hair2);border-radius:20px;padding:5px 12px" title="Búsquedas de Apollo usadas este mes (cuenta las que encontraron email; se renuevan todos los meses — el número exacto está en developer.apollo.io)">⚡ Apollo ${apolloMes}/75</span><button class="linkbtn" data-new="prospectos" style="color:var(--faint)">+ cargar a mano</button><button class="btn" data-new="busquedas">🔎 Buscar</button></div>`:""}</div>
+  ${(function(){ const ub=[...busquedas].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0))[0]; if(!ub) return "";
+    const hoy=new Date().toISOString().slice(0,10); const nuevos=prospectos.filter(p=>String(p.createdAt||"").slice(0,10)===hoy).length;
+    const dir=prospectos.filter(p=>p.emailDirecto).length; const f=new Date(ub.createdAt||Date.now());
+    const cuando=String(ub.createdAt||"").slice(0,10)===hoy?("hoy "+f.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"})):f.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"});
+    return `<div class="resbar">☀️ <b>Última búsqueda ${esc(cuando)}</b><span class="rs">${esc([ub.rubro,ub.zona].filter(Boolean).join(" — "))}</span><span class="rs">· <i>${prospectos.length}</i> lugares · <i>${nuevos}</i> nuevos hoy · <i>${dir}</i> con email del dueño</span><span class="rn">${ub.status==="pendiente"||ub.status==="buscando"?"⏳ motor trabajando…":"✓ lista"}</span></div>`; })()}
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">${tile("Encontrados",prospectos.length)}${tile("Con email",conEmail)}${tile("Enviados",env)}${tile("Respondieron",resp)}${(function(){
     const pr = env>=5 ? Math.round(resp/env*100) : null;
     const col = pr==null?"var(--fg)":(pr>=5?"var(--ok)":(pr>=3?"var(--warn)":"var(--bad)"));
