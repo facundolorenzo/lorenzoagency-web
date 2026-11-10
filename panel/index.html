@@ -2539,14 +2539,13 @@ function empBarraBusqueda(pf){
 }
 // Ganchos: lista con opción de verlos en español (se elige en español, el mail igual sale en inglés)
 let empGanchosEs = {};
-function empGanchoLimpio(g){ return String(g||"").replace(/^\s*(i saw\s+)+/i,"").trim(); }
+function empGanchoLimpio(g){ const s=String(g||"").trim(); return /^i saw/i.test(s) ? s.replace(/^(i saw\s+)+/i,"I saw ") : s; }
 function empGanchosLista(e){
   const items = String(e.ganchos||"").split("\n").map(x=>x.trim()).filter(Boolean).map(empGanchoLimpio);
   const tr = empGanchosEs[e.id] || null;
   const btns = items.map((gl,i)=>{
-    const full = "I saw "+gl;
-    const cara = (tr&&tr[i]) ? esc(tr[i]) : "I saw "+esc(gl);
-    return `<button class="gk" data-empgancho="${e.id}" data-gk="${esc(full)}">${cara}</button>`;
+    const cara = (tr&&tr[i]) ? esc(tr[i]) : esc(gl);
+    return `<button class="gk" data-empgancho="${e.id}" data-gk="${esc(gl)}">${cara}</button>`;
   }).join("");
   const tbtn = `<button class="btn sm ghost" data-empganchotrad="${e.id}" style="margin-bottom:12px;text-transform:none;letter-spacing:0">${tr?"🇬🇧 Ver en inglés":"🌐 Ver en español"}</button>`;
   return `${tbtn}<div class="gklist">${btns}</div><div class="bs" style="margin-top:8px;color:var(--faint)">Tocá uno y se pone al toque como primera frase del mail; después lo editás o enviás.${tr?" Lo elegís en español; el mail igual sale en inglés.":""}</div>`;
@@ -3004,7 +3003,7 @@ async function empClick(e){
   if(ds.empidioma){ await empToggleIdioma(ds.empidioma, t); return; }
   if(ds.empregen){ empRegenOpen=empRegenOpen===ds.empregen?null:ds.empregen; empMailOpen=null; renderApp(); const el=document.getElementById("empregentxt-"+ds.empregen); if(el) el.focus(); return; }
   if(ds.empregencancel){ empRegenOpen=null; renderApp(); return; }
-  if(ds.empganchotrad){ const id=ds.empganchotrad; if(empGanchosEs[id]){ delete empGanchosEs[id]; renderApp(); return; } const em=empleos.find(x=>x.id===id); if(!em||!em.ganchos) return; t.textContent="Traduciendo…"; const items=String(em.ganchos).split("\n").map(x=>x.trim()).filter(Boolean).map(g=>"I saw "+empGanchoLimpio(g)); const es=await Promise.all(items.map(x=>empTraducir(x,"en","es"))); if(!es.some(Boolean)){ note("No pude traducir ahora, probá de nuevo",2000); renderApp(); return; } empGanchosEs[id]=es; renderApp(); return; }
+  if(ds.empganchotrad){ const id=ds.empganchotrad; if(empGanchosEs[id]){ delete empGanchosEs[id]; renderApp(); return; } const em=empleos.find(x=>x.id===id); if(!em||!em.ganchos) return; t.textContent="Traduciendo…"; const items=String(em.ganchos).split("\n").map(x=>x.trim()).filter(Boolean).map(empGanchoLimpio); const es=await Promise.all(items.map(x=>empTraducir(x,"en","es"))); if(!es.some(Boolean)){ note("No pude traducir ahora, probá de nuevo",2000); renderApp(); return; } empGanchosEs[id]=es; renderApp(); return; }
   if(ds.empgancho){ await empInsertarGancho(ds.empgancho, ds.gk||""); return; }
   if(ds.empregenok){ const id=ds.empregenok; const ins=(document.getElementById("empregentxt-"+id)||{}).value||""; const guardar=(document.getElementById("empregenguardar-"+id)||{}).checked; const e=empleos.find(x=>x.id===id);
     if(guardar && ins.trim() && e){ const pf=empPerfiles.find(p=>p.id===e.perfil_id); const prev=pf&&pf.notas_estilo?pf.notas_estilo+"\n":""; await sb.from("perfiles_empleo").update({notas_estilo:prev+ins.trim()}).eq("id",e.perfil_id); }
