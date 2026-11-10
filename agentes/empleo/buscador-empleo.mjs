@@ -212,8 +212,8 @@ async function enviarProgramados() {
     let pk = null;
     for (const e of listos) {
       if (!e.decisor_email || !e.mail_cuerpo) { await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ status: "nuevo", qa_estado: "revisar", qa_nota: "Sin email o sin mail al momento de enviar" }) }); continue; }
-      if (pk === null) pk = await presskitB64(p.presskit_url);
-      const adjuntos = pk ? [{ nombre: p.presskit_nombre || "presskit.pdf", tipo: "application/pdf", base64: pk }] : [];
+      if (pk === null) pk = await presskitB64(p.presskit_url || p.cv_url);
+      const adjuntos = pk ? [{ nombre: p.presskit_url ? (p.presskit_nombre || "presskit.pdf") : (p.cv_nombre || "cv.pdf"), tipo: "application/pdf", base64: pk }] : [];
       const r = await fetch(URL_B + "/functions/v1/enviar", { method: "POST", headers: { Authorization: "Bearer " + KEY, apikey: KEY, "Content-Type": "application/json" }, body: JSON.stringify({ to: e.decisor_email, subject: e.mail_asunto || (e.rol + " at " + e.empresa), body: e.mail_cuerpo, adjuntos, cuenta: p.cuenta || "empleo" }) });
       const j = await r.json().catch(() => ({}));
       if (r.ok && j.ok) {
