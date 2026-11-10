@@ -2527,7 +2527,8 @@ function empMailDe(e){
 const empDias = (iso)=> iso ? Math.floor((Date.now()-new Date(iso).getTime())/86400000) : null;
 function empSalMax(e){ const t=String(e.salario||"").replace(/,/g,""); const nums=[...t.matchAll(/\$?\s*(\d{2,3}(?:\.\d)?)\s*k|\$\s*(\d{5,6})/gi)].map(m=>m[1]?Number(m[1]):Math.round(Number(m[2])/1000)).filter(n=>n>=30&&n<=900); return nums.length?Math.max(...nums):null; }
 function empPagaMas(e,pf){ const mx=empSalMax(e); const min=pf&&pf.salario_min?pf.salario_min:0; return mx!=null && (min? mx>=min*1.2 : mx>=180); }
-function empScore(e,pf){ return (e.match||0) + (empPagaMas(e,pf)?8:0) + (e.carril==="ambos"?6:e.carril==="motiva"?3:0) + (e.decisor_email_verificado?2:0); }
+// Orden: primero el % de match (mayor a menor); a igual %, desempata pago, carril y email verificado
+function empScore(e,pf){ return (e.match||0)*1000 + (empPagaMas(e,pf)?8:0) + (e.carril==="ambos"?6:e.carril==="motiva"?3:0) + (e.decisor_email_verificado?2:0); }
 const empSalPill=(e,pf)=>e.salario?`<span class="pill sal${empPagaMas(e,pf)?" top":""}" title="${empPagaMas(e,pf)?"Paga por encima de tu mínimo: prioridad":""}">${empPagaMas(e,pf)?"💰 ":""}${esc(e.salario)}${empPagaMas(e,pf)?" · paga más":""}</span>`:"";
 function empCuando(iso){ const d=new Date(iso); const dl=x=>x.getFullYear()+"-"+x.getMonth()+"-"+x.getDate(); const hh=d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}); if(dl(d)===dl(new Date())) return "hoy "+hh; if(dl(d)===dl(new Date(Date.now()+86400000))) return "mañana "+hh; return d.toLocaleDateString("es-AR",{weekday:"long",day:"2-digit",month:"2-digit"})+" "+hh; }
 
