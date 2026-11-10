@@ -376,6 +376,11 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .eform .echip{display:inline-flex;align-items:center;padding:7px 11px;border:1px solid var(--hair);border-radius:999px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none;flex-direction:row;gap:0;white-space:nowrap}
 .eform .echip input{display:none}
 .eform .echip.on{border-color:var(--accent);color:var(--accent);background:rgba(221,125,71,.1)}
+.eform .eacts{display:flex;gap:10px;margin-top:22px;align-items:center;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--hair2)}
+.eform .eacts .btn{white-space:nowrap}
+.eform .edel{margin-left:auto;display:inline-flex;align-items:center;gap:7px;color:var(--bad);border-color:rgba(229,96,76,.4)}
+@media(max-width:700px){.eform .eacts .btn{flex:1 1 100%;justify-content:center}.eform .edel{margin-left:0}}
+
 .eform .ecb{position:absolute;left:0;right:0;top:100%;z-index:50;background:#16181c;border:1px solid var(--hair);border-radius:10px;margin-top:4px;box-shadow:0 14px 40px rgba(0,0,0,.6);overflow:hidden}
 .eform .ecbi{padding:9px 12px;font-size:13px;color:var(--fg);cursor:pointer}
 .eform .ecbi:hover{background:rgba(221,125,71,.14);color:var(--accent)}
@@ -2797,7 +2802,7 @@ function empPerfilesHtml(){
         <label><span class="fl">Asunto base</span><input name="mail_asunto" value="${esc(d?d.mail_asunto||"":"")}" placeholder="{rol} at {empresa}"></label>
         <label><span class="fl">Mail base (si lo dejás vacío, el motor escribe uno corto)</span><textarea name="mail_base" rows="9" placeholder="Hi {nombre},&#10;&#10;…&#10;&#10;Facundo Lorenzo">${esc(d?d.mail_base||"":"")}</textarea></label>
       </div>
-      <div style="display:flex;gap:10px;margin-top:18px;align-items:center"><button class="btn" type="submit" ${empBusy==="perfil"?"disabled":""}>${empBusy==="perfil"?"Guardando…":"Guardar perfil"}</button><button class="btn ghost" type="button" data-empcancel="1">Cancelar</button>${d?`<button class="btn ghost" type="button" data-empdelperfil="${d.id}" style="margin-left:auto;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;color:var(--bad);border-color:rgba(229,96,76,.4)">${ICON_TRASH} Borrar perfil</button>`:""}</div>
+      <div class="eacts"><button class="btn" type="submit" ${empBusy==="perfil"?"disabled":""}>${empBusy==="perfil"?"Guardando…":"Guardar perfil"}</button><button class="btn ghost" type="button" data-empcancel="1">Cancelar</button>${d?`<button class="btn ghost edel" type="button" data-empdelperfil="${d.id}">${ICON_TRASH} Borrar perfil</button>`:""}</div>
     </form></div>` : "";
   const lista = empForm ? "" : `<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn" data-empnuevo="1">+ Nuevo perfil</button></div>
     <div class="erow" style="grid-template-columns:repeat(auto-fill,minmax(360px,1fr))">${empPerfiles.map(p=>empPerfilCard(p,empDe(p.id))).join("")}</div>`;
