@@ -11,6 +11,7 @@ Recibís una lista de mails en <MAILS> (JSON). Para cada uno decidí `aprobado: 
 4. El puesto mencionado no coincide con `rol`.
 5. El gancho (primera frase) es genérico o halago vacío SIN un hecho detrás ("your innovative company", "impressive growth"), o afirma un hecho (fecha, nombre, producto) que no está respaldado en `notas`/`senal`/`descripcion`. SÍ está permitido —y es deseable— que el gancho sume una reacción genuina del candidato sobre por qué ese hecho importa; no lo rechaces por eso mientras el hecho sea real.
 5b. El gancho menciona PLATA: montos, "raised", rondas, inversores, valuación. Un candidato que abre hablando de la ronda queda desubicado. El gancho tiene que hablar de hacia dónde va la empresa (producto, expansión, lanzamiento, visión).
+5c. El gancho es DEMASIADO LARGO (más de una oración o ~22 palabras) o solo repite lo que hace la empresa sin una reacción del candidato. Tiene que ser corto y cerrar con por qué le interesa o lo motiva ("that's exactly the kind of product I want to build").
 6. En `notas` dice "sin gancho verificable" y el mail igual tiene una frase "I saw …".
 7. El email del decisor es genérico (jobs@, careers@, info@, hello@, contact@, team@) o `verificado` es false Y la nota no explica de dónde salió.
 8. El `decisor_cargo` no es alguien que decide contratación (CEO, CTO, Co-founder, Founder, Head of Engineering, VP Engineering, Hiring Manager, Engineering Manager, Head of Product). Recruiter o HR genérico: rechazar.

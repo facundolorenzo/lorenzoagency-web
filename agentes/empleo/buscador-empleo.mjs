@@ -319,7 +319,7 @@ async function regenerarMails() {
       "Reescribí este mail de contacto para un puesto. Devolvé SOLO el mail final en inglés, sin markdown ni comillas, listo para enviar.",
       "\n## REGLAS DEL MAIL",
       "- Partí del MAIL BASE del candidato; mantené su estructura, tono y largo. Reemplazá {nombre} (primer nombre del decisor), {empresa}, {rol} y {gancho}.",
-      "- El gancho (primera frase, completa 'I saw ___') NO es un dato suelto: dice qué hace o hacia dónde va la empresa Y una reacción genuina y breve del candidato sobre POR QUÉ eso importa (el impacto real). Ej: no 'I saw Astral is bringing AI tutoring nationwide' (frío), sino 'I saw Astral is giving every kid a lesson built for them — the kind of personalized learning that just wasn't possible before, and that's exactly the kind of product I want to help build'. En primera persona, honesto, nada de halago vacío. NUNCA de plata (montos, rondas, 'raised', inversores, valuación).",
+      "- El gancho (primera frase, completa 'I saw ___') es CORTO y con REACCIÓN: UNA oración, máx ~22 palabras. Media frase dice qué hacen (brevísimo) y la otra media es la reacción honesta del candidato de por qué le copa o lo motivaría sumarse — NO un resumen de lo que hicieron. MAL (largo, solo repite): 'I saw Opaxa is building agents that tell each manager at a restaurant, stadium or hotel what to do today. Turning scattered operational data into a clear daily decision is where AI really changes how a business runs'. BIEN (corto, con reacción): 'I saw Opaxa puts the daily call in front of the manager on the floor, not just HQ — that's exactly the kind of product I want to build'. Primera persona, honesto, nada de halago vacío. NUNCA de plata (montos, rondas, 'raised', inversores, valuación).",
       "- Si no hay dato verificable para el gancho, sacá esa frase entera y arrancá directo con el puesto.",
       "- Cierre sin pedir una llamada de 15 minutos ni 'quick chat' (lo usan todos). Usá algo como 'Let me know if it makes sense to connect.'",
       "- Sin guiones largos, sin emojis, sin signos de exclamación. Máximo ~130 palabras.",
@@ -331,7 +331,7 @@ async function regenerarMails() {
       "\n## DATOS DE LA EMPRESA",
       "Empresa: " + e.empresa, "Rol: " + (e.rol || ""), "Decisor: " + (e.decisor_nombre || "") + " (" + (e.decisor_cargo || "") + ")",
       "Qué hacen: " + (e.descripcion || ""), "Señal/novedad: " + (e.senal || ""), "Notas: " + (e.notas || ""),
-      "\n## SALIDA: devolvé SOLO este JSON (sin markdown): {\"mail\": \"<el mail completo empezando por 'Hi " + String(e.decisor_nombre || "").split(/\s+/)[0] + ",'>\", \"ganchos\": [\"<5 a 6 opciones de gancho distintas, cada una completa 'I saw ___' con una reacción genuina sobre por qué importa, ordenadas de la más fuerte a la más floja, sin plata>\"]}",
+      "\n## SALIDA: devolvé SOLO este JSON (sin markdown): {\"mail\": \"<el mail completo empezando por 'Hi " + String(e.decisor_nombre || "").split(/\s+/)[0] + ",'>\", \"ganchos\": [\"<5 a 6 opciones distintas, cada una CORTA (una oración, máx ~22 palabras): dato brevísimo + tu reacción de por qué te motiva, completa 'I saw ___', ordenadas de la más fuerte a la más floja, sin plata, sin párrafos largos ni repetir el dato sin reacción>\"]}",
     ].filter(Boolean).join("\n");
     let out = "";
     try {
