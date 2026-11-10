@@ -305,8 +305,46 @@ function tocaHoy(p) {
   if (diaLocal(p.ultima_corrida) !== diaLocal(ahora)) return "corrida diaria";
   return null;
 }
+// Regenerar el mail de una empresa cuando el dueño lo pide desde el panel (botón Regenerar)
+async function regenerarMails() {
+  const pend = (await api("empleos?regenerar=eq.true&select=*&limit=10")) || [];
+  for (const e of pend) {
+    const perfil = (await api("perfiles_empleo?id=eq." + e.perfil_id + "&select=*"))?.[0];
+    if (!perfil) { await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ regenerar: false }) }); continue; }
+    console.log(`  ↻ Regenerando mail para ${e.empresa}…`);
+    const partes = [
+      "Reescribí este mail de contacto para un puesto. Devolvé SOLO el mail final en inglés, sin markdown ni comillas, listo para enviar.",
+      "\n## REGLAS DEL MAIL",
+      "- Partí del MAIL BASE del candidato; mantené su estructura, tono y largo. Reemplazá {nombre} (primer nombre del decisor), {empresa}, {rol} y {gancho}.",
+      "- El gancho (primera frase) habla de HACIA DÓNDE VA la empresa (producto, lanzamiento, expansión, visión). NUNCA de plata: nada de montos, rondas, 'raised', inversores ni valuación.",
+      "- Si no hay dato verificable para el gancho, sacá esa frase entera y arrancá directo con el puesto.",
+      "- Cierre sin pedir una llamada de 15 minutos ni 'quick chat' (lo usan todos). Usá algo como 'Let me know if it makes sense to connect.'",
+      "- Sin guiones largos, sin emojis, sin signos de exclamación. Máximo ~130 palabras.",
+      perfil.notas_estilo ? "\n## CÓMO LE GUSTAN LOS MAILS AL CANDIDATO (respetalo):\n" + perfil.notas_estilo : "",
+      e.feedback_nota ? "\n## OBSERVACIÓN DEL CANDIDATO SOBRE ESTE MAIL:\n" + e.feedback_nota : "",
+      e.instruccion_mail ? "\n## INSTRUCCIÓN PARA ESTA REESCRITURA (lo más importante):\n" + e.instruccion_mail : "",
+      "\n## MAIL BASE DEL CANDIDATO\nASUNTO: " + (perfil.mail_asunto || "{rol} at {empresa}") + "\n" + (perfil.mail_base || ""),
+      "\n## DATOS DE LA EMPRESA",
+      "Empresa: " + e.empresa, "Rol: " + (e.rol || ""), "Decisor: " + (e.decisor_nombre || "") + " (" + (e.decisor_cargo || "") + ")",
+      "Qué hacen: " + (e.descripcion || ""), "Señal/novedad: " + (e.senal || ""), "Notas: " + (e.notas || ""),
+      "\nDevolvé el mail completo, empezando por 'Hi " + String(e.decisor_nombre || "").split(/\s+/)[0] + ",'",
+    ].filter(Boolean).join("\n");
+    let out = "";
+    try {
+      const child = execFileP("claude", ["-p", "--dangerously-skip-permissions"], { encoding: "utf8", maxBuffer: 1024 * 1024 * 10, timeout: 1000 * 60 * 10, shell: WIN });
+      child.child.stdin.end(partes); out = (await child).stdout || "";
+    } catch (err) { console.error("  Regenerar falló: " + String(err.message).slice(0, 160)); await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ regenerar: false }) }); continue; }
+    const cuerpo = out.replace(/^```[a-z]*\n?|\n?```$/g, "").trim();
+    if (cuerpo && /\bhi\b/i.test(cuerpo.slice(0, 40))) {
+      await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ mail_cuerpo: cuerpo, regenerar: false, instruccion_mail: null, qa_estado: null, qa_nota: null, status: e.status === "programado" ? "nuevo" : e.status, programado_para: null, updated_at: new Date().toISOString() }) });
+      console.log("  ✓ Mail regenerado: " + e.empresa);
+    } else { await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ regenerar: false }) }); console.error("  Regenerar: salida vacía para " + e.empresa); }
+  }
+}
+
 async function tick() {
   await refuerzosApollo();
+  try { await regenerarMails(); } catch (e) { console.error("  Regenerar: " + String(e.message).slice(0, 160)); }
   const perfiles = (await api("perfiles_empleo?activo=eq.true&select=*")) || [];
   for (const p of perfiles) { const m = tocaHoy(p); if (m) await correr(p, m); }
   for (const p of perfiles) { if (p.auto_envio) { try { await controlCalidad(p); } catch (e) { console.error("  Control: " + String(e.message).slice(0, 160)); } } }

@@ -101,3 +101,9 @@ alter table public.empleos add column if not exists qa_estado text;          -- 
 alter table public.empleos add column if not exists qa_nota text;
 alter table public.empleos add column if not exists programado_para timestamptz;
 alter table public.empleos add column if not exists visto boolean default true;
+
+-- v4: regenerar mail + feedback libre
+alter table public.empleos add column if not exists regenerar boolean default false;
+alter table public.empleos add column if not exists instruccion_mail text;
+alter table public.empleos add column if not exists feedback_nota text;
+alter table public.perfiles_empleo add column if not exists notas_estilo text;  -- cómo quiere los mails (aprende)

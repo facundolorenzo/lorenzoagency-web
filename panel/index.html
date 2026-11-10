@@ -2482,6 +2482,7 @@ let empSub = "hoy";          // hoy / empresas / seguimiento / perfiles
 let empForm = null;          // null | "nuevo" | id del perfil que se edita
 let empPerfilId = null;      // perfil seleccionado (si hay varios)
 let empMailOpen = null;      // id del empleo con el editor de mail abierto
+let empRegenOpen = null;     // id del empleo con el cuadro de "regenerar" abierto
 let empFichaOpen = null;     // (ya no se usa inline) 
 let empVista = null;         // id del empleo abierto en página propia
 let empAdj = {};             // adjuntos extra por empleo (además del presskit)
@@ -2675,10 +2676,26 @@ function empFichaPagina(e, pf){
             ${e.decisor_linkedin?`<div class="efrow"><span>LinkedIn</span><div><a href="${esc(e.decisor_linkedin)}" target="_blank" rel="noopener">${esc(e.decisor_linkedin)}</a></div></div>`:""}`
           :`<div class="bs">Decisor no identificado todavía.</div>`}
         </div></div>
-        <div class="efsec"><div class="efk">Tu opinión (el motor aprende)</div><div class="efv" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm ghost" data-empfb="${e.id}|ok" style="${e.feedback==="ok"?"color:var(--ok);border-color:var(--ok)":""}">✓ Sirve, más así</button><button class="btn sm ghost" data-empfb="${e.id}|no" style="${e.feedback==="no"?"color:var(--bad);border-color:var(--bad)":""}">✗ No sirve</button><button class="btn sm ghost btn-del" data-empdel="${e.id}" title="Borrar" style="margin-left:auto">${ICON_TRASH}</button></div></div>
+        <div class="efsec"><div class="efk">Tu opinión (el motor aprende)</div><div class="efv">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn sm ghost" data-empfb="${e.id}|ok" style="${e.feedback==="ok"?"color:var(--ok);border-color:var(--ok)":""}">✓ Sirve, más así</button><button class="btn sm ghost" data-empfb="${e.id}|no" style="${e.feedback==="no"?"color:var(--bad);border-color:var(--bad)":""}">✗ No sirve</button><button class="btn sm ghost btn-del" data-empdel="${e.id}" title="Borrar" style="margin-left:auto">${ICON_TRASH}</button></div>
+          <div class="bs" style="margin-bottom:6px">Observación sobre este mail (qué cambiarías, cómo lo querés):</div>
+          <textarea id="empfbnota-${e.id}" rows="2" placeholder="Ej: muy largo, sacá la parte de eventos, más directo…">${esc(e.feedback_nota||"")}</textarea>
+          <button class="btn sm ghost" data-empfbnota="${e.id}" style="margin-top:8px">Guardar observación</button>
+        </div></div>
       </div>
     </div>
-    ${empMailOpen===e.id ? empMailEditor(e,pf) : (e.mail_cuerpo ? `<div class="efsec" style="margin-top:6px"><div class="efk" style="display:flex;align-items:center;gap:12px">Mail ${e.status==="enviado"||e.status==="respondio"?"enviado":"preparado por el motor"}<button class="btn sm ghost" data-emptrad="${e.id}" style="margin-left:auto;text-transform:none;letter-spacing:0">${empTrad[e.id]?"Ver original":"🌐 Traducir al español"}</button></div><div class="efv efmail">${esc(e.mail_asunto||"")?`<div style="font-weight:700;margin-bottom:8px">${esc(empTrad[e.id]?empTrad[e.id].asunto:e.mail_asunto)}</div>`:""}${esc(empTrad[e.id]?empTrad[e.id].cuerpo:e.mail_cuerpo).replace(/\n/g,"<br>")}${empTrad[e.id]?`<div class="bs" style="margin-top:10px;color:var(--faint)">Traducción automática, solo para que lo entiendas. Se envía el original en inglés.</div>`:""}</div></div>` : "")}
+    ${empMailOpen===e.id ? empMailEditor(e,pf) : (e.mail_cuerpo ? `<div class="efsec" style="margin-top:6px"><div class="efk" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">Mail ${e.status==="enviado"||e.status==="respondio"?"enviado":"preparado por el motor"}
+      <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      ${e.status!=="enviado"&&e.status!=="respondio"&&e.decisor_email?`<button class="btn sm ghost" data-empmail="${e.id}" style="text-transform:none;letter-spacing:0">✏️ Editar</button><button class="btn sm ghost" data-empregen="${e.id}" style="text-transform:none;letter-spacing:0">↻ Regenerar</button>`:""}
+      <button class="btn sm ghost" data-emptrad="${e.id}" style="text-transform:none;letter-spacing:0">${empTrad[e.id]?"Ver original":"🌐 Traducir"}</button></span></div>
+      <div class="efv efmail">${esc(e.mail_asunto||"")?`<div style="font-weight:700;margin-bottom:8px">${esc(empTrad[e.id]?empTrad[e.id].asunto:e.mail_asunto)}</div>`:""}${esc(empTrad[e.id]?empTrad[e.id].cuerpo:e.mail_cuerpo).replace(/\n/g,"<br>")}${empTrad[e.id]?`<div class="bs" style="margin-top:10px;color:var(--faint)">Traducción automática, solo para que lo entiendas. Se envía el original en inglés.</div>`:""}</div>
+      ${e.regenerar?`<div class="eprog" style="margin-top:10px">↻ <b>El motor está reescribiendo este mail…</b> Aparece acá cuando corra (dejá la ventana negra abierta).</div>`:""}
+      ${empRegenOpen===e.id?`<div style="margin-top:12px;padding:12px;border:1px solid rgba(221,125,71,.35);border-radius:12px;background:rgba(221,125,71,.05)">
+        <div class="bs" style="margin-bottom:8px;color:var(--fg)">Decile al motor cómo rehacerlo (ej. "más corto", "enfocá en la parte de agentes", "más directo"):</div>
+        <textarea id="empregentxt-${e.id}" rows="2" placeholder="Tu instrucción para este mail…">${esc(e.instruccion_mail||"")}</textarea>
+        <label style="display:flex;align-items:center;gap:7px;margin:8px 0;font-size:12.5px;color:var(--muted)"><input type="checkbox" id="empregenguardar-${e.id}" style="width:auto"> Guardar esto como mi estilo para TODOS los mails (el motor lo aprende)</label>
+        <div style="display:flex;gap:8px"><button class="btn" data-empregenok="${e.id}">↻ Pedir al motor que lo rehaga</button><button class="btn ghost" data-empregencancel="1">Cancelar</button></div>
+      </div>`:""}</div>` : "")}
   </div>`;
 }
 
@@ -2875,8 +2892,15 @@ async function empClick(e){
   if(ds.empcancel){ empForm=null; renderApp(); return; }
   if(ds.empdelperfil){ if(!confirm("¿Borrar este perfil y todas sus empresas?")) return; await sb.from("perfiles_empleo").delete().eq("id",ds.empdelperfil); empForm=null; await empLoad(); renderApp(); return; }
   if(ds.empbuscar){ await sb.from("perfiles_empleo").update({pedido_busqueda:true,updated_at:new Date().toISOString()}).eq("id",ds.empbuscar); await empLoad(); renderApp(); note("Pedido al motor. Tiene que estar prendido en tu compu (EMPLEO-VIGILAR.bat)",2600); return; }
-  if(ds.empmail){ empMailOpen=ds.empmail; empFichaOpen=null; renderApp(); const el=document.getElementById("empcuerpo-"+ds.empmail); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); return; }
+  if(ds.empmail){ empMailOpen=ds.empmail; empRegenOpen=null; empFichaOpen=null; renderApp(); const el=document.getElementById("empcuerpo-"+ds.empmail); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); return; }
   if(ds.empmailcerrar){ empMailOpen=null; renderApp(); return; }
+  if(ds.empregen){ empRegenOpen=empRegenOpen===ds.empregen?null:ds.empregen; empMailOpen=null; renderApp(); const el=document.getElementById("empregentxt-"+ds.empregen); if(el) el.focus(); return; }
+  if(ds.empregencancel){ empRegenOpen=null; renderApp(); return; }
+  if(ds.empregenok){ const id=ds.empregenok; const ins=(document.getElementById("empregentxt-"+id)||{}).value||""; const guardar=(document.getElementById("empregenguardar-"+id)||{}).checked; const e=empleos.find(x=>x.id===id);
+    if(guardar && ins.trim() && e){ const pf=empPerfiles.find(p=>p.id===e.perfil_id); const prev=pf&&pf.notas_estilo?pf.notas_estilo+"\n":""; await sb.from("perfiles_empleo").update({notas_estilo:prev+ins.trim()}).eq("id",e.perfil_id); }
+    await sb.from("empleos").update({regenerar:true,instruccion_mail:ins.trim()||null,updated_at:new Date().toISOString()}).eq("id",id);
+    empRegenOpen=null; await empLoad(); renderApp(); note("↻ Pedido al motor. Reescribe el mail en la próxima corrida (ventana negra abierta).",2800); return; }
+  if(ds.empfbnota){ const id=ds.empfbnota; const t=(document.getElementById("empfbnota-"+id)||{}).value||""; await sb.from("empleos").update({feedback_nota:t.trim()||null,updated_at:new Date().toISOString()}).eq("id",id); await empLoad(); renderApp(); note("Observación guardada ✓"); return; }
   if(ds.empcancelar){ await empSetStatus(ds.empcancelar,{status:"nuevo",programado_para:null,qa_estado:"revisar",qa_nota:"Cancelado por vos · queda para envío manual"}); note("Envío cancelado. Queda en Para hoy para mandarlo vos."); return; }
   if(ds.empficha){ empVista=ds.empficha; empMailOpen=null; renderApp(); window.scrollTo({top:0,behavior:"smooth"}); return; }
   if(ds.empvolver){ empVista=null; empMailOpen=null; renderApp(); return; }
