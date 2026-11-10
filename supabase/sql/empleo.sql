@@ -119,3 +119,7 @@ exception when duplicate_object then null; end $$;
 
 -- v6: el mail que el dueño deja a mano = ejemplo de estilo que el motor copia
 alter table public.perfiles_empleo add column if not exists ejemplo_mail text;
+
+-- v7: barra de avance de la búsqueda (tandas de 5)
+alter table public.perfiles_empleo add column if not exists progreso integer;
+alter table public.perfiles_empleo add column if not exists busqueda_inicio timestamptz;

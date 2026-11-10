@@ -82,7 +82,7 @@ async function aprendizaje(perfilId) {
   } catch { return ""; }
 }
 
-async function cerebro(perfil, yaTengo) {
+async function cerebro(perfil, yaTengo, cant) {
   const vars = [
     "## PERFIL",
     "NOMBRE: " + perfil.nombre,
@@ -103,7 +103,7 @@ async function cerebro(perfil, yaTengo) {
     "\n## MAIL BASE (respetá estructura y tono; completá {nombre} {empresa} {rol} {gancho})",
     "ASUNTO BASE: " + (perfil.mail_asunto || "(vacío)"),
     perfil.mail_base || "(vacío: escribí uno corto según las reglas)",
-    "\n## CANTIDAD: traé hasta " + CANTIDAD + " empresas nuevas",
+    "\n## CANTIDAD: traé hasta " + (cant || CANTIDAD) + " empresas nuevas EN ESTA PASADA (las mejores que encuentres ahora; habrá más pasadas después, no hace falta agotar todo acá)",
     "FECHA DE HOY: " + new Date().toISOString().slice(0, 10),
     await aprendizaje(perfil.id),
     "\n## YA ENCONTRADAS (no repetir):\n" + (yaTengo.length ? yaTengo.map(x => "- " + x).join("\n") : "(ninguna)"),
@@ -122,10 +122,32 @@ async function cerebro(perfil, yaTengo) {
 async function correr(perfil, motivo) {
   console.log(`\n[${new Date().toLocaleTimeString()}] Buscando para ${perfil.nombre} (${motivo})…`);
   await patchPerfil(perfil.id, { estado_motor: "buscando", pedido_busqueda: false });
+  // Barra de avance (best-effort: si falta el SQL v7 solo deja un aviso en consola y sigue)
+  const avance = (obj) => patchPerfil(perfil.id, obj);
+  await avance({ progreso: 5, busqueda_inicio: new Date().toISOString() });
   const existentes = (await api(`empleos?perfil_id=eq.${perfil.id}&select=empresa`)) || [];
   const ya = new Set(existentes.map(x => String(x.empresa).toLowerCase().trim()));
-  const rows = await cerebro(perfil, [...ya]);
-  if (!rows) { await patchPerfil(perfil.id, { estado_motor: "error", ultima_corrida: new Date().toISOString() }); return; }
+  const TANDA = 5, tandas = Math.max(1, Math.ceil(CANTIDAD / TANDA));
+  let totRev = 0, totNue = 0, falloInicial = false;
+  for (let t = 1; t <= tandas; t++) {
+    console.log(`  Tanda ${t}/${tandas} (de a ${TANDA})…`);
+    const rows = await cerebro(perfil, [...ya], TANDA);
+    if (!rows) { if (t === 1) falloInicial = true; else console.log("  Esta tanda falló; me quedo con lo ya cargado."); break; }
+    totRev += rows.length;
+    const nuevos = await procesarTanda(perfil, rows, ya);
+    if (nuevos.length) await api("empleos", { method: "POST", body: JSON.stringify(nuevos) });
+    totNue += nuevos.length;
+    console.log(`  Tanda ${t}: +${nuevos.length} nuevas (van ${totNue}). Ya están en el panel.`);
+    await avance({ progreso: Math.min(95, 5 + Math.round((t / tandas) * 90)) });
+    if (rows.length < TANDA) break;  // el cerebro no encontró más
+  }
+  if (falloInicial) { await patchPerfil(perfil.id, { estado_motor: "error", ultima_corrida: new Date().toISOString() }); await avance({ progreso: null, busqueda_inicio: null }); return; }
+  await patchPerfil(perfil.id, { estado_motor: "lista", ultima_corrida: new Date().toISOString(), ultima_revisadas: totRev, ultima_nuevas: totNue });
+  await avance({ progreso: null, busqueda_inicio: null });
+  console.log(`  Listo: ${totRev} revisadas, ${totNue} nuevas cargadas en el panel (EMPLEO → Para hoy).`);
+  try { await controlCalidad(perfil); } catch (e) { console.error("  Control: " + String(e.message).slice(0, 160)); }
+}
+async function procesarTanda(perfil, rows, ya) {
   const nuevos = [];
   for (const r of rows) {
     const emp = limpio(r.empresa); if (!emp || ya.has(emp.toLowerCase())) continue;
@@ -154,10 +176,7 @@ async function correr(perfil, motivo) {
       created_at: new Date().toISOString(),
     });
   }
-  if (nuevos.length) await api("empleos", { method: "POST", body: JSON.stringify(nuevos) });
-  await patchPerfil(perfil.id, { estado_motor: "lista", ultima_corrida: new Date().toISOString(), ultima_revisadas: rows.length, ultima_nuevas: nuevos.length });
-  console.log(`  Listo: ${rows.length} revisadas, ${nuevos.length} nuevas cargadas en el panel (EMPLEO → Para hoy).`);
-  try { await controlCalidad(perfil); } catch (e) { console.error("  Control: " + String(e.message).slice(0, 160)); }
+  return nuevos;
 }
 
 // ---------- PILOTO AUTOMÁTICO ----------

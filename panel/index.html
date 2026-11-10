@@ -2530,6 +2530,13 @@ async function empToggleIdioma(id, btn){
     if(cambioC||cambioA) note("Inglés actualizado con tus cambios. Revisalo y Guardá.",3000);
   }
 }
+// Barra de avance de la búsqueda (el motor va subiendo perfiles_empleo.progreso por tandas)
+function empBarraBusqueda(pf){
+  const tiene = pf.progreso!=null;
+  const p = Math.max(4, Math.min(100, Number(pf.progreso)||4));
+  const min = pf.busqueda_inicio ? Math.max(0, Math.round((Date.now()-new Date(pf.busqueda_inicio).getTime())/60000)) : null;
+  return `<span style="display:inline-flex;align-items:center;gap:10px"><span class="bs" style="color:var(--accent)">⏳ buscando</span><span style="width:130px;height:6px;border-radius:99px;background:rgba(221,125,71,.18);overflow:hidden"><span style="display:block;height:100%;width:${p}%;border-radius:99px;background:var(--accent);transition:width .6s"></span></span><span class="bs" style="color:var(--accent)">${tiene?p+"%":""}${min!=null&&min>0?` · ⏱ ${min} min`:""}</span></span>`;
+}
 // Ganchos: lista con opción de verlos en español (se elige en español, el mail igual sale en inglés)
 let empGanchosEs = {};
 function empGanchoLimpio(g){ return String(g||"").replace(/^\s*(i saw\s+)+/i,"").trim(); }
@@ -2651,7 +2658,7 @@ function renderEmpleo2(){
       : `<div class="empty">Todavía no enviaste ningún mail desde Empleo.</div>`;
   }
   $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Empleo — que las empresas te encuentren a vos${selPerfil}</h2>
-    ${pf?`<div style="display:flex;gap:10px;align-items:center">${pf.estado_motor==="buscando"||pf.pedido_busqueda?`<span class="bs" style="color:var(--accent)">⏳ el motor está buscando…</span>`:""}<button class="btn" data-empbuscar="${pf.id}" ${pf.pedido_busqueda?"disabled":""}>🔎 Buscar ahora</button></div>`:""}</div>
+    ${pf?`<div style="display:flex;gap:10px;align-items:center">${pf.estado_motor==="buscando"||pf.pedido_busqueda?empBarraBusqueda(pf):""}<button class="btn" data-empbuscar="${pf.id}" ${pf.pedido_busqueda?"disabled":""}>🔎 Buscar ahora</button></div>`:""}</div>
     ${subHtml}${cuerpo}`;
   const s=document.getElementById("empsel"); if(s) s.onchange=()=>{ empPerfilId=s.value; renderApp(); };
 }
