@@ -2568,12 +2568,12 @@ function renderEmpleo(){
 }
 
 function empResumenBar(pf){
-  if(!pf || !pf.ultima_corrida) return `<div class="resbar">☀️ <b>Sin corridas todavía</b><span class="rs">el motor busca solo todas las mañanas a las 7 (con tu compu prendida) o cuando tocás <i>Buscar ahora</i></span></div>`;
+  if(!pf || !pf.ultima_corrida) return `<div class="resbar">☀️ <b>Sin corridas todavía</b><span class="rs">el motor busca solo domingo a viernes a las 18:00 (con tu compu prendida) o cuando tocás <i>Buscar ahora</i></span></div>`;
   const f=new Date(pf.ultima_corrida); const dl=x=>x.getFullYear()+"-"+x.getMonth()+"-"+x.getDate(); const ahora=new Date(), ayer=new Date(Date.now()-86400000);
   const hh=f.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
   const cuando=dl(f)===dl(ahora)?("hoy "+hh):dl(f)===dl(ayer)?("ayer "+hh):(f.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"})+" "+hh);
   const rec=empDe(pf.id).filter(e=>e.status==="nuevo"&&e.decisor_email).length;
-  return `<div class="resbar">☀️ <b>Búsqueda ${esc(cuando)}</b><span class="rs"><i>${pf.ultima_revisadas||0}</i> empresas revisadas · <i>${pf.ultima_nuevas||0}</i> nuevas · <i>${Math.min(5,rec)}</i> recomendadas para escribir</span><span class="rn">${pf.estado_motor==="buscando"?"⏳ buscando…":"próxima: mañana 7:00"}</span></div>`;
+  return `<div class="resbar">☀️ <b>Búsqueda ${esc(cuando)}</b><span class="rs"><i>${pf.ultima_revisadas||0}</i> empresas revisadas · <i>${pf.ultima_nuevas||0}</i> nuevas · <i>${Math.min(5,rec)}</i> recomendadas para escribir</span><span class="rn">${pf.estado_motor==="buscando"?"⏳ buscando…":(function(){const d=new Date();const h=d.getHours();const dia=d.getDay();const hoyBusca=[0,1,2,3,4,5].includes(dia)&&h<18;return hoyBusca?"próxima búsqueda: hoy 18:00":"próxima búsqueda: "+(dia===5||dia===6?"domingo":"mañana")+" 18:00";})()}</span></div>`;
 }
 
 function empCard(e, pf, compacta){
