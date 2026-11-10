@@ -2946,9 +2946,9 @@ async function empPresskitAdjunto(pf){
 }
 async function empEnviar(id, soloBorrador){
   const e=empleos.find(x=>x.id===id); if(!e) return; const pf=empPerfiles.find(p=>p.id===e.perfil_id);
+  const {asunto,cuerpo}=await empCuerpoFinal(id); empResetIdioma(id);  // leer lo editado ANTES de redibujar
+  if(!cuerpo.trim()){ note("El mail está vacío"); return; }
   empBusy=id; renderApp();
-  const {asunto,cuerpo}=await empCuerpoFinal(id); empResetIdioma(id);
-  if(!cuerpo.trim()){ empBusy=null; renderApp(); note("El mail está vacío"); return; }
   try{
     const adj=[]; const pk=await empPresskitAdjunto(pf); if(pk) adj.push(pk); for(const a of (empAdj[id]||[])) adj.push(a);
     const body={to:e.decisor_email,subject:asunto,body:cuerpo,adjuntos:adj.slice(0,5),cuenta:(pf&&pf.cuenta)||"empleo"};
@@ -2963,10 +2963,10 @@ async function empEnviar(id, soloBorrador){
 }
 async function empGuardarMail(id){
   const e=empleos.find(x=>x.id===id); if(!e) return;
-  empBusy=id; renderApp();
-  const {asunto,cuerpo}=await empCuerpoFinal(id); empResetIdioma(id);
-  if(!cuerpo.trim()){ empBusy=null; renderApp(); note("El mail está vacío"); return; }
+  const {asunto,cuerpo}=await empCuerpoFinal(id); empResetIdioma(id);  // leer lo editado ANTES de redibujar
+  if(!cuerpo.trim()){ note("El mail está vacío"); return; }
   const cambiado = cuerpo.trim()!==String(e.mail_cuerpo||"").trim() || asunto.trim()!==String(e.mail_asunto||"").trim();
+  empBusy=id; renderApp();
   try{
     await sb.from("empleos").update({mail_asunto:asunto,mail_cuerpo:cuerpo,updated_at:new Date().toISOString()}).eq("id",id);
     // Aprendizaje: lo que vos dejás a mano es el mejor ejemplo del tono que querés. Lo guardo en el perfil y el motor lo copia.
