@@ -42,13 +42,15 @@ Por corrida, intentá que al menos un tercio sean del carril "motiva" o "ambos".
 ## EL MAIL (campos `mail_asunto` y `mail_cuerpo`), en inglés
 - Partí del MAIL BASE del perfil. Mantené su estructura, tono y largo; solo reemplazá `{nombre}` (primer nombre del decisor), `{empresa}`, `{rol}` y `{gancho}`.
 - `{gancho}` es UNA frase concreta y verificable sobre la empresa, y tiene reglas estrictas porque abre el mail:
+  - Habla de HACIA DÓNDE VA la empresa: qué están construyendo, un lanzamiento, una expansión, una nueva vertical, lo que anunciaron que viene, una frase del fundador sobre la visión. Completa la frase "I saw …" con naturalidad: "I saw Astral is taking its AI math tutor nationwide", "I saw Opaxa is expanding into new verticals", "I saw the launch of Flash, your assistant for strategy teams".
+  - NUNCA hables de plata: nada de montos, rondas, "raised $5.5M", valuaciones ni inversores. Eso queda desubicado viniendo de un candidato. La ronda sirve como fuente para saber que crecen, pero en el mail se menciona el crecimiento, no el dinero.
   - Tiene que salir de una fuente que abriste y leíste (web de la empresa, aviso, prensa, blog, LinkedIn de la empresa). Anotá la URL en `gancho_fuente`.
   - Tiene que ser RECIENTE: de los últimos 90 días (ronda, lanzamiento, aviso publicado, nota de prensa, post). Si lo más reciente que encontrás tiene más de 90 días, usá en su lugar algo atemporal y seguro sacado de su propia web (qué construyen y para quién), nunca una noticia vieja.
   - Nunca des por hecho fechas, montos ni nombres que no viste escritos. Si dudás, elegí el dato más simple y seguro.
   - Prohibido: "your innovative company", "your impressive growth", elogios vacíos, o datos de otra empresa con nombre parecido.
   - Anotá la fecha del dato en `gancho_fecha` (AAAA-MM-DD o "sin fecha" si es atemporal).
   - Si NO hay nada verificable (ni noticia reciente ni dato claro en su web), NO inventes: eliminá la frase del gancho completa (la oración que empieza con "I saw") y arrancá el mail directo con la frase del puesto. Dejá `gancho_fuente` vacío y escribí en `notas`: "sin gancho verificable".
-- Si el MAIL BASE está vacío, escribí uno corto (máx. 120 palabras): saludo con nombre, una línea de por qué les escribo (el gancho), dos líneas de quién soy con lo del perfil, un cierre con pedido claro de 15 minutos de llamada, firma con el nombre del perfil. Sin guiones largos, sin emojis, sin adjetivos vacíos.
+- Si el MAIL BASE está vacío, escribí uno corto (máx. 120 palabras): saludo con nombre, una línea de por qué les escribo (el gancho), dos líneas de quién soy con lo del perfil, un cierre sin pedir tiempo ("Let me know if it makes sense to connect."), firma con el nombre del perfil. Sin guiones largos, sin emojis, sin adjetivos vacíos. Nunca "15-minute call" ni "quick chat": lo usan todos.
 - Asunto: corto y específico ("Forward Deployed Engineer for Flashpoint", "Helping {empresa} ship agents faster"). Nunca "Job application".
 
 ## CAMPOS CORTOS (van en pastillas, tienen que leerse de un vistazo)
