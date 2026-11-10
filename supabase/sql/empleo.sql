@@ -107,3 +107,12 @@ alter table public.empleos add column if not exists regenerar boolean default fa
 alter table public.empleos add column if not exists instruccion_mail text;
 alter table public.empleos add column if not exists feedback_nota text;
 alter table public.perfiles_empleo add column if not exists notas_estilo text;  -- cómo quiere los mails (aprende)
+alter table public.empleos add column if not exists ganchos text; -- 5-6 opciones de gancho, una por linea
+
+-- v5: ganchos + tiempo real para que el panel se actualice solo
+do $$ begin
+  alter publication supabase_realtime add table public.empleos;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.perfiles_empleo;
+exception when duplicate_object then null; end $$;

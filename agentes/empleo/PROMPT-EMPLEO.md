@@ -49,6 +49,7 @@ Por corrida, intentá que al menos un tercio sean del carril "motiva" o "ambos".
   - Nunca des por hecho fechas, montos ni nombres que no viste escritos. Si dudás, elegí el dato más simple y seguro.
   - Prohibido: "your innovative company", "your impressive growth", elogios vacíos, o datos de otra empresa con nombre parecido.
   - Anotá la fecha del dato en `gancho_fecha` (AAAA-MM-DD o "sin fecha" si es atemporal).
+- Además del gancho elegido, devolvé en `ganchos` entre 5 y 6 OPCIONES de gancho distintas (frases cortas en inglés, para completar "I saw ___"), ordenadas de la más fuerte a la más floja, todas verificables con la data que analizaste y SIN hablar de plata. Variá el ángulo: producto, lanzamiento, expansión, visión del fundador, el problema que resuelven, un detalle del aviso. Así el candidato puede elegir otra si no le gusta la primera.
   - Si NO hay nada verificable (ni noticia reciente ni dato claro en su web), NO inventes: eliminá la frase del gancho completa (la oración que empieza con "I saw") y arrancá el mail directo con la frase del puesto. Dejá `gancho_fuente` vacío y escribí en `notas`: "sin gancho verificable".
 - Si el MAIL BASE está vacío, escribí uno corto (máx. 120 palabras): saludo con nombre, una línea de por qué les escribo (el gancho), dos líneas de quién soy con lo del perfil, un cierre sin pedir tiempo ("Let me know if it makes sense to connect."), firma con el nombre del perfil. Sin guiones largos, sin emojis, sin adjetivos vacíos. Nunca "15-minute call" ni "quick chat": lo usan todos.
 - Asunto: corto y específico ("Forward Deployed Engineer for Flashpoint", "Helping {empresa} ship agents faster"). Nunca "Job application".
@@ -92,6 +93,7 @@ Devolvé SOLO un bloque así, con un array JSON (sin markdown alrededor):
     "por_que": "Buscan alguien que arme agentes con clientes reales y escriba código; el perfil ya construyó un motor de agentes y viene de operar negocios. Entrada: mail directo al cofundador, no postulación.",
     "mail_asunto": "Forward Deployed Engineer for Flashpoint",
     "mail_cuerpo": "Hi Christian,\n\n…",
+    "ganchos": ["Astral is bringing its AI math tutor to homeschool families nationwide", "Astral is scaling personalized AI tutoring for K-8", "Astral is building AI that generates a lesson for each kid", "Astral is growing its engineering team to ship faster", "Astral is expanding its homeschool platform across the US"],
     "gancho_fuente": "https://techcrunch.com/…",
     "gancho_fecha": "2026-09-30",
     "notas": "Email publicado en el post de la ronda en TechCrunch."

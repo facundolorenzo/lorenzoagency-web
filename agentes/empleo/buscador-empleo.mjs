@@ -145,6 +145,7 @@ async function correr(perfil, motivo) {
       match: Number.isFinite(Number(r.match)) ? Math.max(0, Math.min(100, Math.round(Number(r.match)))) : null,
       motivacion: Number.isFinite(Number(r.motivacion)) ? Math.max(0, Math.min(100, Math.round(Number(r.motivacion)))) : null,
       carril: ["remoto", "motiva", "ambos"].includes(r.carril) ? r.carril : null,
+      ganchos: Array.isArray(r.ganchos) ? r.ganchos.map(x=>String(x).trim()).filter(Boolean).slice(0,6).join("\n") : null,
       por_que: limpio(r.por_que), mail_asunto: limpio(r.mail_asunto), mail_cuerpo: limpio(r.mail_cuerpo),
       status: "nuevo", apollo_estado: apEst, apollo_nota: apEst === "sin_resultado" ? "Apollo no encontró email verificado" : null,
       notas: [nota, limpio(r.gancho_fuente) ? "Gancho: " + r.gancho_fuente + (limpio(r.gancho_fecha) ? " (" + r.gancho_fecha + ")" : "") : null].filter(Boolean).join(" · ") || null,
@@ -360,6 +361,6 @@ if (!VIGILAR) {
   await refuerzosApollo();
   for (const p of perfiles) await correr(p, "pasada manual");
 } else {
-  console.log("Modo vigilancia: dejá esta ventana abierta. Reviso el panel cada 30s (pedidos de 'Buscar ahora' y la corrida diaria).");
-  for (;;) { try { await tick(); } catch (e) { console.error("Error: " + String(e.message).slice(0, 200)); } await new Promise(r => setTimeout(r, 30000)); }
+  console.log("Modo vigilancia: dejá esta ventana abierta. Reviso el panel cada 12s (pedidos de 'Buscar ahora' y la corrida diaria).");
+  for (;;) { try { await tick(); } catch (e) { console.error("Error: " + String(e.message).slice(0, 200)); } await new Promise(r => setTimeout(r, 12000)); }
 }

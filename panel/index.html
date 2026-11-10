@@ -346,6 +346,10 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .eful{margin:0;padding-left:18px}.eful li{margin:4px 0}
 .efmail{font-size:14px;background:rgba(255,255,255,.03);border:1px solid var(--hair2);border-radius:12px;padding:14px 16px}
 .efpage .emailbox{margin-top:6px}
+.efsec .gklist{display:flex;flex-direction:column;gap:7px}
+.efsec .gk{text-align:left;font-size:13px;color:var(--fg);background:rgba(255,255,255,.03);border:1px solid var(--hair2);border-radius:10px;padding:9px 12px;cursor:pointer;line-height:1.4;transition:border-color .12s,background .12s}
+.efsec .gk:hover{border-color:var(--accent);background:rgba(221,125,71,.1);color:var(--accent)}
+
 .ecard .edesc{font-size:13px;color:var(--muted);margin:-6px 0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:720px}
 .efdesc{display:block;font-family:var(--disp);font-size:15px;font-weight:500;letter-spacing:0;color:var(--muted);margin-top:6px;line-height:1.4}
 .efpage .pills .pill.mut{color:var(--muted)}
@@ -2537,7 +2541,11 @@ function empCuando(iso){ const d=new Date(iso); const dl=x=>x.getFullYear()+"-"+
 function renderEmpleo(){
   try{ renderEmpleo2(); }catch(err){ console.error("renderEmpleo", err); $app().innerHTML = `<div class="empty">Error al dibujar Empleo: ${esc(String(err&&err.message||err))}<br><button class="btn ghost" onclick="empForm=null;empVista=null;empSub='hoy';renderApp()">Volver a Para hoy</button></div>`; }
 }
+let _empPoll=null;
+function empPendiente(){ try{ return empleos.some(e=>e.regenerar||e.apollo_estado==="pendiente") || empPerfiles.some(p=>p.estado_motor==="buscando"||p.pedido_busqueda); }catch{ return false; } }
+function empAutoRefresh(){ clearTimeout(_empPoll); if(tab!=="empleo"||!empPendiente()) return; _empPoll=setTimeout(async()=>{ if(tab!=="empleo"){return;} try{ await empLoad(); }catch(e){} if(tab==="empleo") renderApp(); }, 8000); }
 function renderEmpleo2(){
+  empAutoRefresh();
   const pf = empPerfil();
   const todos = pf ? empDe(pf.id) : [];
   const hoy = todos.filter(e=>(e.status==="nuevo"||e.status==="programado") && e.feedback!=="no").sort((a,b)=>(a.status==="programado"?-1:0)-(b.status==="programado"?-1:0) || empScore(b,pf)-empScore(a,pf));
@@ -2666,6 +2674,7 @@ function empFichaPagina(e, pf){
         ${sec("Por qué encaja", e.por_que?esc(e.por_que):"")}
         ${sec("Qué hacen", e.descripcion?esc(e.descripcion):"")}
         ${sec("Señal", e.senal?`⚡ ${esc(e.senal)}`+(gancho?`<div class="bs" style="margin-top:6px">${link(gancho.replace(/^Gancho:\s*/i,"Fuente: "))}</div>`:""):"")}
+        ${(e.ganchos&&String(e.ganchos).trim()&&e.status!=="enviado"&&e.status!=="respondio")?sec("Ganchos para el mail (tocá uno para usarlo)", `<div class="gklist">${String(e.ganchos).split("\n").map(x=>x.trim()).filter(Boolean).map(g=>`<button class="gk" data-empgancho="${e.id}" data-gk="${esc(g)}">I saw ${esc(g)}</button>`).join("")}</div><div class="bs" style="margin-top:8px;color:var(--faint)">El motor reescribe el mail con el gancho que elijas (~1 min).</div>`):""}
         ${sec("La empresa", [fila("Web", web?`<a href="${esc(web)}" target="_blank" rel="noopener">${esc(web.replace(/^https?:\/\//,""))}</a>`:""),fila("Ciudad",esc(e.ciudad||"")),fila("Tamaño",esc(e.tamano||"")),fila("Etapa",esc(e.etapa||"")),fila("Fuente",esc(e.fuente||"")),fila("Aviso",e.url_aviso?`<a href="${esc(e.url_aviso)}" target="_blank" rel="noopener">${esc(e.url_aviso)}</a>`:""),fila("Publicado",esc(e.publicado||""))].join(""))}
         ${otras.length?sec("Notas del motor", `<ul class="eful">${otras.map(n=>`<li>${link(n)}</li>`).join("")}</ul>`):""}
       </div>
@@ -2896,6 +2905,7 @@ async function empClick(e){
   if(ds.empmailcerrar){ empMailOpen=null; renderApp(); return; }
   if(ds.empregen){ empRegenOpen=empRegenOpen===ds.empregen?null:ds.empregen; empMailOpen=null; renderApp(); const el=document.getElementById("empregentxt-"+ds.empregen); if(el) el.focus(); return; }
   if(ds.empregencancel){ empRegenOpen=null; renderApp(); return; }
+  if(ds.empgancho){ const id=ds.empgancho; const g=ds.gk||""; await sb.from("empleos").update({regenerar:true,instruccion_mail:'Usá exactamente este gancho en la primera frase (completá "I saw "): '+g,updated_at:new Date().toISOString()}).eq("id",id); await empLoad(); renderApp(); note("↻ Reescribiendo con ese gancho… (~1 min)",2600); return; }
   if(ds.empregenok){ const id=ds.empregenok; const ins=(document.getElementById("empregentxt-"+id)||{}).value||""; const guardar=(document.getElementById("empregenguardar-"+id)||{}).checked; const e=empleos.find(x=>x.id===id);
     if(guardar && ins.trim() && e){ const pf=empPerfiles.find(p=>p.id===e.perfil_id); const prev=pf&&pf.notas_estilo?pf.notas_estilo+"\n":""; await sb.from("perfiles_empleo").update({notas_estilo:prev+ins.trim()}).eq("id",e.perfil_id); }
     await sb.from("empleos").update({regenerar:true,instruccion_mail:ins.trim()||null,updated_at:new Date().toISOString()}).eq("id",id);
