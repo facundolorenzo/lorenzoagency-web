@@ -328,17 +328,22 @@ async function regenerarMails() {
       "\n## DATOS DE LA EMPRESA",
       "Empresa: " + e.empresa, "Rol: " + (e.rol || ""), "Decisor: " + (e.decisor_nombre || "") + " (" + (e.decisor_cargo || "") + ")",
       "Qué hacen: " + (e.descripcion || ""), "Señal/novedad: " + (e.senal || ""), "Notas: " + (e.notas || ""),
-      "\nDevolvé el mail completo, empezando por 'Hi " + String(e.decisor_nombre || "").split(/\s+/)[0] + ",'",
+      "\n## SALIDA: devolvé SOLO este JSON (sin markdown): {\"mail\": \"<el mail completo empezando por 'Hi " + String(e.decisor_nombre || "").split(/\s+/)[0] + ",'>\", \"ganchos\": [\"<5 a 6 opciones de gancho distintas, cada una completa 'I saw ___' con una reacción genuina sobre por qué importa, ordenadas de la más fuerte a la más floja, sin plata>\"]}",
     ].filter(Boolean).join("\n");
     let out = "";
     try {
       const child = execFileP("claude", ["-p", "--dangerously-skip-permissions"], { encoding: "utf8", maxBuffer: 1024 * 1024 * 10, timeout: 1000 * 60 * 10, shell: WIN });
       child.child.stdin.end(partes); out = (await child).stdout || "";
     } catch (err) { console.error("  Regenerar falló: " + String(err.message).slice(0, 160)); await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ regenerar: false }) }); continue; }
-    const cuerpo = out.replace(/^```[a-z]*\n?|\n?```$/g, "").trim();
+    let cuerpo = "", ganchos = null;
+    const jm = out.match(/\{[\s\S]*\}/);
+    if (jm) { try { const o = JSON.parse(jm[0]); cuerpo = String(o.mail || "").trim(); if (Array.isArray(o.ganchos)) ganchos = o.ganchos.map(x => String(x).trim()).filter(Boolean).slice(0, 6).join("\n"); } catch {} }
+    if (!cuerpo) cuerpo = out.replace(/^```[a-z]*\n?|\n?```$/g, "").trim();  // fallback: texto plano
     if (cuerpo && /\bhi\b/i.test(cuerpo.slice(0, 40))) {
-      await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ mail_cuerpo: cuerpo, regenerar: false, instruccion_mail: null, qa_estado: null, qa_nota: null, status: e.status === "programado" ? "nuevo" : e.status, programado_para: null, updated_at: new Date().toISOString() }) });
-      console.log("  ✓ Mail regenerado: " + e.empresa);
+      const patch = { mail_cuerpo: cuerpo, regenerar: false, instruccion_mail: null, qa_estado: null, qa_nota: null, status: e.status === "programado" ? "nuevo" : e.status, programado_para: null, updated_at: new Date().toISOString() };
+      if (ganchos) patch.ganchos = ganchos;
+      await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify(patch) });
+      console.log("  ✓ Mail regenerado: " + e.empresa + (ganchos ? " (+ganchos)" : ""));
     } else { await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ regenerar: false }) }); console.error("  Regenerar: salida vacía para " + e.empresa); }
   }
 }
