@@ -306,9 +306,11 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .emailbox{margin-top:14px;padding:14px;border:1px solid rgba(221,125,71,.35);border-radius:14px;background:rgba(221,125,71,.05)}
 .emailbox input,.emailbox textarea{width:100%;box-sizing:border-box}
 .emailbox textarea{font-size:13.5px;line-height:1.5;min-height:200px}
-.ecard.prof .hd{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+.ecard.prof .hd{display:flex;gap:16px;align-items:center;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--hair2)}
+.ecard.prof .hd1{display:block;margin-top:4px;font-size:12px;color:var(--muted)}
+.ecard.prof .hd2{display:block;margin-top:3px;font-size:12px;color:var(--muted);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ecard.prof .av2{width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#F08C52,#D56E38);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:18px;color:#1b1105;flex:none}
-.ecard.prof .hd b{font-family:var(--disp);font-size:16px;display:block;color:#fff}
+.ecard.prof .hd b{font-family:var(--disp);font-size:17px;display:block;color:#fff;line-height:1.2;text-transform:capitalize}
 .ecard.prof .hd span{font-size:12px;color:var(--muted)}
 .ecard.prof .okdot{font-style:normal;color:var(--ok)}
 .ecard.prof .kv{display:grid;grid-template-columns:110px 1fr;gap:7px 10px;font-size:12.5px}
@@ -2638,7 +2640,7 @@ function empPerfilCard(pf, todos){
   const ini=pf.nombre.split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase();
   const kv=(k,v)=>v?`<div class="k">${k}</div><div class="v">${esc(v)}</div>`:"";
   return `<div class="ecard prof">
-    <div class="hd"><div class="av2">${esc(ini)}</div><div><b>${esc(pf.nombre)}</b><span>${pf.activo?"Perfil activo":"Pausado"} · ${esc(pf.email_envio||"sin casilla")} ${pf.email_envio?'<em class="okdot">●</em>':""}</span></div><button class="btn sm ghost" data-empeditar="${pf.id}" style="margin-left:auto">Editar</button></div>
+    <div class="hd"><div class="av2">${esc(ini)}</div><div style="min-width:0;flex:1"><b>${esc(pf.nombre)}</b><span class="hd1">${pf.activo?'<em class="okdot">●</em> Perfil activo':'<em style="color:var(--faint)">●</em> Pausado'}</span><span class="hd2" title="Casilla desde la que salen los mails">✉ ${esc(pf.email_envio||"sin casilla configurada")}</span></div><button class="btn sm ghost" data-empeditar="${pf.id}">Editar</button></div>
     <div class="sec">FILTRO</div>
     <div class="kv">${kv("rol",pf.roles)}${kv("dónde",[pf.pais,pf.ubicacion].filter(Boolean).join(" · "))}${kv("modalidad",pf.modalidad)}${kv("salario mín.",pf.salario_min?"$"+pf.salario_min+"k":"")}${kv("etapa",pf.etapas)}</div>
     ${pf.distinto?`<div class="sec">LO QUE ME HACE DISTINTO</div><div style="font-size:12.5px;color:var(--muted);line-height:1.5">${esc(pf.distinto)}</div>`:""}
