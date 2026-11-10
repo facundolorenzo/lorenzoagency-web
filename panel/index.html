@@ -2888,6 +2888,7 @@ async function empClick(e){
   if(ds.empdel){ if(!confirm("¿Borrar esta empresa?")) return; await sb.from("empleos").delete().eq("id",ds.empdel); await empLoad(); renderApp(); return; }
   if(ds.empapollo){ await empSetStatus(ds.empapollo,{apollo_estado:"pendiente"}); note("⚡ Pedido a Apollo. El motor lo procesa cuando corre.",2200); return; }
 }
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && sb){ let ch=false; if(openLeadId){ openLeadId=null; ch=true; } if(typeof openProspId!=="undefined" && openProspId){ openProspId=null; ch=true; } if(typeof empVista!=="undefined" && empVista){ empVista=null; ch=true; } if(ch) renderApp(); } });
 document.addEventListener("submit", async e=>{ if(e.target && e.target.id==="femp-perfil"){ e.preventDefault(); await empGuardarPerfil(e.target); } });
 
 /* ---------- PROSPECCIÓN (Agente 4 — outbound) ---------- */
@@ -3676,6 +3677,9 @@ function note(msg,ms){
 document.addEventListener("click", async e=>{
   const t = e.target;
   if(!sb) return;
+  // Cerrar fichas: va primero para que ningún otro estado se trague el clic
+  if(t.closest && (t.closest("[data-closelead]") || (t.dataset&&t.dataset.closeleadbg))){ openLeadId=null; tradActivo=false; tradOriginal=""; tradShown=""; cierreAjuste=false; repDropOpen=false; renderApp(); return; }
+  if(t.closest && t.closest("[data-closeprosp]")){ openProspId=null; renderApp(); return; }
   if(agendaPick && t.closest && !t.closest(".agenda-pop") && !(t.dataset&&(t.dataset.agopen||t.dataset.agclose))){ agendaPick=null; agendaDay=null; agendaHora=null; renderApp(); return; }
   const fr = t.closest && t.closest("[data-franja]");
   if(fr){ const s=fr.dataset.franja; leadCollapsed[s]=!leadCollapsed[s]; renderApp(); return; }
