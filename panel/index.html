@@ -300,6 +300,10 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .btnpro:disabled{opacity:.5;cursor:default;transform:none}
 .ecard .why{margin-top:12px;padding-top:12px;border-top:1px dashed var(--hair2);font-size:12.5px;color:var(--muted);line-height:1.5}
 .ecard .why b{color:var(--fg);font-weight:600}
+.eprog{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:10px 14px;border-radius:12px;background:rgba(76,195,138,.08);border:1px solid rgba(76,195,138,.35);font-size:13px;color:var(--fg)}
+.eprog b{color:var(--ok)}
+.eprog.warn{background:rgba(229,180,84,.08);border-color:rgba(229,180,84,.4)}.eprog.warn b{color:var(--warn)}
+
 .eficha{margin-top:14px;padding-top:14px;border-top:1px solid var(--hair2);font-size:12.5px;color:var(--fg);line-height:1.6;display:grid;gap:6px}
 .eficha .ek{display:inline-block;min-width:84px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--faint);text-transform:uppercase}
 .eficha a{color:var(--accent);text-decoration:none}
@@ -1068,7 +1072,7 @@ function tabsHtml(){
   const hoyN = (isAdmin||esVendedor) ? leadsHoy().length : 0;
   const visN = prospectos.filter(x=>x.visitar && x.status!=="descartado" && x.feedback!=="no").length;
   return `<nav id="tabs">${t.map(([k,l])=>{
-    let b=''; if((k==='leads'||k==='misclientes')&&nuevos) b=`<span class="nbadge">${nuevos}</span>`; if(k==='hoy'&&hoyN) b=`<span class="nbadge">${hoyN}</span>`; if(k==='visitas'&&visN) b=`<span class="nbadge">${visN}</span>`; if(k==='empleo'){const eN=(typeof empleos!=='undefined'?empleos:[]).filter(x=>x.status==='nuevo'&&x.decisor_email&&x.feedback!=='no').length; if(eN) b=`<span class="nbadge">${Math.min(eN,5)}</span>`;}
+    let b=''; if((k==='leads'||k==='misclientes')&&nuevos) b=`<span class="nbadge">${nuevos}</span>`; if(k==='hoy'&&hoyN) b=`<span class="nbadge">${hoyN}</span>`; if(k==='visitas'&&visN) b=`<span class="nbadge">${visN}</span>`; if(k==='empleo'){const L=(typeof empleos!=='undefined'?empleos:[]); const rN=L.filter(x=>x.status==='respondio'&&x.visto===false).length; const eN=L.filter(x=>(x.status==='nuevo'||x.status==='programado')&&x.decisor_email&&x.feedback!=='no').length; if(rN) b=`<span class="nbadge" style="background:var(--ok);color:#06140c" title="${rN} respuesta(s) nueva(s)">★${rN}</span>`; else if(eN) b=`<span class="nbadge">${Math.min(eN,15)}</span>`;}
     return `<button data-t="${k}" class="${tab===k?'on':''}">${l}${b}</button>`;
   }).join("")}</nav>`;
 }
@@ -2501,17 +2505,20 @@ function empMailDe(e){
   return { asunto, cuerpo };
 }
 const empDias = (iso)=> iso ? Math.floor((Date.now()-new Date(iso).getTime())/86400000) : null;
+function empCuando(iso){ const d=new Date(iso); const dl=x=>x.getFullYear()+"-"+x.getMonth()+"-"+x.getDate(); const hh=d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}); if(dl(d)===dl(new Date())) return "hoy "+hh; if(dl(d)===dl(new Date(Date.now()+86400000))) return "mañana "+hh; return d.toLocaleDateString("es-AR",{weekday:"long",day:"2-digit",month:"2-digit"})+" "+hh; }
 
 // ---- Render ----
 function renderEmpleo(){
   const pf = empPerfil();
   const todos = pf ? empDe(pf.id) : [];
-  const hoy = todos.filter(e=>e.status==="nuevo" && e.feedback!=="no").sort((a,b)=>(b.match||0)-(a.match||0));
+  const hoy = todos.filter(e=>(e.status==="nuevo"||e.status==="programado") && e.feedback!=="no").sort((a,b)=>(a.status==="programado"?-1:0)-(b.status==="programado"?-1:0) || (b.match||0)-(a.match||0));
   const conMail = hoy.filter(e=>e.decisor_email);
-  const paraHoy = conMail.slice(0,5);
+  const tope = pf && pf.tope_diario ? pf.tope_diario : 5;
+  const paraHoy = conMail.slice(0,Math.max(5,tope));
   const env = todos.filter(e=>e.status==="enviado"||e.status==="respondio");
-  const subs = [["hoy","Para hoy",paraHoy.length],["empresas","Empresas",todos.length],["seguimiento","Seguimiento",env.filter(e=>e.status==="enviado").length],["perfiles","Perfiles",empPerfiles.length]];
-  const subHtml = `<div class="esub">${subs.map(([k,l,n])=>`<span data-empsub="${k}" class="${empSub===k?"on":""}">${l}${n?`<i class="${k==="hoy"?"":"g"}">${n}</i>`:""}</span>`).join("")}</div>`;
+  const nuevasResp = env.filter(e=>e.status==="respondio" && e.visto===false).length;
+  const subs = [["hoy","Para hoy",paraHoy.length],["empresas","Empresas",todos.length],["seguimiento",nuevasResp?"Seguimiento ★":"Seguimiento",nuevasResp||env.filter(e=>e.status==="enviado").length],["perfiles","Perfiles",empPerfiles.length]];
+  const subHtml = `<div class="esub">${subs.map(([k,l,n])=>`<span data-empsub="${k}" class="${empSub===k?"on":""}">${l}${n?`<i class="${k==="hoy"||(k==="seguimiento"&&nuevasResp)?"":"g"}">${n}</i>`:""}</span>`).join("")}</div>`;
   const selPerfil = empPerfiles.length>1 ? `<select class="lsel" id="empsel" style="margin-left:14px">${empPerfiles.map(p=>`<option value="${p.id}" ${p.id===empPerfilId?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>` : "";
 
   if(empVista){ const ev=empleos.find(x=>x.id===empVista); if(ev){ $app().innerHTML = `<div class="bar"><h2><span class="tick"></span>Empleo</h2></div>` + empFichaPagina(ev, empPerfiles.find(p=>p.id===ev.perfil_id)); return; } empVista=null; }
@@ -2521,7 +2528,7 @@ function renderEmpleo(){
   } else if(empSub==="perfiles" || empForm){
     cuerpo = empPerfilesHtml();
   } else if(empSub==="hoy"){
-    cuerpo = `${empResumenBar(pf)}<div class="erow"><div>${paraHoy.length?paraHoy.map(e=>empCard(e,pf)).join(""):`<div class="empty">${todos.length?"No quedan empresas con email del decisor para escribir hoy. Mirá <b>Empresas</b>: podés pedirle a Apollo el email de las que faltan.":"El motor todavía no trajo empresas. Tocá <b>Buscar ahora</b> (con el motor prendido en tu compu) o esperá la corrida de mañana 7 AM."}</div>`}${conMail.length>5?`<div style="text-align:center;color:var(--faint);font-size:12px;margin-top:6px">+ ${conMail.length-5} más en Empresas ↓</div>`:""}</div><div>${empPerfilCard(pf,todos)}</div></div>`;
+    cuerpo = `${empResumenBar(pf)}<div class="erow"><div>${paraHoy.length?paraHoy.map(e=>empCard(e,pf)).join(""):`<div class="empty">${todos.length?"No quedan empresas con email del decisor para escribir hoy. Mirá <b>Empresas</b>: podés pedirle a Apollo el email de las que faltan.":"El motor todavía no trajo empresas. Tocá <b>Buscar ahora</b> (con el motor prendido en tu compu) o esperá la corrida de mañana 7 AM."}</div>`}${conMail.length>paraHoy.length?`<div style="text-align:center;color:var(--faint);font-size:12px;margin-top:6px">+ ${conMail.length-paraHoy.length} más en Empresas ↓</div>`:""}</div><div>${empPerfilCard(pf,todos)}</div></div>`;
   } else if(empSub==="empresas"){
     const ord=[...todos].sort((a,b)=>(b.match||0)-(a.match||0));
     cuerpo = `${empResumenBar(pf)}${ord.length?ord.map(e=>empCard(e,pf,true)).join(""):`<div class="empty">Todavía no hay empresas para este perfil.</div>`}`;
@@ -2562,7 +2569,9 @@ function empCard(e, pf, compacta){
     e.senal?`<span class="pill hot">⚡ ${esc(e.senal)}</span>`:"",
     e.publicado?`<span class="pill">${esc(e.publicado)}</span>`:"",
     !e.decisor_email?`<span class="pill" style="color:var(--warn);border-color:rgba(229,180,84,.45)">decisor sin email</span>`:"",
+    e.qa_estado==="revisar"?`<span class="pill" style="color:var(--warn);border-color:rgba(229,180,84,.45)" title="${esc(e.qa_nota||"")}">⚠ control: revisar</span>`:(e.qa_estado==="ok"&&e.status!=="programado"?`<span class="pill" style="color:var(--ok);border-color:rgba(76,195,138,.4)" title="${esc(e.qa_nota||"")}">✓ control OK</span>`:""),
   ].filter(Boolean).join("");
+  const progHtml = e.status==="programado" ? `<div class="eprog">⏱ <b>Se envía solo ${e.programado_para?empCuando(e.programado_para):""}</b> · ✓ control OK${e.qa_nota?` <span class="bs" title="${esc(e.qa_nota)}">· ${esc(String(e.qa_nota).slice(0,70))}</span>`:""}<button class="btn sm ghost" data-empcancelar="${e.id}" style="margin-left:auto">Cancelar envío</button><button class="btn sm ghost" data-empmail="${e.id}">Retocar</button></div>` : (e.qa_estado==="revisar"&&e.status==="nuevo"?`<div class="eprog warn">⚠ <b>El control no lo aprobó:</b> ${esc(e.qa_nota||"revisalo antes de enviar")}</div>`:"");
   const ap = e.apollo_estado;
   const dec = e.decisor_nombre ? `<div class="dec"><div class="av${e.decisor_email?"":" gris"}">${esc(ini)}</div><div><div class="n">${esc(e.decisor_nombre)}</div><div class="c">${esc(e.decisor_cargo||"")}</div></div>
       ${e.decisor_email?`<span class="v">${e.decisor_email_verificado?"verificado":"directo"}</span><a class="m" href="mailto:${esc(e.decisor_email)}">${esc(e.decisor_email)}</a>`
@@ -2588,6 +2597,7 @@ function empCard(e, pf, compacta){
         ${e.rol?`<div class="role">${esc(e.rol)}</div>`:""}
         ${pills?`<div class="pills">${pills}</div>`:""}
         ${dec}
+        ${progHtml}
         ${e.por_que&&!compacta?`<div class="why"><b>Por qué encaja:</b> ${esc(e.por_que)}</div>`:""}
       </div>
       <div class="acts">${acciones}</div>
@@ -2620,6 +2630,7 @@ function empFichaPagina(e, pf){
       </div>
       <div class="acts" style="min-width:220px">${acciones}</div>
     </div>
+    ${e.status==="programado"?`<div class="eprog" style="margin:-6px 0 18px">⏱ <b>Se envía solo ${e.programado_para?empCuando(e.programado_para):""}</b> · ✓ control OK${e.qa_nota?` <span class="bs">· ${esc(e.qa_nota)}</span>`:""}<button class="btn sm ghost" data-empcancelar="${e.id}" style="margin-left:auto">Cancelar envío</button></div>`:(e.qa_estado==="revisar"&&e.status==="nuevo"?`<div class="eprog warn" style="margin:-6px 0 18px">⚠ <b>El control no lo aprobó:</b> ${esc(e.qa_nota||"")}</div>`:"")}
     <div class="efgrid">
       <div>
         ${sec("Por qué encaja", e.por_que?esc(e.por_que):"")}
@@ -2710,7 +2721,7 @@ function empPerfilCard(pf, todos){
   return `<div class="ecard prof">
     <div class="hd"><div class="av2">${esc(ini)}</div><div style="min-width:0;flex:1"><b>${esc(pf.nombre)}</b><span class="hd1">${pf.activo?'<em class="okdot">●</em> Perfil activo':'<em style="color:var(--faint)">●</em> Pausado'}</span><span class="hd2" title="Casilla desde la que salen los mails">✉ ${esc(pf.email_envio||"sin casilla configurada")}</span></div><button class="btn sm ghost" data-empeditar="${pf.id}">Editar</button></div>
     <div class="sec">FILTRO</div>
-    <div class="kv">${kv("rol",pf.roles)}${kv("dónde",[pf.pais,pf.ubicacion].filter(Boolean).join(" · "))}${kv("me mudaría a",pf.ciudades_extra)}${kv("modalidad",pf.modalidad)}${kv("salario mín.",pf.salario_min?"$"+pf.salario_min+"k":"")}${kv("etapa",pf.etapas)}${kv("me motiva",pf.intereses)}${kv("tope",pf.tope_diario?pf.tope_diario+" mails/día":"")}</div>
+    <div class="kv">${kv("rol",pf.roles)}${kv("dónde",[pf.pais,pf.ubicacion].filter(Boolean).join(" · "))}${kv("me mudaría a",pf.ciudades_extra)}${kv("modalidad",pf.modalidad)}${kv("salario mín.",pf.salario_min?"$"+pf.salario_min+"k":"")}${kv("etapa",pf.etapas)}${kv("me motiva",pf.intereses)}${kv("tope",pf.tope_diario?pf.tope_diario+" mails/día":"")}${kv("piloto",pf.auto_envio?("🟢 encendido · salen "+(pf.hora_envio||8)+":00 lun-vie"):"⚪ apagado · envío manual")}</div>
     ${pf.distinto?`<div class="sec">LO QUE ME HACE DISTINTO</div><div style="font-size:12.5px;color:var(--muted);line-height:1.5">${esc(pf.distinto)}</div>`:""}
     ${pf.proyectos?`<div class="sec">PROYECTOS</div><div>${String(pf.proyectos).split(/[;\n]/).map(x=>x.trim()).filter(Boolean).map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>`:""}
     <div class="sec">ARCHIVOS</div>
@@ -2741,6 +2752,8 @@ function empPerfilesHtml(){
         <label><span class="fl">Modalidad (elegí varias)</span><span class="echips">${(function(){const sel=new Set(String(d&&d.modalidad||"Remoto · Híbrido").split(/\s*·\s*/).filter(Boolean));const T={"Remoto":"Trabajás desde tu casa; la empresa puede estar en cualquier ciudad del país.","Híbrido":"Algunos días en la oficina: solo empresas cerca de tu ciudad.","Presencial":"Todos los días en la oficina: solo empresas en tu ciudad."};return ["Remoto","Híbrido","Presencial"].map(x=>`<label class="echip${sel.has(x)?" on":""}" title="${T[x]}"><input type="checkbox" name="modalidad_chk" value="${x}" ${sel.has(x)?"checked":""} onchange="this.parentNode.classList.toggle('on',this.checked)">${x}</label>`).join("");})()}</span></label>
         <label><span class="fl">Salario mínimo (USD/año)</span><select name="salario_min" class="lsel">${[["","Sin mínimo"],[60,"$60k o más"],[80,"$80k o más"],[100,"$100k o más"],[120,"$120k o más"],[140,"$140k o más"],[160,"$160k o más"],[180,"$180k o más"],[200,"$200k o más"],[250,"$250k o más"]].map(([v,l])=>`<option value="${v}" ${d&&String(d.salario_min||"")===String(v)?"selected":""}>${l}</option>`).join("")}</select></label>
         <label><span class="fl">Etapas de empresa (elegí varias)</span><span class="echips">${(function(){const sel=new Set(String(d&&d.etapas||"Pre-seed · Seed · Serie A").split(/\s*·\s*/).filter(Boolean));const T={"Pre-seed":"Recién arrancan: 2 a 10 personas, poca plata (menos de US$2M). Entrás como fundador técnico o primer ingeniero: mucho equity, sueldo más bajo.","Seed":"Ya tienen producto y primeros clientes: 10 a 30 personas, levantaron US$2M a 10M. El punto justo entre equity y sueldo.","Serie A":"Crecen en serio: 30 a 100 personas, US$10M a 30M. Sueldos de mercado, equipo armado, roles más definidos.","Serie B+":"Empresa grande: más de 100 personas, mucha plata. Sueldos altos, menos equity, más proceso.","Bootstrapped":"Sin inversores: viven de lo que venden. Suelen ser estables y pagar en efectivo, sin equity.","Corporación":"Empresa establecida (Google, bancos, etc.). Sueldo y beneficios altos, pero más lentos y burocráticos."};return ["Pre-seed","Seed","Serie A","Serie B+","Bootstrapped","Corporación"].map(x=>`<label class="echip${sel.has(x)?" on":""}" title="${T[x]}"><input type="checkbox" name="etapas_chk" value="${x}" ${sel.has(x)?"checked":""} onchange="this.parentNode.classList.toggle('on',this.checked)">${x}</label>`).join("");})()}</span></label>
+        <label><span class="fl">Piloto automático</span><span class="fh">Si está encendido, un agente de control revisa cada mail y los aprobados salen solos al día siguiente. Podés cancelar cualquiera antes de la hora.</span><select name="auto_envio" class="lsel"><option value="false" ${!d||!d.auto_envio?"selected":""}>Apagado · envío yo con un clic</option><option value="true" ${d&&d.auto_envio?"selected":""}>Encendido · salen solos</option></select></label>
+        <label><span class="fl">Hora de envío (Costa Este)</span><span class="fh">Costa Oeste sale 3 horas después automáticamente. Lunes a viernes.</span><select name="hora_envio" class="lsel">${[7,8,9,10].map(h=>`<option value="${h}" ${(d&&d.hora_envio?d.hora_envio:8)===h?"selected":""}>${h}:00</option>`).join("")}</select></label>
         <label><span class="fl">Mails por día (tope)</span><select name="tope_diario" class="lsel">${[3,5,8,10,15,20].map(n=>`<option value="${n}" ${(d&&d.tope_diario?d.tope_diario:5)===n?"selected":""}>${n} por día</option>`).join("")}</select></label>
         <label><span class="fl">Estado</span><select name="activo" class="lsel"><option value="true" ${!d||d.activo?"selected":""}>Activo (el motor busca)</option><option value="false" ${d&&!d.activo?"selected":""}>Pausado</option></select></label>
       </div>
@@ -2776,6 +2789,8 @@ async function empGuardarPerfil(form){
   row.etapas = fd.getAll("etapas_chk").join(" · ") || null;
   row.modalidad = fd.getAll("modalidad_chk").join(" · ") || null;
   row.tope_diario = Number(fd.get("tope_diario")||5);
+  row.auto_envio = String(fd.get("auto_envio"))==="true";
+  row.hora_envio = Number(fd.get("hora_envio")||8);
   row.activo = String(fd.get("activo"))==="true";
   row.updated_at = new Date().toISOString();
   empBusy="perfil"; renderApp();
@@ -2821,7 +2836,7 @@ async function empSetStatus(id, patch){ await sb.from("empleos").update({...patc
 
 document.addEventListener("click", async e=>{
   const t=e.target; if(!sb||tab!=="empleo") return; const ds=t.dataset||{};
-  if(ds.empsub){ empSub=ds.empsub; empForm=null; renderApp(); return; }
+  if(ds.empsub){ empSub=ds.empsub; empForm=null; renderApp(); if(empSub==="seguimiento"){ const ids=empleos.filter(e=>e.status==="respondio"&&e.visto===false).map(e=>e.id); if(ids.length){ await sb.from("empleos").update({visto:true}).in("id",ids); await empLoad(); renderApp(); } } return; }
   if(ds.empnuevo){ empForm="nuevo"; empSub="perfiles"; renderApp(); return; }
   if(ds.empeditar){ empForm=ds.empeditar; empSub="perfiles"; renderApp(); const f=document.getElementById("femp-perfil"); if(f) f.scrollIntoView({behavior:"smooth",block:"start"}); return; }
   if(ds.empcancel){ empForm=null; renderApp(); return; }
@@ -2829,6 +2844,7 @@ document.addEventListener("click", async e=>{
   if(ds.empbuscar){ await sb.from("perfiles_empleo").update({pedido_busqueda:true,updated_at:new Date().toISOString()}).eq("id",ds.empbuscar); await empLoad(); renderApp(); note("Pedido al motor. Tiene que estar prendido en tu compu (EMPLEO-VIGILAR.bat)",2600); return; }
   if(ds.empmail){ empMailOpen=ds.empmail; empFichaOpen=null; renderApp(); const el=document.getElementById("empcuerpo-"+ds.empmail); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); return; }
   if(ds.empmailcerrar){ empMailOpen=null; renderApp(); return; }
+  if(ds.empcancelar){ await empSetStatus(ds.empcancelar,{status:"nuevo",programado_para:null,qa_estado:"revisar",qa_nota:"Cancelado por vos · queda para envío manual"}); note("Envío cancelado. Queda en Para hoy para mandarlo vos."); return; }
   if(ds.empficha){ empVista=ds.empficha; empMailOpen=null; renderApp(); window.scrollTo({top:0,behavior:"smooth"}); return; }
   if(ds.empvolver){ empVista=null; empMailOpen=null; renderApp(); return; }
   if(ds.empenviar){ await empEnviar(ds.empenviar,false); return; }

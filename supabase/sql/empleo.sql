@@ -93,3 +93,11 @@ alter table public.perfiles_empleo add column if not exists tope_diario integer 
 alter table public.empleos add column if not exists motivacion integer;       -- 0-100 cuánto encaja con lo que le gusta
 alter table public.empleos add column if not exists carril text;              -- 'remoto' (plata+remoto) / 'motiva' (crecimiento/interés) / 'ambos'
 alter table public.perfiles_empleo add column if not exists ciudades_extra text; -- otras ciudades donde se mudaría
+
+-- v3: piloto automático
+alter table public.perfiles_empleo add column if not exists auto_envio boolean default false;
+alter table public.perfiles_empleo add column if not exists hora_envio integer default 8;
+alter table public.empleos add column if not exists qa_estado text;          -- ok / revisar
+alter table public.empleos add column if not exists qa_nota text;
+alter table public.empleos add column if not exists programado_para timestamptz;
+alter table public.empleos add column if not exists visto boolean default true;

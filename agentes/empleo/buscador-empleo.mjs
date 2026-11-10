@@ -1,7 +1,11 @@
 // MOTOR DE EMPLEO — LORENZO Agency / Cronos
 // Lee los perfiles activos del panel (pestaña EMPLEO), busca empresas que contratan con el
 // cerebro (claude -p, gratis con tu cuenta), identifica al decisor, redacta el mail y lo carga
-// en el panel. Corre solo una vez por día (7 AM) y también cuando tocás "Buscar ahora".
+// en el panel. Busca domingo a viernes a las 18:00 (EMPLEO_HORA) y cuando tocás "Buscar ahora".
+// PILOTO AUTOMÁTICO: un agente de control revisa cada mail, los aprobados se programan para
+// el próximo día hábil (8:00 Este / 11:00 Oeste) y salen solos desde tu Gmail con el presskit;
+// después vigila tu bandeja (IMAP) y marca quién respondió, con aviso en Windows.
+// .env extra: EMPLEO_MAIL_USER, EMPLEO_MAIL_PASS (contraseña de aplicación de Gmail), EMPLEO_CANTIDAD
 //
 // Uso:  node buscador-empleo.mjs            -> una pasada y termina
 //       node buscador-empleo.mjs --vigilar  -> queda mirando (corrida diaria + pedidos del panel)
@@ -36,6 +40,12 @@ const api = async (path, opts = {}) => {
 const patchPerfil = (id, body) => api("perfiles_empleo?id=eq." + id, { method: "PATCH", body: JSON.stringify({ ...body, updated_at: new Date().toISOString() }) }).catch(e => console.error("  (no pude actualizar el perfil: " + String(e.message).slice(0, 120) + ")"));
 
 const PROMPT_BASE = readFileSync(join(DIR, "PROMPT-EMPLEO.md"), "utf8");
+const PROMPT_CONTROL = existsSync(join(DIR, "PROMPT-CONTROL-EMPLEO.md")) ? readFileSync(join(DIR, "PROMPT-CONTROL-EMPLEO.md"), "utf8") : "";
+const MAIL_USER = env.EMPLEO_MAIL_USER || "", MAIL_PASS = env.EMPLEO_MAIL_PASS || "";
+const DIAS_BUSQUEDA = [0, 1, 2, 3, 4, 5]; // dom a vie
+const DIAS_ENVIO = [1, 2, 3, 4, 5];       // lun a vie
+const OESTE = /\b(CA|WA|OR|NV|AZ|CO|UT|ID|MT|NM|AK|HI)\b|San Francisco|Los Angeles|Seattle|Portland|Denver|Phoenix|San Diego|Oakland|Palo Alto|Mountain View|Bay Area|Austin|Dallas|Houston|Chicago/i;
+const HORA_ENVIO_OESTE = 11;
 const limpio = v => (v == null ? null : (String(v).trim() || null));
 
 const mxCache = new Map();
@@ -144,6 +154,130 @@ async function correr(perfil, motivo) {
   if (nuevos.length) await api("empleos", { method: "POST", body: JSON.stringify(nuevos) });
   await patchPerfil(perfil.id, { estado_motor: "lista", ultima_corrida: new Date().toISOString(), ultima_revisadas: rows.length, ultima_nuevas: nuevos.length });
   console.log(`  Listo: ${rows.length} revisadas, ${nuevos.length} nuevas cargadas en el panel (EMPLEO → Para hoy).`);
+  try { await controlCalidad(perfil); } catch (e) { console.error("  Control: " + String(e.message).slice(0, 160)); }
+}
+
+// ---------- PILOTO AUTOMÁTICO ----------
+function proximoEnvio(ciudad, horaBase) {
+  const d = new Date(); const oeste = OESTE.test(String(ciudad || "")) && !/Miami|New York|Boston|Atlanta|Washington|Philadelphia|Charlotte|Tampa|Orlando|Brooklyn|Manhattan|NYC|FL|NY|MA|GA|DC|PA|NC/i.test(String(ciudad || ""));
+  const hora = oeste ? Math.max(horaBase, HORA_ENVIO_OESTE) : horaBase;
+  d.setHours(hora, 0, 0, 0);
+  if (d <= new Date()) d.setDate(d.getDate() + 1);
+  while (!DIAS_ENVIO.includes(d.getDay())) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+// Agente de control: revisa los mails nuevos del perfil y aprueba o manda a revisión manual
+async function controlCalidad(perfil) {
+  if (!perfil.auto_envio) return;
+  const cand = (await api(`empleos?perfil_id=eq.${perfil.id}&status=eq.nuevo&qa_estado=is.null&decisor_email=not.is.null&select=id,empresa,rol,ciudad,decisor_nombre,decisor_cargo,decisor_email,decisor_email_verificado,match,mail_asunto,mail_cuerpo,notas,senal,descripcion,feedback&order=match.desc&limit=30`)) || [];
+  const lista = cand.filter(e => e.feedback !== "no" && e.mail_cuerpo);
+  if (!lista.length) return;
+  console.log(`  Control de calidad: revisando ${lista.length} mails…`);
+  let aprobados = [];
+  if (PROMPT_CONTROL) {
+    const entrada = lista.map(e => ({ id: e.id, empresa: e.empresa, rol: e.rol, decisor_nombre: e.decisor_nombre, decisor_cargo: e.decisor_cargo, decisor_email: e.decisor_email, verificado: !!e.decisor_email_verificado, match: e.match, asunto: e.mail_asunto, mail: e.mail_cuerpo, notas: e.notas, senal: e.senal, descripcion: e.descripcion }));
+    let out = "";
+    try {
+      const child = execFileP("claude", ["-p", "--dangerously-skip-permissions"], { encoding: "utf8", maxBuffer: 1024 * 1024 * 20, timeout: 1000 * 60 * 20, shell: WIN });
+      child.child.stdin.end(PROMPT_CONTROL + "\n\nPERFIL: " + perfil.nombre + " · " + (perfil.email_envio || "") + "\nFECHA DE HOY: " + new Date().toISOString().slice(0, 10) + "\n\n<MAILS>\n" + JSON.stringify(entrada, null, 1) + "\n</MAILS>");
+      out = (await child).stdout || "";
+    } catch (e) { console.error("  El control falló: " + String(e.message).slice(0, 200)); return; }
+    const m = out.match(/<CONTROL>([\s\S]*?)<\/CONTROL>/); if (!m) { console.error("  Control sin bloque <CONTROL>"); return; }
+    let res = []; try { res = JSON.parse(m[1]); } catch { console.error("  Control: JSON inválido"); return; }
+    for (const r of res) {
+      const e = lista.find(x => x.id === r.id); if (!e) continue;
+      const ok = !!r.aprobado && Number(e.match) >= 70;
+      const patch = { qa_estado: ok ? "ok" : "revisar", qa_nota: limpio(r.nota), updated_at: new Date().toISOString() };
+      if (ok) { const cuando = proximoEnvio(e.ciudad, Number(perfil.hora_envio || 8)); patch.status = "programado"; patch.programado_para = cuando.toISOString(); aprobados.push(e.empresa + " → " + cuando.toLocaleString("es-AR", { weekday: "short", hour: "2-digit", minute: "2-digit" })); }
+      await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify(patch) });
+    }
+  }
+  console.log(aprobados.length ? "  ✓ Programados: " + aprobados.join(" · ") : "  Ningún mail aprobado por el control (quedan en Para hoy para que los mires).");
+}
+
+async function presskitB64(url) {
+  if (!url) return null;
+  try { const r = await fetch(url); const b = Buffer.from(await r.arrayBuffer()); return b.toString("base64"); } catch { return null; }
+}
+async function enviarProgramados() {
+  const perfiles = (await api("perfiles_empleo?activo=eq.true&auto_envio=eq.true&select=*")) || [];
+  for (const p of perfiles) {
+    const hoy0 = new Date(); hoy0.setHours(0, 0, 0, 0);
+    const enviadosHoy = ((await api(`empleos?perfil_id=eq.${p.id}&status=in.(enviado,respondio)&enviado_at=gte.${hoy0.toISOString()}&select=id`)) || []).length;
+    const tope = Number(p.tope_diario || 5);
+    if (enviadosHoy >= tope) continue;
+    const listos = (await api(`empleos?perfil_id=eq.${p.id}&status=eq.programado&programado_para=lte.${new Date().toISOString()}&select=*&order=match.desc&limit=${tope - enviadosHoy}`)) || [];
+    if (!listos.length) continue;
+    let pk = null;
+    for (const e of listos) {
+      if (!e.decisor_email || !e.mail_cuerpo) { await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ status: "nuevo", qa_estado: "revisar", qa_nota: "Sin email o sin mail al momento de enviar" }) }); continue; }
+      if (pk === null) pk = await presskitB64(p.presskit_url);
+      const adjuntos = pk ? [{ nombre: p.presskit_nombre || "presskit.pdf", tipo: "application/pdf", base64: pk }] : [];
+      const r = await fetch(URL_B + "/functions/v1/enviar", { method: "POST", headers: { Authorization: "Bearer " + KEY, apikey: KEY, "Content-Type": "application/json" }, body: JSON.stringify({ to: e.decisor_email, subject: e.mail_asunto || (e.rol + " at " + e.empresa), body: e.mail_cuerpo, adjuntos, cuenta: p.cuenta || "empleo" }) });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.ok) {
+        await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ status: "enviado", enviado_at: new Date().toISOString(), updated_at: new Date().toISOString() }) });
+        console.log(`  ✉ Enviado a ${e.decisor_nombre} (${e.empresa}) desde ${p.email_envio || "tu casilla"}`);
+      } else {
+        await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ status: "nuevo", qa_estado: "revisar", qa_nota: "No se pudo enviar: " + String(j.error || r.status).slice(0, 160), updated_at: new Date().toISOString() }) });
+        console.error("  ✗ No salió el mail a " + e.empresa + ": " + String(j.error || r.status).slice(0, 160));
+        if (/secrets|EMPLEO_MAIL/i.test(String(j.error || ""))) break; // sin Gmail configurado, no insistir
+      }
+      await new Promise(r => setTimeout(r, 20000 + Math.random() * 40000)); // 20-60 s entre mails, como una persona
+    }
+  }
+}
+
+// ---------- RESPUESTAS (IMAP Gmail) ----------
+import { connect as tlsConnect } from "node:tls";
+function imapBuscarRemitentes(emails, desde) {
+  return new Promise((resolve) => {
+    if (!MAIL_USER || !MAIL_PASS || !emails.length) return resolve(new Set());
+    const sock = tlsConnect({ host: "imap.gmail.com", port: 993, servername: "imap.gmail.com" });
+    let buf = "", n = 0, cola = [], hallados = new Set(), actual = null;
+    const send = (cmd) => { const tag = "a" + (++n); sock.write(tag + " " + cmd + "\r\n"); return tag; };
+    const fin = () => { try { sock.end(); } catch {} resolve(hallados); };
+    const t = setTimeout(fin, 25000);
+    const fecha = new Date(desde); const d = fecha.getDate() + "-" + ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][fecha.getMonth()] + "-" + fecha.getFullYear();
+    const paso = () => {
+      if (!cola.length) { clearTimeout(t); return fin(); }
+      actual = cola.shift(); actual.tag = send(actual.cmd);
+    };
+    sock.on("data", (c) => {
+      buf += c.toString();
+      if (!actual) { if (/OK/.test(buf)) { buf = ""; cola = [{ cmd: 'LOGIN "' + MAIL_USER + '" "' + MAIL_PASS.replace(/"/g, '\\"') + '"' }, { cmd: "SELECT INBOX" }, ...emails.map(em => ({ cmd: 'SEARCH FROM "' + em + '" SINCE ' + d, email: em }))]; paso(); } return; }
+      const re = new RegExp("^" + actual.tag + " (OK|NO|BAD)", "m");
+      if (re.test(buf)) {
+        if (actual.email) { const m = buf.match(/\* SEARCH([ \d]*)/); if (m && m[1].trim()) hallados.add(actual.email); }
+        if (/ NO| BAD/.test((buf.match(re) || [""])[0]) && !actual.email) { clearTimeout(t); return fin(); }
+        buf = ""; paso();
+      }
+    });
+    sock.on("error", () => { clearTimeout(t); fin(); });
+  });
+}
+function avisoWindows(titulo, texto) {
+  if (!WIN) return;
+  try {
+    const ps = `[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null; $t=[Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); $x=$t.GetElementsByTagName('text'); $x.Item(0).AppendChild($t.CreateTextNode('${titulo.replace(/'/g, "")}')) > $null; $x.Item(1).AppendChild($t.CreateTextNode('${texto.replace(/'/g, "")}')) > $null; [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('LORENZO Empleo').Show([Windows.UI.Notifications.ToastNotification]::new($t))`;
+    execFile("powershell", ["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps], () => {});
+  } catch {}
+}
+let _ultimoRespCheck = 0;
+async function revisarRespuestas() {
+  if (!MAIL_USER || !MAIL_PASS) return;
+  if (Date.now() - _ultimoRespCheck < 10 * 60 * 1000) return; _ultimoRespCheck = Date.now();
+  const env = (await api("empleos?status=eq.enviado&decisor_email=not.is.null&select=id,empresa,decisor_nombre,decisor_email,enviado_at")) || [];
+  if (!env.length) return;
+  const desde = env.reduce((a, e) => (a < e.enviado_at ? a : e.enviado_at), env[0].enviado_at);
+  const hall = await imapBuscarRemitentes([...new Set(env.map(e => e.decisor_email))], desde);
+  for (const e of env) {
+    if (!hall.has(e.decisor_email)) continue;
+    await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ status: "respondio", respondio_at: new Date().toISOString(), visto: false, updated_at: new Date().toISOString() }) });
+    console.log(`  ★ RESPONDIÓ: ${e.decisor_nombre} de ${e.empresa}`);
+    avisoWindows("Te respondieron: " + e.empresa, (e.decisor_nombre || "") + " contestó tu mail. Miralo en EMPLEO → Seguimiento.");
+  }
 }
 
 // Pedidos sueltos de Apollo desde el panel ("⚡ Buscar email")
@@ -160,23 +294,28 @@ async function refuerzosApollo() {
 }
 
 const hoyKey = () => new Date().toISOString().slice(0, 10);
+const diaLocal = (x) => { const d = new Date(x); return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate(); };
 function tocaHoy(p) {
   if (p.pedido_busqueda) return "pedido desde el panel";
   if (p.estado_motor === "buscando") return null;
-  const h = new Date().getHours();
-  if (h < HORA) return null;
+  const ahora = new Date();
+  if (!DIAS_BUSQUEDA.includes(ahora.getDay())) return null;
+  if (ahora.getHours() < HORA) return null;
   if (!p.ultima_corrida) return "primera corrida";
-  if (String(p.ultima_corrida).slice(0, 10) !== hoyKey()) return "corrida diaria";
+  if (diaLocal(p.ultima_corrida) !== diaLocal(ahora)) return "corrida diaria";
   return null;
 }
 async function tick() {
   await refuerzosApollo();
   const perfiles = (await api("perfiles_empleo?activo=eq.true&select=*")) || [];
   for (const p of perfiles) { const m = tocaHoy(p); if (m) await correr(p, m); }
+  for (const p of perfiles) { if (p.auto_envio) { try { await controlCalidad(p); } catch (e) { console.error("  Control: " + String(e.message).slice(0, 160)); } } }
+  try { await enviarProgramados(); } catch (e) { console.error("  Envío: " + String(e.message).slice(0, 160)); }
+  try { await revisarRespuestas(); } catch (e) { console.error("  Respuestas: " + String(e.message).slice(0, 160)); }
 }
 
 const VIGILAR = process.argv.includes("--vigilar");
-console.log("MOTOR DE EMPLEO" + (APOLLO ? " · Apollo conectado" : " · sin Apollo") + " · corrida diaria a las " + HORA + ":00 · hasta " + CANTIDAD + " empresas por corrida");
+console.log("MOTOR DE EMPLEO" + (APOLLO ? " · Apollo conectado" : " · sin Apollo") + (MAIL_USER ? " · Gmail " + MAIL_USER : " · Gmail NO configurado (sin envío automático ni respuestas)") + " · busca dom-vie a las " + HORA + ":00 · hasta " + CANTIDAD + " por corrida · envía lun-vie");
 if (!VIGILAR) {
   const perfiles = (await api("perfiles_empleo?activo=eq.true&select=*")) || [];
   if (!perfiles.length) console.log("No hay perfiles activos. Creá uno en el panel (EMPLEO → Perfiles).");
