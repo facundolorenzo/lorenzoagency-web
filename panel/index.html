@@ -1009,7 +1009,9 @@ async function loadAll(){
     vendedores = (vd && !vd.error && vd.data) ? vd.data.map(FROM.vendedores) : [];
     rankingPublico = (rk && !rk.error && rk.data) ? rk.data.map(r=>({id:r.vendedor_id,nombre:r.nombre,volumen:Number(r.volumen)||0,ventas:Number(r.ventas)||0})) : [];
   }
-  renderApp();
+  const _el=document.activeElement;
+  const _editando = empMailOpen || (_el&&["INPUT","TEXTAREA","SELECT"].includes(_el.tagName));
+  if(!_editando) renderApp();   // no redibujar mientras edita el mail: le borraría lo que escribió
   pollFirma = firmaDatos();
   pollBusquedas();
 }
@@ -2612,7 +2614,7 @@ function renderEmpleo(){
 }
 let _empPoll=null;
 function empPendiente(){ try{ return empleos.some(e=>e.regenerar||e.apollo_estado==="pendiente") || empPerfiles.some(p=>p.estado_motor==="buscando"||p.pedido_busqueda); }catch{ return false; } }
-function empAutoRefresh(){ clearTimeout(_empPoll); if(tab!=="empleo"||!empPendiente()) return; _empPoll=setTimeout(async()=>{ if(tab!=="empleo"){return;} try{ await empLoad(); }catch(e){} if(tab==="empleo") renderApp(); }, 8000); }
+function empAutoRefresh(){ clearTimeout(_empPoll); if(tab!=="empleo"||!empPendiente()) return; _empPoll=setTimeout(async()=>{ if(tab!=="empleo"){return;} const el=document.activeElement; const ocupado=empMailOpen||empForm||(el&&["INPUT","TEXTAREA","SELECT"].includes(el.tagName)); if(ocupado){ empAutoRefresh(); return; } try{ await empLoad(); }catch(e){} if(tab==="empleo"){ const y=window.scrollY; renderApp(); window.scrollTo(0,y); } }, 8000); }
 function renderEmpleo2(){
   empAutoRefresh();
   const pf = empPerfil();
