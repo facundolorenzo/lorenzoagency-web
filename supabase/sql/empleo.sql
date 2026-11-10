@@ -92,3 +92,4 @@ alter table public.perfiles_empleo add column if not exists evitar text;      --
 alter table public.perfiles_empleo add column if not exists tope_diario integer default 5;
 alter table public.empleos add column if not exists motivacion integer;       -- 0-100 cuánto encaja con lo que le gusta
 alter table public.empleos add column if not exists carril text;              -- 'remoto' (plata+remoto) / 'motiva' (crecimiento/interés) / 'ambos'
+alter table public.perfiles_empleo add column if not exists ciudades_extra text; -- otras ciudades donde se mudaría

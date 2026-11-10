@@ -84,6 +84,7 @@ async function cerebro(perfil, yaTengo) {
     "EXPERIENCIA: " + (perfil.experiencia || "(no cargada)"),
     "LO QUE LO HACE DISTINTO: " + (perfil.distinto || ""),
     "QUÉ LO MOTIVA (carril 'motiva'): " + (perfil.intereses || "(no definido)"),
+    "OTRAS CIUDADES A LAS QUE SE MUDARÍA (solo para empresas que lo motivan; respetá el 'cuándo' si lo dice): " + (perfil.ciudades_extra || "(ninguna)"),
     "QUÉ NO LO MOTIVA (igual sirve si es remoto y paga): " + (perfil.evitar || "(nada en particular)"),
     "PROYECTOS: " + (perfil.proyectos || ""),
     perfil.linkedin ? "LINKEDIN: " + perfil.linkedin : "",
