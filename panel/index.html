@@ -2786,7 +2786,7 @@ function empMailEditor(e, pf){
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><span class="bs">Para</span><b style="font-size:13px">${esc(e.decisor_email)}</b><span class="bs" style="margin-left:auto">sale de <b style="color:var(--fg)">${esc(pf&&pf.email_envio||"tu Gmail")}</b></span></div>
     <input id="empasunto-${e.id}" value="${esc(asunto)}" placeholder="Asunto" style="margin-bottom:8px">
     <textarea id="empcuerpo-${e.id}" rows="12">${esc(cuerpo)}</textarea>
-    <div class="bs" style="margin:14px 0 10px;color:var(--accent);line-height:1.6">✍️ Escribí o corregí directo acá. Tocá <b>Guardar</b> y el motor copia tu tono en los próximos mails.</div>
+    <div class="bs" style="margin:14px 0 10px;color:var(--accent);line-height:1.6">✍️ Escribí o corregí directo acá. Tocá <b>Guardar</b> y el motor copia tu tono en los próximos mails. <span style="color:var(--faint)">· v14</span></div>
     <div class="bs" style="margin:0 0 18px;line-height:1.6">El saludo (primera línea) sale en negrita solo · **así** también. ${pf&&(pf.presskit_url||pf.cv_url)?`Adjunto automático: <b style="color:var(--fg)">${esc(pf.presskit_url?(pf.presskit_nombre||"presskit.pdf"):(pf.cv_nombre||"cv.pdf"))}</b>`:"Sin presskit ni CV cargados en el perfil: el mail sale sin adjunto."}${adj.length?` + ${adj.map(a=>esc(a.nombre)).join(", ")}`:""}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:4px">
       <button class="btn" data-empenviar="${e.id}" ${empBusy===e.id?"disabled":""}>${empBusy===e.id?"Enviando…":"Enviar →"}</button>
@@ -2968,7 +2968,8 @@ async function empGuardarMail(id){
   const cambiado = cuerpo.trim()!==String(e.mail_cuerpo||"").trim() || asunto.trim()!==String(e.mail_asunto||"").trim();
   empBusy=id; renderApp();
   try{
-    await sb.from("empleos").update({mail_asunto:asunto,mail_cuerpo:cuerpo,updated_at:new Date().toISOString()}).eq("id",id);
+    const r1=await sb.from("empleos").update({mail_asunto:asunto,mail_cuerpo:cuerpo,updated_at:new Date().toISOString()}).eq("id",id);
+    if(r1.error) throw new Error(r1.error.message);
     // Aprendizaje: lo que vos dejás a mano es el mejor ejemplo del tono que querés. Lo guardo en el perfil y el motor lo copia.
     let aprendio=false;
     if(cambiado && cuerpo.trim() && e.perfil_id){ const r=await sb.from("perfiles_empleo").update({ejemplo_mail:cuerpo.trim(),updated_at:new Date().toISOString()}).eq("id",e.perfil_id); aprendio=!r.error; }
