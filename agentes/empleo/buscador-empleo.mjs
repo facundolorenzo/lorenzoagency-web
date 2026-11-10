@@ -317,7 +317,7 @@ async function regenerarMails() {
       "Reescribí este mail de contacto para un puesto. Devolvé SOLO el mail final en inglés, sin markdown ni comillas, listo para enviar.",
       "\n## REGLAS DEL MAIL",
       "- Partí del MAIL BASE del candidato; mantené su estructura, tono y largo. Reemplazá {nombre} (primer nombre del decisor), {empresa}, {rol} y {gancho}.",
-      "- El gancho (primera frase) habla de HACIA DÓNDE VA la empresa (producto, lanzamiento, expansión, visión). NUNCA de plata: nada de montos, rondas, 'raised', inversores ni valuación.",
+      "- El gancho (primera frase, completa 'I saw ___') NO es un dato suelto: dice qué hace o hacia dónde va la empresa Y una reacción genuina y breve del candidato sobre POR QUÉ eso importa (el impacto real). Ej: no 'I saw Astral is bringing AI tutoring nationwide' (frío), sino 'I saw Astral is giving every kid a lesson built for them — the kind of personalized learning that just wasn't possible before, and that's exactly the kind of product I want to help build'. En primera persona, honesto, nada de halago vacío. NUNCA de plata (montos, rondas, 'raised', inversores, valuación).",
       "- Si no hay dato verificable para el gancho, sacá esa frase entera y arrancá directo con el puesto.",
       "- Cierre sin pedir una llamada de 15 minutos ni 'quick chat' (lo usan todos). Usá algo como 'Let me know if it makes sense to connect.'",
       "- Sin guiones largos, sin emojis, sin signos de exclamación. Máximo ~130 palabras.",

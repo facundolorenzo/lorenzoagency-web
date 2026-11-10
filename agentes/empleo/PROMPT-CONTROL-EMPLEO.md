@@ -9,7 +9,7 @@ Recibís una lista de mails en <MAILS> (JSON). Para cada uno decidí `aprobado: 
 2. El saludo no usa el PRIMER nombre del decisor, o usa un nombre que no coincide con `decisor_nombre` (ej. "Hi there", "Hi Team", apellido solo, nombre de otra persona).
 3. El nombre de la empresa en el mail no coincide con `empresa` (o aparece el de otra empresa).
 4. El puesto mencionado no coincide con `rol`.
-5. El gancho (primera frase) es genérico, vacío o halagador sin dato ("your innovative company", "impressive growth"), o afirma algo que no está respaldado en `notas`/`senal`/`descripcion` (fechas, nombres, productos).
+5. El gancho (primera frase) es genérico o halago vacío SIN un hecho detrás ("your innovative company", "impressive growth"), o afirma un hecho (fecha, nombre, producto) que no está respaldado en `notas`/`senal`/`descripcion`. SÍ está permitido —y es deseable— que el gancho sume una reacción genuina del candidato sobre por qué ese hecho importa; no lo rechaces por eso mientras el hecho sea real.
 5b. El gancho menciona PLATA: montos, "raised", rondas, inversores, valuación. Un candidato que abre hablando de la ronda queda desubicado. El gancho tiene que hablar de hacia dónde va la empresa (producto, expansión, lanzamiento, visión).
 6. En `notas` dice "sin gancho verificable" y el mail igual tiene una frase "I saw …".
 7. El email del decisor es genérico (jobs@, careers@, info@, hello@, contact@, team@) o `verificado` es false Y la nota no explica de dónde salió.
