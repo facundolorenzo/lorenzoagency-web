@@ -278,25 +278,25 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .ring small{position:relative;z-index:1;font-size:9px;color:var(--muted);letter-spacing:.08em;margin-top:2px}
 .ring.mid{background:conic-gradient(var(--warn) var(--p),rgba(255,255,255,.07) 0)}
 .ring.low{background:conic-gradient(var(--muted) var(--p),rgba(255,255,255,.07) 0)}
-.ecard .co{font-family:var(--disp);font-size:18px;font-weight:800;letter-spacing:-.01em;color:#fff}
+.ecard .co,.efpage .co{font-family:var(--disp);font-size:18px;font-weight:800;letter-spacing:-.01em;color:#fff}
 .ecard .co span{color:var(--muted);font-weight:500;font-size:13px;margin-left:10px}
-.ecard .role{font-size:14px;color:var(--fg);margin:3px 0 10px;font-weight:500}
-.ecard .pills{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
-.ecard .pill{font-family:var(--mono);font-size:11.5px;padding:5px 10px;border-radius:9px;border:1px solid var(--hair);color:var(--fg)}
-.ecard .pill.sal{border-color:rgba(76,195,138,.45);color:var(--ok);font-weight:600}
-.ecard .pill.st{color:var(--info);border-color:rgba(106,165,232,.4)}
-.ecard .pill.sal.top{background:rgba(76,195,138,.14);border-color:var(--ok);color:#8FE3B5;font-weight:700;box-shadow:0 0 0 1px rgba(76,195,138,.25)}
+.ecard .role,.efpage .role{font-size:14px;color:var(--fg);margin:3px 0 10px;font-weight:500}
+.ecard .pills,.efpage .pills{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.ecard .pill,.efpage .pill{font-family:var(--mono);font-size:11.5px;padding:5px 10px;border-radius:9px;border:1px solid var(--hair);color:var(--fg)}
+.ecard .pill.sal,.efpage .pill.sal{border-color:rgba(76,195,138,.45);color:var(--ok);font-weight:600}
+.ecard .pill.st,.efpage .pill.st{color:var(--info);border-color:rgba(106,165,232,.4)}
+.ecard .pill.sal.top,.efpage .pill.sal.top{background:rgba(76,195,138,.14);border-color:var(--ok);color:#8FE3B5;font-weight:700;box-shadow:0 0 0 1px rgba(76,195,138,.25)}
 
-.ecard .pill.hot{color:var(--accent);border-color:rgba(221,125,71,.5)}
-.ecard .dec{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.035);border:1px solid var(--hair2);border-radius:12px;padding:9px 12px;flex-wrap:wrap}
-.ecard .av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#F08C52,#D56E38);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:11px;font-weight:800;color:#1b1105;flex:none}
-.ecard .av.gris{background:#34353b;color:#c9cbd1}
-.ecard .dec .n{font-family:var(--disp);font-weight:700;font-size:13.5px;color:#fff}
-.ecard .dec .c{color:var(--muted);font-size:12px}
-.ecard .dec .m{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--accent);text-decoration:none}
-.ecard .dec .v{font-size:10px;color:var(--ok);border:1px solid rgba(76,195,138,.4);border-radius:6px;padding:2px 6px;font-family:var(--mono)}
-.ecard .acts{display:flex;flex-direction:column;gap:8px;min-width:170px}
-.ecard .acts .btnpro{justify-content:center}
+.ecard .pill.hot,.efpage .pill.hot{color:var(--accent);border-color:rgba(221,125,71,.5)}
+.ecard .dec,.efpage .dec{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.035);border:1px solid var(--hair2);border-radius:12px;padding:9px 12px;flex-wrap:wrap}
+.ecard .av,.efpage .av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#F08C52,#D56E38);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:11px;font-weight:800;color:#1b1105;flex:none}
+.ecard .av.gris,.efpage .av.gris{background:#34353b;color:#c9cbd1}
+.ecard .dec .n,.efpage .dec .n{font-family:var(--disp);font-weight:700;font-size:13.5px;color:#fff}
+.ecard .dec .c,.efpage .dec .c{color:var(--muted);font-size:12px}
+.ecard .dec .m,.efpage .dec .m{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--accent);text-decoration:none}
+.ecard .dec .v,.efpage .dec .v{font-size:10px;color:var(--ok);border:1px solid rgba(76,195,138,.4);border-radius:6px;padding:2px 6px;font-family:var(--mono)}
+.ecard .acts,.efpage .acts{display:flex;flex-direction:column;gap:8px;min-width:170px}
+.ecard .acts .btnpro,.efpage .acts .btnpro{justify-content:center}
 .btnpro.hot{background:linear-gradient(180deg,#F08C52,#D56E38);color:#1b1105;border-color:rgba(255,255,255,.15)}
 .btnpro.hot:hover{background:linear-gradient(180deg,#F59A62,#DD7D47)}
 .btnpro:disabled{opacity:.5;cursor:default;transform:none}
@@ -346,6 +346,10 @@ nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-v
 .eful{margin:0;padding-left:18px}.eful li{margin:4px 0}
 .efmail{font-size:14px;background:rgba(255,255,255,.03);border:1px solid var(--hair2);border-radius:12px;padding:14px 16px}
 .efpage .emailbox{margin-top:6px}
+.ecard .edesc{font-size:13px;color:var(--muted);margin:-6px 0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:720px}
+.efdesc{display:block;font-family:var(--disp);font-size:15px;font-weight:500;letter-spacing:0;color:var(--muted);margin-top:6px;line-height:1.4}
+.efpage .pills .pill.mut{color:var(--muted)}
+
 
 .eform{max-width:980px}
 .eform .esec{font-family:var(--disp);font-size:14.5px;font-weight:800;color:#fff;margin:22px 0 10px;display:flex;align-items:center;gap:12px}
@@ -2610,6 +2614,7 @@ function empCard(e, pf, compacta){
       <div style="min-width:0">
         <div class="co">${esc(e.empresa)}<span>${[e.ciudad,e.tamano,e.etapa].filter(Boolean).map(esc).join(" · ")}</span></div>
         ${e.rol?`<div class="role">${esc(e.rol)}</div>`:""}
+        ${e.descripcion?`<div class="edesc" title="${esc(e.descripcion)}">${esc(e.descripcion)}</div>`:""}
         ${pills?`<div class="pills">${pills}</div>`:""}
         ${dec}
         ${progHtml}
@@ -2639,7 +2644,7 @@ function empFichaPagina(e, pf){
     <div class="efhead">
       <div class="ring${cls}" style="--p:${m==null?0:m}%;width:96px;height:96px"><b style="font-size:26px">${m==null?"—":m+"%"}</b><small>MATCH</small></div>
       <div style="min-width:0;flex:1">
-        <div class="eftitle">${esc(e.empresa)}</div>
+        <div class="eftitle">${esc(e.empresa)}${e.descripcion?`<span class="efdesc">${esc(e.descripcion)}</span>`:""}</div>
         ${e.rol?`<div class="efrole">${esc(e.rol)}</div>`:""}
         <div class="pills" style="margin-top:10px">${[empSalPill(e,pf),e.modalidad?`<span class="pill">${esc(e.modalidad)}</span>`:"",e.etapa?`<span class="pill st">${esc(e.etapa)}</span>`:"",e.ciudad?`<span class="pill">${esc(e.ciudad)}</span>`:"",e.tamano?`<span class="pill">${esc(e.tamano)}</span>`:"",e.publicado?`<span class="pill">${esc(e.publicado)}</span>`:""].filter(Boolean).join("")}</div>
       </div>
