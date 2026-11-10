@@ -85,3 +85,10 @@ drop policy if exists "empleo_write" on storage.objects;
 create policy "empleo_write" on storage.objects for insert to authenticated with check (bucket_id = 'empleo');
 drop policy if exists "empleo_update" on storage.objects;
 create policy "empleo_update" on storage.objects for update to authenticated using (bucket_id = 'empleo');
+
+-- v2: motivación (dos carriles)
+alter table public.perfiles_empleo add column if not exists intereses text;   -- sectores/temas que lo motivan
+alter table public.perfiles_empleo add column if not exists evitar text;      -- sectores que no lo motivan
+alter table public.perfiles_empleo add column if not exists tope_diario integer default 5;
+alter table public.empleos add column if not exists motivacion integer;       -- 0-100 cuánto encaja con lo que le gusta
+alter table public.empleos add column if not exists carril text;              -- 'remoto' (plata+remoto) / 'motiva' (crecimiento/interés) / 'ambos'
