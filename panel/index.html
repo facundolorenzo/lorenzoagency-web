@@ -2528,6 +2528,9 @@ function empCuando(iso){ const d=new Date(iso); const dl=x=>x.getFullYear()+"-"+
 
 // ---- Render ----
 function renderEmpleo(){
+  try{ renderEmpleo2(); }catch(err){ console.error("renderEmpleo", err); $app().innerHTML = `<div class="empty">Error al dibujar Empleo: ${esc(String(err&&err.message||err))}<br><button class="btn ghost" onclick="empForm=null;empVista=null;empSub='hoy';renderApp()">Volver a Para hoy</button></div>`; }
+}
+function renderEmpleo2(){
   const pf = empPerfil();
   const todos = pf ? empDe(pf.id) : [];
   const hoy = todos.filter(e=>(e.status==="nuevo"||e.status==="programado") && e.feedback!=="no").sort((a,b)=>(a.status==="programado"?-1:0)-(b.status==="programado"?-1:0) || empScore(b,pf)-empScore(a,pf));
@@ -2856,6 +2859,9 @@ async function empEnviar(id, soloBorrador){
 async function empSetStatus(id, patch){ await sb.from("empleos").update({...patch,updated_at:new Date().toISOString()}).eq("id",id); await empLoad(); renderApp(); }
 
 document.addEventListener("click", async e=>{
+  try{ await empClick(e); }catch(err){ console.error("empleo", err); note("Error en Empleo: "+String(err&&err.message||err).slice(0,140),4000); }
+});
+async function empClick(e){
   const t=e.target; if(!sb||tab!=="empleo") return; const ds=t.dataset||{};
   if(ds.empsub){ empSub=ds.empsub; empForm=null; renderApp(); if(empSub==="seguimiento"){ const ids=empleos.filter(e=>e.status==="respondio"&&e.visto===false).map(e=>e.id); if(ids.length){ await sb.from("empleos").update({visto:true}).in("id",ids); await empLoad(); renderApp(); } } return; }
   if(ds.empnuevo){ empForm="nuevo"; empSub="perfiles"; renderApp(); return; }
@@ -2881,7 +2887,7 @@ document.addEventListener("click", async e=>{
   if(ds.empfb){ const [id,v]=ds.empfb.split("|"); await empSetStatus(id,{feedback:v}); note(v==="ok"?"✓ Anotado, más así":"✗ Anotado"); return; }
   if(ds.empdel){ if(!confirm("¿Borrar esta empresa?")) return; await sb.from("empleos").delete().eq("id",ds.empdel); await empLoad(); renderApp(); return; }
   if(ds.empapollo){ await empSetStatus(ds.empapollo,{apollo_estado:"pendiente"}); note("⚡ Pedido a Apollo. El motor lo procesa cuando corre.",2200); return; }
-});
+}
 document.addEventListener("submit", async e=>{ if(e.target && e.target.id==="femp-perfil"){ e.preventDefault(); await empGuardarPerfil(e.target); } });
 
 /* ---------- PROSPECCIÓN (Agente 4 — outbound) ---------- */
