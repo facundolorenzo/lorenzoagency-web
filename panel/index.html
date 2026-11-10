@@ -2492,13 +2492,52 @@ let empVista = null;         // id del empleo abierto en página propia
 let empAdj = {};             // adjuntos extra por empleo (además del presskit)
 let empBusy = null;
 let empTrad = {};            // traducciones mostradas por id {asunto, cuerpo}
-async function empTraducir(txt){
+async function empTraducir(txt, sl="en", tl="es"){
+  if(!String(txt||"").trim()) return "";
   try{
-    const r=await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=es&dt=t&q="+encodeURIComponent(txt));
+    const r=await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl="+sl+"&tl="+tl+"&dt=t&q="+encodeURIComponent(txt));
     const j=await r.json(); return (j[0]||[]).map(x=>x[0]).join("");
   }catch(e){
-    try{ const r=await fetch("https://api.mymemory.translated.net/get?langpair=en|es&q="+encodeURIComponent(txt.slice(0,490))); const j=await r.json(); return j.responseData&&j.responseData.translatedText||""; }catch{ return ""; }
+    try{ const r=await fetch("https://api.mymemory.translated.net/get?langpair="+sl+"|"+tl+"&q="+encodeURIComponent(txt.slice(0,490))); const j=await r.json(); return j.responseData&&j.responseData.translatedText||""; }catch{ return ""; }
   }
+}
+// Editor bilingüe: el textarea puede mostrarse en español y editarse; al volver al inglés se traduce lo que cambiaste
+let empLang={}, empEnOrig={}, empEsBase={};
+function empResetIdioma(id){ delete empLang[id]; delete empEnOrig[id]; delete empEsBase[id]; }
+async function empToggleIdioma(id, btn){
+  const ta=document.getElementById("empcuerpo-"+id), su=document.getElementById("empasunto-"+id);
+  if(!ta) return;
+  if((empLang[id]||"en")==="en"){
+    btn.textContent="Traduciendo…"; btn.disabled=true;
+    const [c,a]=await Promise.all([empTraducir(ta.value,"en","es"), su?empTraducir(su.value,"en","es"):Promise.resolve("")]);
+    btn.disabled=false;
+    if(!c){ btn.textContent="🌐 Ver/editar en español"; note("No pude traducir ahora, probá de nuevo",2000); return; }
+    empEnOrig[id]={cuerpo:ta.value, asunto:su?su.value:""}; empEsBase[id]={cuerpo:c, asunto:a};
+    ta.value=c; if(su&&a) su.value=a; empLang[id]="es";
+    btn.textContent="🇬🇧 Volver al inglés (con tus cambios)";
+    note("Editá libre en español. Al volver al inglés se traduce lo que cambiaste.",3000);
+  } else {
+    const base=empEsBase[id]||{}, orig=empEnOrig[id]||{};
+    const cambioC=ta.value!==(base.cuerpo||""), cambioA=su&&su.value!==(base.asunto||"");
+    btn.textContent="Traduciendo…"; btn.disabled=true;
+    const c = cambioC ? (await empTraducir(ta.value,"es","en")||orig.cuerpo||ta.value) : (orig.cuerpo||ta.value);
+    const a = cambioA ? (await empTraducir(su.value,"es","en")||orig.asunto||su.value) : (orig.asunto||(su?su.value:""));
+    btn.disabled=false;
+    ta.value=c; if(su) su.value=a; empLang[id]="en";
+    btn.textContent="🌐 Ver/editar en español";
+    if(cambioC||cambioA) note("Inglés actualizado con tus cambios. Revisalo y Guardá.",3000);
+  }
+}
+// Devuelve el asunto/cuerpo SIEMPRE en inglés (lo que se envía), aunque estés viendo español
+async function empCuerpoFinal(id){
+  const ta=document.getElementById("empcuerpo-"+id), su=document.getElementById("empasunto-"+id);
+  let asunto=su?su.value||"":"", cuerpo=ta?ta.value||"":"";
+  if(empLang[id]==="es"){
+    const base=empEsBase[id]||{}, orig=empEnOrig[id]||{};
+    if(cuerpo!==(base.cuerpo||"")) cuerpo=await empTraducir(cuerpo,"es","en")||orig.cuerpo||cuerpo; else cuerpo=orig.cuerpo||cuerpo;
+    if(su&&asunto!==(base.asunto||"")) asunto=await empTraducir(asunto,"es","en")||orig.asunto||asunto; else asunto=orig.asunto||asunto;
+  }
+  return {asunto,cuerpo};
 }
 
 async function empLoad(){
@@ -2722,7 +2761,7 @@ function empMailEditor(e, pf){
       <button class="btn ghost" data-empguardarmail="${e.id}" ${empBusy===e.id?"disabled":""}>💾 Guardar</button>
       <button class="btn ghost" data-empborrador="${e.id}" ${empBusy===e.id?"disabled":""}>📝 A mis borradores</button>
       <label class="btn sm ghost" style="cursor:pointer;margin:0">📎 Adjuntar<input type="file" style="display:none" onchange="empAdjAdd('${e.id}',this)"></label>
-      <button class="btn sm ghost" data-emptradbox="${e.id}" style="margin-left:auto">🌐 Ver en español</button>
+      <button class="btn sm ghost" data-empidioma="${e.id}" style="margin-left:auto">${empLang[e.id]==="es"?"🇬🇧 Volver al inglés (con tus cambios)":"🌐 Ver/editar en español"}</button>
       <button class="linkbtn" data-empmailcerrar="1" style="color:var(--faint)">Cerrar</button>
     </div></div>`;
 }
@@ -2875,9 +2914,9 @@ async function empPresskitAdjunto(pf){
 }
 async function empEnviar(id, soloBorrador){
   const e=empleos.find(x=>x.id===id); if(!e) return; const pf=empPerfiles.find(p=>p.id===e.perfil_id);
-  const asunto=(document.getElementById("empasunto-"+id)||{}).value||"", cuerpo=(document.getElementById("empcuerpo-"+id)||{}).value||"";
-  if(!cuerpo.trim()){ note("El mail está vacío"); return; }
   empBusy=id; renderApp();
+  const {asunto,cuerpo}=await empCuerpoFinal(id); empResetIdioma(id);
+  if(!cuerpo.trim()){ empBusy=null; renderApp(); note("El mail está vacío"); return; }
   try{
     const adj=[]; const pk=await empPresskitAdjunto(pf); if(pk) adj.push(pk); for(const a of (empAdj[id]||[])) adj.push(a);
     const body={to:e.decisor_email,subject:asunto,body:cuerpo,adjuntos:adj.slice(0,5),cuenta:(pf&&pf.cuenta)||"empleo"};
@@ -2892,10 +2931,10 @@ async function empEnviar(id, soloBorrador){
 }
 async function empGuardarMail(id){
   const e=empleos.find(x=>x.id===id); if(!e) return;
-  const asunto=(document.getElementById("empasunto-"+id)||{}).value||"", cuerpo=(document.getElementById("empcuerpo-"+id)||{}).value||"";
-  if(!cuerpo.trim()){ note("El mail está vacío"); return; }
-  const cambiado = cuerpo.trim()!==String(e.mail_cuerpo||"").trim() || asunto.trim()!==String(e.mail_asunto||"").trim();
   empBusy=id; renderApp();
+  const {asunto,cuerpo}=await empCuerpoFinal(id); empResetIdioma(id);
+  if(!cuerpo.trim()){ empBusy=null; renderApp(); note("El mail está vacío"); return; }
+  const cambiado = cuerpo.trim()!==String(e.mail_cuerpo||"").trim() || asunto.trim()!==String(e.mail_asunto||"").trim();
   try{
     await sb.from("empleos").update({mail_asunto:asunto,mail_cuerpo:cuerpo,updated_at:new Date().toISOString()}).eq("id",id);
     // Aprendizaje: lo que vos dejás a mano es el mejor ejemplo del tono que querés. Lo guardo en el perfil y el motor lo copia.
@@ -2920,8 +2959,9 @@ async function empClick(e){
   if(ds.empcancel){ empForm=null; renderApp(); return; }
   if(ds.empdelperfil){ if(!confirm("¿Borrar este perfil y todas sus empresas?")) return; await sb.from("perfiles_empleo").delete().eq("id",ds.empdelperfil); empForm=null; await empLoad(); renderApp(); return; }
   if(ds.empbuscar){ await sb.from("perfiles_empleo").update({pedido_busqueda:true,updated_at:new Date().toISOString()}).eq("id",ds.empbuscar); await empLoad(); renderApp(); note("Pedido al motor. Tiene que estar prendido en tu compu (EMPLEO-VIGILAR.bat)",2600); return; }
-  if(ds.empmail){ empMailOpen=ds.empmail; empRegenOpen=null; empFichaOpen=null; renderApp(); const el=document.getElementById("empcuerpo-"+ds.empmail); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); return; }
-  if(ds.empmailcerrar){ empMailOpen=null; renderApp(); return; }
+  if(ds.empmail){ empResetIdioma(ds.empmail); empMailOpen=ds.empmail; empRegenOpen=null; empFichaOpen=null; renderApp(); const el=document.getElementById("empcuerpo-"+ds.empmail); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); return; }
+  if(ds.empmailcerrar){ empResetIdioma(empMailOpen); empMailOpen=null; renderApp(); return; }
+  if(ds.empidioma){ await empToggleIdioma(ds.empidioma, t); return; }
   if(ds.empregen){ empRegenOpen=empRegenOpen===ds.empregen?null:ds.empregen; empMailOpen=null; renderApp(); const el=document.getElementById("empregentxt-"+ds.empregen); if(el) el.focus(); return; }
   if(ds.empregencancel){ empRegenOpen=null; renderApp(); return; }
   if(ds.empgancho){ const id=ds.empgancho; const g=ds.gk||""; await sb.from("empleos").update({regenerar:true,instruccion_mail:'Usá exactamente este gancho en la primera frase (completá "I saw "): '+g,updated_at:new Date().toISOString()}).eq("id",id); await empLoad(); renderApp(); note("↻ Reescribiendo con ese gancho… (~1 min)",2600); return; }
@@ -2933,7 +2973,6 @@ async function empClick(e){
   if(ds.empcancelar){ await empSetStatus(ds.empcancelar,{status:"nuevo",programado_para:null,qa_estado:"revisar",qa_nota:"Cancelado por vos · queda para envío manual"}); note("Envío cancelado. Queda en Para hoy para mandarlo vos."); return; }
   if(ds.empficha){ empVista=ds.empficha; empMailOpen=null; renderApp(); window.scrollTo({top:0,behavior:"smooth"}); return; }
   if(ds.empvolver){ empVista=null; empMailOpen=null; renderApp(); return; }
-  if(ds.emptradbox){ const id=ds.emptradbox; const ta=document.getElementById("empcuerpo-"+id); if(!ta) return; let box=document.getElementById("emptradbox-"+id); if(box){ box.remove(); t.textContent="🌐 Ver en español"; return; } t.textContent="Traduciendo…"; const c=await empTraducir(ta.value||""); t.textContent="Ocultar español"; box=document.createElement("div"); box.id="emptradbox-"+id; box.className="efmail"; box.style.cssText="margin-top:10px;font-size:13px;color:var(--muted)"; box.innerHTML=esc(c||"No pude traducir ahora").replace(/\n/g,"<br>")+'<div class="bs" style="margin-top:8px;color:var(--faint)">Traducción de lo que está escrito arriba. Se envía el inglés.</div>'; ta.parentNode.insertBefore(box, ta.nextSibling); return; }
   if(ds.emptrad){ const id=ds.emptrad; if(empTrad[id]){ delete empTrad[id]; renderApp(); return; } const em=empleos.find(x=>x.id===id); if(!em) return; t.textContent="Traduciendo…"; const [a,c]=await Promise.all([empTraducir(em.mail_asunto||""),empTraducir(em.mail_cuerpo||"")]); if(!c){ note("No pude traducir ahora, probá de nuevo",2000); renderApp(); return; } empTrad[id]={asunto:a,cuerpo:c}; renderApp(); return; }
   if(ds.empguardarmail){ await empGuardarMail(ds.empguardarmail); return; }
   if(ds.empenviar){ await empEnviar(ds.empenviar,false); return; }
