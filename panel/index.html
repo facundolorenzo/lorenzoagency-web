@@ -2899,8 +2899,10 @@ async function empGuardarMail(id){
   try{
     await sb.from("empleos").update({mail_asunto:asunto,mail_cuerpo:cuerpo,updated_at:new Date().toISOString()}).eq("id",id);
     // Aprendizaje: lo que vos dejás a mano es el mejor ejemplo del tono que querés. Lo guardo en el perfil y el motor lo copia.
-    if(cambiado && cuerpo.trim() && e.perfil_id){ await sb.from("perfiles_empleo").update({ejemplo_mail:cuerpo.trim(),updated_at:new Date().toISOString()}).eq("id",e.perfil_id); }
+    let aprendio=false;
+    if(cambiado && cuerpo.trim() && e.perfil_id){ const r=await sb.from("perfiles_empleo").update({ejemplo_mail:cuerpo.trim(),updated_at:new Date().toISOString()}).eq("id",e.perfil_id); aprendio=!r.error; }
     await empLoad();
+    if(cambiado && !aprendio){ note("✓ Mail guardado (para que el motor aprenda el tono, falta correr el SQL)",3200); empBusy=null; renderApp(); return; }
     note(cambiado?"✓ Guardado. El motor va a copiar este tono en los próximos.":"✓ Guardado",2600);
   }catch(err){ note("No se guardó: "+String(err.message||err).slice(0,140),3000); }
   empBusy=null; renderApp();
