@@ -116,3 +116,6 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   alter publication supabase_realtime add table public.perfiles_empleo;
 exception when duplicate_object then null; end $$;
+
+-- v6: el mail que el dueño deja a mano = ejemplo de estilo que el motor copia
+alter table public.perfiles_empleo add column if not exists ejemplo_mail text;
