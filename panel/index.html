@@ -2475,6 +2475,15 @@ let empFichaOpen = null;     // (ya no se usa inline)
 let empVista = null;         // id del empleo abierto en página propia
 let empAdj = {};             // adjuntos extra por empleo (además del presskit)
 let empBusy = null;
+let empTrad = {};            // traducciones mostradas por id {asunto, cuerpo}
+async function empTraducir(txt){
+  try{
+    const r=await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=es&dt=t&q="+encodeURIComponent(txt));
+    const j=await r.json(); return (j[0]||[]).map(x=>x[0]).join("");
+  }catch(e){
+    try{ const r=await fetch("https://api.mymemory.translated.net/get?langpair=en|es&q="+encodeURIComponent(txt.slice(0,490))); const j=await r.json(); return j.responseData&&j.responseData.translatedText||""; }catch{ return ""; }
+  }
+}
 
 async function empLoad(){
   if(!sb || !isAdmin) return;
@@ -2649,7 +2658,7 @@ function empFichaPagina(e, pf){
         <div class="efsec"><div class="efk">Tu opinión (el motor aprende)</div><div class="efv" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm ghost" data-empfb="${e.id}|ok" style="${e.feedback==="ok"?"color:var(--ok);border-color:var(--ok)":""}">✓ Sirve, más así</button><button class="btn sm ghost" data-empfb="${e.id}|no" style="${e.feedback==="no"?"color:var(--bad);border-color:var(--bad)":""}">✗ No sirve</button><button class="btn sm ghost btn-del" data-empdel="${e.id}" title="Borrar" style="margin-left:auto">${ICON_TRASH}</button></div></div>
       </div>
     </div>
-    ${empMailOpen===e.id ? empMailEditor(e,pf) : (e.mail_cuerpo && e.status!=="enviado" ? `<div class="efsec" style="margin-top:6px"><div class="efk">Mail preparado por el motor</div><div class="efv efmail">${esc(e.mail_asunto||"")?`<div style="font-weight:700;margin-bottom:8px">${esc(e.mail_asunto)}</div>`:""}${esc(e.mail_cuerpo).replace(/\n/g,"<br>")}</div></div>` : "")}
+    ${empMailOpen===e.id ? empMailEditor(e,pf) : (e.mail_cuerpo ? `<div class="efsec" style="margin-top:6px"><div class="efk" style="display:flex;align-items:center;gap:12px">Mail ${e.status==="enviado"||e.status==="respondio"?"enviado":"preparado por el motor"}<button class="btn sm ghost" data-emptrad="${e.id}" style="margin-left:auto;text-transform:none;letter-spacing:0">${empTrad[e.id]?"Ver original":"🌐 Traducir al español"}</button></div><div class="efv efmail">${esc(e.mail_asunto||"")?`<div style="font-weight:700;margin-bottom:8px">${esc(empTrad[e.id]?empTrad[e.id].asunto:e.mail_asunto)}</div>`:""}${esc(empTrad[e.id]?empTrad[e.id].cuerpo:e.mail_cuerpo).replace(/\n/g,"<br>")}${empTrad[e.id]?`<div class="bs" style="margin-top:10px;color:var(--faint)">Traducción automática, solo para que lo entiendas. Se envía el original en inglés.</div>`:""}</div></div>` : "")}
   </div>`;
 }
 
@@ -2665,7 +2674,8 @@ function empMailEditor(e, pf){
       <button class="btn" data-empenviar="${e.id}" ${empBusy===e.id?"disabled":""}>${empBusy===e.id?"Enviando…":"Enviar →"}</button>
       <button class="btn ghost" data-empborrador="${e.id}" ${empBusy===e.id?"disabled":""}>📝 A mis borradores</button>
       <label class="btn sm ghost" style="cursor:pointer;margin:0">📎 Adjuntar<input type="file" style="display:none" onchange="empAdjAdd('${e.id}',this)"></label>
-      <button class="linkbtn" data-empmailcerrar="1" style="color:var(--faint);margin-left:auto">Cerrar</button>
+      <button class="btn sm ghost" data-emptradbox="${e.id}" style="margin-left:auto">🌐 Ver en español</button>
+      <button class="linkbtn" data-empmailcerrar="1" style="color:var(--faint)">Cerrar</button>
     </div></div>`;
 }
 const EMP_PAISES=["Estados Unidos","Remoto global","Canadá","México","Argentina","Brasil","Chile","Colombia","Perú","Uruguay","Costa Rica","Panamá","España","Portugal","Reino Unido","Irlanda","Alemania","Francia","Países Bajos","Bélgica","Suiza","Austria","Suecia","Noruega","Dinamarca","Finlandia","Italia","Polonia","Estonia","Emiratos Árabes Unidos","Arabia Saudita","Israel","Singapur","India","Japón","Corea del Sur","Australia","Nueva Zelanda","Sudáfrica"];
@@ -2847,6 +2857,8 @@ document.addEventListener("click", async e=>{
   if(ds.empcancelar){ await empSetStatus(ds.empcancelar,{status:"nuevo",programado_para:null,qa_estado:"revisar",qa_nota:"Cancelado por vos · queda para envío manual"}); note("Envío cancelado. Queda en Para hoy para mandarlo vos."); return; }
   if(ds.empficha){ empVista=ds.empficha; empMailOpen=null; renderApp(); window.scrollTo({top:0,behavior:"smooth"}); return; }
   if(ds.empvolver){ empVista=null; empMailOpen=null; renderApp(); return; }
+  if(ds.emptradbox){ const id=ds.emptradbox; const ta=document.getElementById("empcuerpo-"+id); if(!ta) return; let box=document.getElementById("emptradbox-"+id); if(box){ box.remove(); t.textContent="🌐 Ver en español"; return; } t.textContent="Traduciendo…"; const c=await empTraducir(ta.value||""); t.textContent="Ocultar español"; box=document.createElement("div"); box.id="emptradbox-"+id; box.className="efmail"; box.style.cssText="margin-top:10px;font-size:13px;color:var(--muted)"; box.innerHTML=esc(c||"No pude traducir ahora").replace(/\n/g,"<br>")+'<div class="bs" style="margin-top:8px;color:var(--faint)">Traducción de lo que está escrito arriba. Se envía el inglés.</div>'; ta.parentNode.insertBefore(box, ta.nextSibling); return; }
+  if(ds.emptrad){ const id=ds.emptrad; if(empTrad[id]){ delete empTrad[id]; renderApp(); return; } const em=empleos.find(x=>x.id===id); if(!em) return; t.textContent="Traduciendo…"; const [a,c]=await Promise.all([empTraducir(em.mail_asunto||""),empTraducir(em.mail_cuerpo||"")]); if(!c){ note("No pude traducir ahora, probá de nuevo",2000); renderApp(); return; } empTrad[id]={asunto:a,cuerpo:c}; renderApp(); return; }
   if(ds.empenviar){ await empEnviar(ds.empenviar,false); return; }
   if(ds.empborrador){ await empEnviar(ds.empborrador,true); return; }
   if(ds.empdesc){ await empSetStatus(ds.empdesc,{status:"descartado",feedback:"no"}); note("Descartada"); return; }
