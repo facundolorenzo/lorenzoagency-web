@@ -354,6 +354,7 @@ async function regenerarMails() {
       "\n## DATOS DE LA EMPRESA",
       "Empresa: " + e.empresa, "Rol: " + (e.rol || ""), "Decisor: " + (e.decisor_nombre || "") + " (" + (e.decisor_cargo || "") + ")",
       "Qué hacen: " + (e.descripcion || ""), "Señal/novedad: " + (e.senal || ""), "Notas: " + (e.notas || ""),
+      e.por_que ? "Por qué encaja (análisis ya hecho — DE ACÁ sale el ÁNGULO del mail): " + e.por_que : "",
       "\n## SALIDA: devolvé SOLO este JSON (sin markdown): {\"mail\": \"<el mail completo empezando por 'Hi " + String(e.decisor_nombre || "").split(/\s+/)[0] + ",'>\", \"ganchos\": [\"<5 a 6 PRIMERAS FRASES completas y distintas (máx ~22 palabras c/u), VARIANDO la forma: 1-2 'I saw [dato] — [reacción]'; UNA directa al puesto sin dato (solo interés genuino por el rol en esa empresa); una del problema que resuelven; una de cómo trabajan. Máximo dos con la misma coletilla final. Inglés natural, sin plata, de la más fuerte a la más floja>\"]}",
     ].filter(Boolean).join("\n");
     let out = "";
