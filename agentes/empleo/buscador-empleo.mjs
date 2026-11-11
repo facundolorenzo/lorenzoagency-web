@@ -70,6 +70,34 @@ async function apolloMatch(nombre, empresa, web) {
   return null;
 }
 
+// Hunter.io (misma key del .env que usa el Agente 4): email del decisor por nombre + dominio
+const HUNTER = env.HUNTER_API_KEY || null;
+let hunterUsadosEmp = 0;
+const HUNTER_MAX_EMP = 5;
+async function hunterMatch(nombre, web) {
+  if (!HUNTER || hunterUsadosEmp >= HUNTER_MAX_EMP) return null;
+  let dominio; try { dominio = new URL(String(web || "").startsWith("http") ? web : "https://" + web).hostname.replace(/^www\./, ""); } catch { return null; }
+  if (!dominio) return null;
+  const partes = String(nombre || "").trim().split(/\s+/);
+  if (partes.length < 2) return null;
+  try {
+    const r = await fetch(`https://api.hunter.io/v2/email-finder?domain=${encodeURIComponent(dominio)}&first_name=${encodeURIComponent(partes[0])}&last_name=${encodeURIComponent(partes.slice(1).join(" "))}&api_key=${HUNTER}`);
+    if (!r.ok) return null;
+    hunterUsadosEmp++;
+    const d = ((await r.json()) || {}).data;
+    if (d && d.email && (d.score || 0) >= 80) return d.email;
+  } catch {}
+  return null;
+}
+// Cascada de email del decisor: 1º Apollo (persona) → 2º Hunter (dominio) si Apollo no encuentra
+async function emailDecisor(nombre, empresa, web) {
+  const ap = await apolloMatch(nombre, empresa, web);
+  if (ap) return { email: ap, via: "Apollo" };
+  const hu = await hunterMatch(nombre, web);
+  if (hu) return { email: hu, via: "Hunter" };
+  return null;
+}
+
 async function aprendizaje(perfilId) {
   try {
     const no = await api(`empleos?perfil_id=eq.${perfilId}&feedback=eq.no&select=empresa,rol,etapa&order=updated_at.desc&limit=20`);
@@ -231,8 +259,8 @@ async function procesarTanda(perfil, rows, ya) {
     if (email && !(await emailVivo(email))) { nota = [nota, "dominio sin correo, descartado: " + email].filter(Boolean).join(" · "); email = null; verif = false; }
     // Apollo solo para los candidatos fuertes sin email (cuida los créditos)
     if (!email && APOLLO && limpio(r.decisor_nombre) && Number(r.match) >= 60) {
-      const ap = await apolloMatch(r.decisor_nombre, emp, r.web);
-      if (ap && (await emailVivo(ap))) { email = ap; verif = true; apEst = "hecho"; nota = [nota, "Apollo encontró el email del decisor"].filter(Boolean).join(" · "); console.log("  ⭐ Apollo: " + r.decisor_nombre + " @ " + emp); }
+      const res = await emailDecisor(r.decisor_nombre, emp, r.web);
+      if (res && (await emailVivo(res.email))) { email = res.email; verif = true; apEst = "hecho"; nota = [nota, res.via + " encontró el email del decisor"].filter(Boolean).join(" · "); console.log("  ⭐ " + res.via + ": " + r.decisor_nombre + " @ " + emp); }
       else apEst = "sin_resultado";
     }
     ya.add(emp.toLowerCase());
@@ -383,10 +411,11 @@ async function refuerzosApollo() {
   const pend = (await api("empleos?apollo_estado=eq.pendiente&select=id,empresa,web,decisor_nombre")) || [];
   for (const e of pend) {
     if (!e.decisor_nombre) { await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ apollo_estado: "sin_resultado", apollo_nota: "No hay nombre del decisor para buscar" }) }); continue; }
-    const ap = await apolloMatch(e.decisor_nombre, e.empresa, e.web);
+    const res = await emailDecisor(e.decisor_nombre, e.empresa, e.web);
+    const ap = res && res.email;
     const ok = ap && (await emailVivo(ap));
-    await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify(ok ? { decisor_email: ap, decisor_email_verificado: true, apollo_estado: "hecho", apollo_nota: "Apollo encontró el email verificado", updated_at: new Date().toISOString() } : { apollo_estado: "sin_resultado", apollo_nota: "Apollo no encontró un email verificado de " + e.decisor_nombre, updated_at: new Date().toISOString() }) });
-    console.log((ok ? "  ⭐ Apollo encontró: " : "  Apollo sin resultado: ") + e.decisor_nombre + " @ " + e.empresa);
+    await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify(ok ? { decisor_email: ap, decisor_email_verificado: true, apollo_estado: "hecho", apollo_nota: (res.via || "Apollo") + " encontró el email verificado", updated_at: new Date().toISOString() } : { apollo_estado: "sin_resultado", apollo_nota: "Ni Hunter ni Apollo encontraron un email verificado de " + e.decisor_nombre, updated_at: new Date().toISOString() }) });
+    console.log((ok ? "  ⭐ " + (res.via || "?") + " encontró: " : "  Sin resultado (Hunter+Apollo): ") + e.decisor_nombre + " @ " + e.empresa);
   }
 }
 
