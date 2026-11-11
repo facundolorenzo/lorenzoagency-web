@@ -2535,7 +2535,7 @@ function empBarraBusqueda(pf){
   const tiene = pf.progreso!=null;
   const p = Math.max(4, Math.min(100, Number(pf.progreso)||4));
   const min = pf.busqueda_inicio ? Math.max(0, Math.round((Date.now()-new Date(pf.busqueda_inicio).getTime())/60000)) : null;
-  return `<span style="display:inline-flex;align-items:center;gap:10px"><span class="bs" style="color:var(--accent)">⏳ buscando</span><span style="width:130px;height:6px;border-radius:99px;background:rgba(221,125,71,.18);overflow:hidden"><span style="display:block;height:100%;width:${p}%;border-radius:99px;background:var(--accent);transition:width .6s"></span></span><span class="bs" style="color:var(--accent)">${tiene?p+"%":""}${min!=null&&min>0?` · ⏱ ${min} min`:""}</span></span>`;
+  return `<span style="display:inline-flex;align-items:center;gap:14px"><span style="color:var(--accent);font-size:13.5px;white-space:nowrap">⏳ buscando</span><span style="width:300px;max-width:34vw;height:12px;border-radius:99px;background:rgba(221,125,71,.16);border:1px solid rgba(221,125,71,.25);overflow:hidden"><span style="display:block;height:100%;width:${p}%;border-radius:99px;background:linear-gradient(90deg,var(--accent),#f0a06c);transition:width .6s;box-shadow:0 0 12px rgba(221,125,71,.5)"></span></span><span style="color:var(--accent);font-family:var(--mono);font-size:14px;font-weight:700;white-space:nowrap">${tiene?p+"%":""}${min!=null&&min>0?` · ⏱ ${min} min`:""}</span></span>`;
 }
 // Ganchos: lista con opción de verlos en español (se elige en español, el mail igual sale en inglés)
 let empGanchosEs = {};
