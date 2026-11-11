@@ -167,7 +167,8 @@ async function radarFetch(url) {
   } catch { return null; } finally { clearTimeout(t); }
 }
 const radarTxt = s => String(s || "").replace(/<!\[CDATA\[|\]\]>/g, "").replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/\s+/g, " ").trim();
-async function radar(perfil) {
+async function radar(perfil, tope = 100) {
+  const capHN = Math.round(tope * 0.45), capRO = Math.round(tope * 0.4), capWWR = Math.round(tope * 0.2);
   const kws = [...new Set([
     ...String(perfil.roles || "").toLowerCase().split(/[·,\/|\n]+/).map(s => s.trim()).filter(s => s.length > 3),
     "ai engineer", "founding engineer", "forward deployed", "applied ai", "full stack", "full-stack", "product engineer", "ai automation", "solutions engineer",
@@ -183,7 +184,7 @@ async function radar(perfil) {
       const th = await radarFetch("https://hn.algolia.com/api/v1/items/" + id);
       let n = 0;
       for (const c of (th && th.children) || []) {
-        if (n >= 40) break;
+        if (n >= capHN) break;
         const txt = radarTxt(c && c.text); if (!txt || !matchKw(txt)) continue;
         if (!/remote|usa|united states|miami|new york|nyc|san francisco|austin|boston|denver|seattle/i.test(txt)) continue;
         items.push("HN Who is hiring (" + String(c.created_at || "").slice(0, 10) + "): " + txt.slice(0, 260) + " — https://news.ycombinator.com/item?id=" + c.id);
@@ -196,7 +197,7 @@ async function radar(perfil) {
     const j = await radarFetch("https://remoteok.com/api");
     let n = 0;
     for (const o of Array.isArray(j) ? j : []) {
-      if (!o || !o.position || n >= 40) continue;
+      if (!o || !o.position || n >= capRO) continue;
       const blob = o.position + " " + (Array.isArray(o.tags) ? o.tags.join(" ") : "") + " " + String(o.description || "").slice(0, 300);
       if (!matchKw(blob)) continue;
       if (minSal && o.salary_max && Number(o.salary_max) < minSal) continue;
@@ -210,7 +211,7 @@ async function radar(perfil) {
     if (typeof x === "string") {
       let n = 0;
       for (const m of x.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
-        if (n >= 20) break;
+        if (n >= capWWR) break;
         const it = m[1];
         const title = radarTxt((it.match(/<title>([\s\S]*?)<\/title>/) || [])[1]);
         const link = radarTxt((it.match(/<link>([\s\S]*?)<\/link>/) || [])[1]);
@@ -238,18 +239,26 @@ async function correr(perfil, motivo) {
   const TANDA = 5;
   const OBJETIVO = Number(env.EMPLEO_OBJETIVO || 15);   // cuántas CON email del decisor querés listas por día
   const MAX_REVISAR = Number(env.EMPLEO_MAX || 50);     // tope de empresas a analizar a fondo (cuida tiempo y créditos)
-  let totRev = 0, totNue = 0, totConEmail = 0, falloInicial = false, t = 0;
+  let totRev = 0, totNue = 0, totConEmail = 0, falloInicial = false, t = 0, fallos = 0, radarSubido = false;
   while (totConEmail < OBJETIVO && totRev < MAX_REVISAR) {
     t++;
     console.log(`  Tanda ${t} (de a ${TANDA}) — listas con email: ${totConEmail}/${OBJETIVO}, revisadas ${totRev}/${MAX_REVISAR}…`);
     const rows = await cerebro(perfil, [...ya], TANDA);
-    if (!rows) { if (t === 1) falloInicial = true; else console.log("  Esta tanda falló; me quedo con lo ya cargado."); break; }
-    totRev += rows.length;
+    if (!rows) { if (t === 1 && !radarSubido) { falloInicial = true; break; } if (++fallos >= 3) { console.log("  Varias tandas sin respuesta usable; corto."); break; } console.log("  Esta tanda no devolvió empresas usables; reintento la próxima."); continue; }
+    totRev += rows.length; fallos = 0;
     const r = await procesarTanda(perfil, rows, ya, async () => { await avance({ progreso: Math.min(95, 5 + Math.round((totConEmail / OBJETIVO) * 90)) }); });
     totNue += r.insertadas; totConEmail += r.conEmail;
     console.log(`  Tanda ${t}: +${r.insertadas} nuevas (${r.conEmail} con email del decisor). Listas para enviar: ${totConEmail}/${OBJETIVO}.`);
     await avance({ progreso: Math.min(95, 5 + Math.round((totConEmail / OBJETIVO) * 90)) });
-    if (r.insertadas === 0) { console.log("  Esta tanda no sumó empresas nuevas; corto acá."); break; }
+    if (r.insertadas === 0) {
+      if (!radarSubido) {   // se quedó sin candidatos antes de llegar al objetivo → subo el radar a 200 y sigo
+        radarSubido = true;
+        console.log(`  📡 Me quedé corto (${totConEmail}/${OBJETIVO}) — subo el radar a 200 y sigo buscando.`);
+        try { perfil._radar = await radar(perfil, 200); } catch {}
+        continue;
+      }
+      console.log("  Ya con radar ampliado no aparecen nuevas; corto acá."); break;
+    }
   }
   if (falloInicial) { await patchPerfil(perfil.id, { estado_motor: "error", ultima_corrida: new Date().toISOString() }); await avance({ progreso: null, busqueda_inicio: null }); return; }
   await patchPerfil(perfil.id, { estado_motor: "lista", ultima_corrida: new Date().toISOString(), ultima_revisadas: totRev, ultima_nuevas: totNue });
