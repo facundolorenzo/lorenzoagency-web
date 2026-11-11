@@ -4458,14 +4458,20 @@ document.addEventListener("click", async e=>{
   }
   if(t.dataset.prospmail){
     const p=prospectos.find(x=>x.id===t.dataset.prospmail); if(!p) return;
-    openProspId=null;
-    if(p.leadId && leads.some(l=>l.id===p.leadId)){ openLeadId=p.leadId; fichaTab="email"; tab="leads"; renderApp(); return; }
+    if(!(p.emailDirecto||p.email)){ note("Este negocio todavía no tiene email para escribir. Conseguilo con ⚡ Apollo."); return; }
+    if(p.leadId && leads.some(l=>l.id===p.leadId)){ openProspId=null; openLeadId=p.leadId; fichaTab="email"; tab="leads"; renderApp(); return; }
     const msg=["Captado en la búsqueda ("+(p.fuente||"captación")+")",p.contacto?("Contacto: "+p.contacto):"",p.puntoFlojo?("PUNTO FLOJO (entrá el mail por acá): "+p.puntoFlojo):"",p.entrada?("QUÉ ESTÁ PASANDO:\n"+p.entrada):"",p.web?("Web: "+p.web):"",p.notas||""].filter(Boolean).join("\n");
-    const {data:nl,error}=await sb.from("leads").insert({name:p.empresa||p.contacto,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"captación",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
-    if(error){ note("No se pudo preparar: "+error.message); return; }
+    let nl;
+    try{
+      const r=await sb.from("leads").insert({name:p.empresa||p.contacto,email:p.emailDirecto||p.email||null,phone:p.phoneDirecto||p.phone||null,service:p.nicho||"captación",message:msg,status:"nuevo",created_at:new Date().toISOString()}).select().single();
+      if(r.error) throw new Error(r.error.message);
+      nl=r.data;
+    }catch(err){ note("No se pudo preparar el mail: "+String(err.message||err).slice(0,160),4000); return; }  // NO cierra la ficha: ves el error
     try{ await sb.from("prospectos").update({lead_id:nl.id,updated_at:new Date().toISOString()}).eq("id",p.id); }catch(err){}
-    openLeadId=nl.id; fichaTab="email"; tab="leads";
-    await loadAll(); renderApp(); return;
+    openProspId=null; openLeadId=nl.id; fichaTab="email"; tab="leads";
+    await loadAll(); renderApp();
+    note("✍️ Escribí el mail acá y tocá Enviar. (El decisor y el email ya están cargados.)",3500);
+    return;
   }
   if(t.dataset.prosplead){
     const p=prospectos.find(x=>x.id===t.dataset.prosplead); if(!p) return;
