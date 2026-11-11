@@ -100,6 +100,7 @@ async function cerebro(perfil, yaTengo, cant) {
     perfil.linkedin ? "LINKEDIN: " + perfil.linkedin : "",
     perfil.ejemplo_mail ? "\n## MAIL QUE EL DUEÑO DEJÓ A MANO (es el tono EXACTO que quiere; copiá voz, estructura, largo y nivel de inglés. NO copies los datos de esa empresa ni su gancho, solo el estilo):\n" + perfil.ejemplo_mail : "",
     (perfil._enviados && perfil._enviados.length) ? "\n## ÚLTIMOS MAILS ENVIADOS POR EL CANDIDATO — LA VARA DE CALIDAD (imitá voz, enfoque, estructura y largo; NO copies los datos de esas empresas):\n" + perfil._enviados.map((m, i) => "--- MAIL " + (i + 1) + " (a " + m.empresa + ") ---\n" + m.mail_cuerpo).join("\n\n") : "",
+    (perfil._radar && perfil._radar.length) ? "\n## AVISOS FRESCOS DEL RADAR (bajados hoy de fuentes estructuradas, ya pasaron el filtro de rol/remoto/sueldo): EMPEZÁ investigando estos — verificá cada uno, encontrá al decisor y armá la ficha — y ADEMÁS sumá otros que encuentres por tu cuenta como siempre:\n- " + perfil._radar.join("\n- ") : "",
     perfil.notas_estilo ? "\n## CÓMO LE GUSTAN LOS MAILS (respetalo):\n" + perfil.notas_estilo : "",
     "\n## MAIL BASE (respetá estructura y tono; completá {nombre} {empresa} {rol} {gancho})",
     "ASUNTO BASE: " + (perfil.mail_asunto || "(vacío)"),
@@ -120,6 +121,77 @@ async function cerebro(perfil, yaTengo, cant) {
   try { const rows = JSON.parse(m[1]); return Array.isArray(rows) ? rows : []; } catch { console.error("  JSON inválido."); return null; }
 }
 
+// ---- RADAR: fuentes estructuradas gratis (complemento del cerebro, nunca lo reemplaza) ----
+// Baja avisos frescos en segundos de HN "Who is hiring", RemoteOK y WeWorkRemotely,
+// los filtra por rol/remoto/sueldo del perfil y se los acerca al cerebro como punto de partida.
+const RADAR_TIMEOUT = 20000;
+async function radarFetch(url) {
+  const c = new AbortController(); const t = setTimeout(() => c.abort(), RADAR_TIMEOUT);
+  try {
+    const r = await fetch(url, { signal: c.signal, headers: { "user-agent": "Mozilla/5.0" } });
+    if (!r.ok) return null;
+    return (r.headers.get("content-type") || "").includes("json") ? await r.json() : await r.text();
+  } catch { return null; } finally { clearTimeout(t); }
+}
+const radarTxt = s => String(s || "").replace(/<!\[CDATA\[|\]\]>/g, "").replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/\s+/g, " ").trim();
+async function radar(perfil) {
+  const kws = [...new Set([
+    ...String(perfil.roles || "").toLowerCase().split(/[·,\/|\n]+/).map(s => s.trim()).filter(s => s.length > 3),
+    "ai engineer", "founding engineer", "forward deployed", "applied ai", "full stack", "full-stack", "product engineer", "ai automation", "solutions engineer",
+  ])];
+  const matchKw = t => { const lt = String(t).toLowerCase(); return kws.some(k => lt.includes(k)); };
+  const minSal = (Number(perfil.salario_min) || 0) * 1000;
+  const items = [];
+  // 1) Hacker News "Who is hiring" (el hilo del mes)
+  try {
+    const s = await radarFetch("https://hn.algolia.com/api/v1/search_by_date?tags=story,author_whoishiring&query=%22Ask%20HN%3A%20Who%20is%20hiring%3F%22&hitsPerPage=1");
+    const id = s && s.hits && s.hits[0] && s.hits[0].objectID;
+    if (id) {
+      const th = await radarFetch("https://hn.algolia.com/api/v1/items/" + id);
+      let n = 0;
+      for (const c of (th && th.children) || []) {
+        if (n >= 15) break;
+        const txt = radarTxt(c && c.text); if (!txt || !matchKw(txt)) continue;
+        if (!/remote|usa|united states|miami|new york|nyc|san francisco|austin|boston|denver|seattle/i.test(txt)) continue;
+        items.push("HN Who is hiring (" + String(c.created_at || "").slice(0, 10) + "): " + txt.slice(0, 260) + " — https://news.ycombinator.com/item?id=" + c.id);
+        n++;
+      }
+    }
+  } catch {}
+  // 2) RemoteOK
+  try {
+    const j = await radarFetch("https://remoteok.com/api");
+    let n = 0;
+    for (const o of Array.isArray(j) ? j : []) {
+      if (!o || !o.position || n >= 12) continue;
+      const blob = o.position + " " + (Array.isArray(o.tags) ? o.tags.join(" ") : "") + " " + String(o.description || "").slice(0, 300);
+      if (!matchKw(blob)) continue;
+      if (minSal && o.salary_max && Number(o.salary_max) < minSal) continue;
+      items.push("RemoteOK (" + String(o.date || "").slice(0, 10) + "): " + (o.company || "?") + " — " + o.position + (o.salary_min ? " — $" + o.salary_min + "–" + (o.salary_max || "?") : "") + " — " + (o.url || "https://remoteok.com/l/" + o.id));
+      n++;
+    }
+  } catch {}
+  // 3) WeWorkRemotely (RSS)
+  try {
+    const x = await radarFetch("https://weworkremotely.com/categories/remote-programming-jobs.rss");
+    if (typeof x === "string") {
+      let n = 0;
+      for (const m of x.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
+        if (n >= 8) break;
+        const it = m[1];
+        const title = radarTxt((it.match(/<title>([\s\S]*?)<\/title>/) || [])[1]);
+        const link = radarTxt((it.match(/<link>([\s\S]*?)<\/link>/) || [])[1]);
+        const fecha = radarTxt((it.match(/<pubDate>([\s\S]*?)<\/pubDate>/) || [])[1]).slice(0, 16);
+        if (!title || !matchKw(title)) continue;
+        items.push("WeWorkRemotely (" + fecha + "): " + title + " — " + link);
+        n++;
+      }
+    }
+  } catch {}
+  console.log(items.length ? "  📡 Radar: " + items.length + " avisos frescos pasan tu filtro (HN / RemoteOK / WWR). Se los paso al cerebro como punto de partida." : "  📡 Radar: hoy sin resultados nuevos — el cerebro busca solo, como siempre.");
+  return items;
+}
+
 async function correr(perfil, motivo) {
   console.log(`\n[${new Date().toLocaleTimeString()}] Buscando para ${perfil.nombre} (${motivo})…`);
   await patchPerfil(perfil.id, { estado_motor: "buscando", pedido_busqueda: false });
@@ -129,6 +201,7 @@ async function correr(perfil, motivo) {
   const existentes = (await api(`empleos?perfil_id=eq.${perfil.id}&select=empresa`)) || [];
   const ya = new Set(existentes.map(x => String(x.empresa).toLowerCase().trim()));
   try { perfil._enviados = (await api(`empleos?perfil_id=eq.${perfil.id}&status=in.(enviado,respondio)&mail_cuerpo=not.is.null&select=empresa,mail_cuerpo&order=enviado_at.desc.nullslast&limit=4`)) || []; } catch { perfil._enviados = []; }
+  try { perfil._radar = await radar(perfil); } catch { perfil._radar = []; }
   const TANDA = 5, tandas = Math.max(1, Math.ceil(CANTIDAD / TANDA));
   let totRev = 0, totNue = 0, falloInicial = false;
   for (let t = 1; t <= tandas; t++) {
