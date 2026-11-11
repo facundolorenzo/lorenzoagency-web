@@ -40,15 +40,26 @@ Por corrida, intentá que al menos un tercio sean del carril "motiva" o "ambos".
 - Menos de 40: no la traigas.
 
 ## EL MAIL (campos `mail_asunto` y `mail_cuerpo`), en inglés
-- Partí del MAIL BASE del perfil. Mantené su estructura, tono y largo; solo reemplazá `{nombre}` (primer nombre del decisor), `{empresa}`, `{rol}` y `{gancho}`.
-- `{gancho}` es UNA frase concreta y verificable sobre la empresa, y tiene reglas estrictas porque abre el mail:
-  - CORTO y con TU REACCIÓN: UNA sola oración, máximo ~22 palabras. Media frase dice qué hacen (brevísimo) y la otra media es la reacción honesta del candidato sobre por qué le copa o lo motivaría sumarse — NO un resumen de lo que hicieron. El acento va en la reacción, no en el dato. Completa "I saw …" natural. MAL (largo y solo repite el dato): "I saw Opaxa is building agents that tell each manager at a restaurant, stadium or hotel what to do today. Turning scattered operational data into a clear daily decision is where AI really changes how a business runs". BIEN (corto, con reacción): "I saw Opaxa puts the daily call in front of the manager on the floor, not just HQ — that's exactly the kind of product I'd want to contribute to". Honesto, primera persona, sin halago vacío. La reacción preferida del candidato es "that's exactly the kind of product I'd want to contribute to" (usala como cierre por defecto; variá solo para no repetir).
-  - NUNCA hables de plata: nada de montos, rondas, "raised $5.5M", valuaciones ni inversores. Eso queda desubicado viniendo de un candidato. La ronda sirve como fuente para saber que crecen, pero en el mail se menciona el crecimiento, no el dinero.
-  - Tiene que salir de una fuente que abriste y leíste (web de la empresa, aviso, prensa, blog, LinkedIn de la empresa). Anotá la URL en `gancho_fuente`.
-  - Tiene que ser RECIENTE: de los últimos 90 días (ronda, lanzamiento, aviso publicado, nota de prensa, post). Si lo más reciente que encontrás tiene más de 90 días, usá en su lugar algo atemporal y seguro sacado de su propia web (qué construyen y para quién), nunca una noticia vieja.
-  - Nunca des por hecho fechas, montos ni nombres que no viste escritos. Si dudás, elegí el dato más simple y seguro.
-  - Prohibido: "your innovative company", "your impressive growth", elogios vacíos, o datos de otra empresa con nombre parecido.
-  - Anotá la fecha del dato en `gancho_fecha` (AAAA-MM-DD o "sin fecha" si es atemporal).
+- NO es una plantilla a rellenar. Escribí el mail COMPLETO para esta empresa, como lo escribiría el candidato a mano. Si en este prompt hay "ÚLTIMOS MAILS ENVIADOS", esa es LA VARA: imitá su calidad, voz, estructura y largo (sin copiar los datos de esas empresas). El MAIL BASE del perfil es solo referencia de firma y cierre.
+- El mail se construye desde el ÁNGULO: la ventaja injusta del candidato para ESTA empresa. Elegí la más fuerte que sea VERDAD y abrí el mail con ella:
+  1. Construyó algo muy parecido a lo que ellos hacen → "I built my own version of that" (su motor Cronos).
+  2. Es el usuario exacto del producto que construyen.
+  3. Misma ciudad: vive en Miami, y desde marzo pasa tiempo en Nueva York → ofrecer verse en persona.
+  4. Vivió el problema que resuelven como dueño de negocio (6 años con su marca de eventos: comunidad de 25.000, eventos de 2.000 personas en 4 ciudades).
+  5. El aviso pide literalmente su perfil: ex-founder, forward deployed, autodidacta que shippea rápido.
+  6. La misión lo motiva de verdad (concreto, no genérico).
+- Estructura que funciona (la de sus mails enviados):
+  1. Saludo con primer nombre del decisor.
+  2. Párrafo 1: observación específica y verificable de la empresa, integrada natural, + el ángulo. SIN plata.
+  3. Párrafo 2: Cronos contado EN ESPEJO de lo que ellos hacen (un agente principal delega en agentes especializados, control de calidad antes de enviar, aprende de correcciones). Stack solo si suma.
+  4. Párrafo 3: ex-CEO seis años, Hi Dr (2018), criterio de producto ("the user, the launch and the business result").
+  5. Extra solo si aplica al aviso: "the paid trial works for me" / "I'm trying your product this week" / "happy to meet in person".
+  6. Cierre: "Let me know if it makes sense to connect. My resume is attached." Nunca "15-minute call" ni "quick chat".
+- Reglas duras del dato de empresa que uses:
+  - NUNCA plata: ni montos, ni rondas, ni "raised", ni valuación, ni inversores.
+  - Salió de una fuente que abriste y leíste: URL en `gancho_fuente`, fecha en `gancho_fecha` (AAAA-MM-DD o "sin fecha" si es atemporal). Reciente (≤90 días) o atemporal de su propia web.
+  - Nada que no viste escrito. Prohibidos los elogios vacíos ("your innovative company") y datos de otra empresa con nombre parecido.
+- Inglés simple y natural (el candidato tiene inglés intermedio): frases cortas, sin guiones largos, sin emojis, sin palabras rebuscadas.
 - Además del gancho elegido, devolvé en `ganchos` entre 5 y 6 OPCIONES distintas. Cada una es UNA PRIMERA FRASE COMPLETA del mail en inglés (corta, máx ~22 palabras), lista para usar tal cual. VARIÁ LA FORMA — prohibido repetir el mismo molde seis veces:
   - 1 o 2 del tipo "I saw [dato breve] — [reacción]". Reacción preferida: "that's exactly the kind of product I'd want to contribute to".
   - UNA SIEMPRE directa al puesto, sin dato de la empresa, solo interés genuino por el rol. Ej: "The Applied AI Engineer opening is exactly the kind of work I do — production AI agents end to end — and I'd love to do it at Kaavio."

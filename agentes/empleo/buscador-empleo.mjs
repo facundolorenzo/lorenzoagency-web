@@ -99,6 +99,7 @@ async function cerebro(perfil, yaTengo, cant) {
     "PROYECTOS: " + (perfil.proyectos || ""),
     perfil.linkedin ? "LINKEDIN: " + perfil.linkedin : "",
     perfil.ejemplo_mail ? "\n## MAIL QUE EL DUEÑO DEJÓ A MANO (es el tono EXACTO que quiere; copiá voz, estructura, largo y nivel de inglés. NO copies los datos de esa empresa ni su gancho, solo el estilo):\n" + perfil.ejemplo_mail : "",
+    (perfil._enviados && perfil._enviados.length) ? "\n## ÚLTIMOS MAILS ENVIADOS POR EL CANDIDATO — LA VARA DE CALIDAD (imitá voz, enfoque, estructura y largo; NO copies los datos de esas empresas):\n" + perfil._enviados.map((m, i) => "--- MAIL " + (i + 1) + " (a " + m.empresa + ") ---\n" + m.mail_cuerpo).join("\n\n") : "",
     perfil.notas_estilo ? "\n## CÓMO LE GUSTAN LOS MAILS (respetalo):\n" + perfil.notas_estilo : "",
     "\n## MAIL BASE (respetá estructura y tono; completá {nombre} {empresa} {rol} {gancho})",
     "ASUNTO BASE: " + (perfil.mail_asunto || "(vacío)"),
@@ -127,6 +128,7 @@ async function correr(perfil, motivo) {
   await avance({ progreso: 5, busqueda_inicio: new Date().toISOString() });
   const existentes = (await api(`empleos?perfil_id=eq.${perfil.id}&select=empresa`)) || [];
   const ya = new Set(existentes.map(x => String(x.empresa).toLowerCase().trim()));
+  try { perfil._enviados = (await api(`empleos?perfil_id=eq.${perfil.id}&status=in.(enviado,respondio)&mail_cuerpo=not.is.null&select=empresa,mail_cuerpo&order=enviado_at.desc.nullslast&limit=4`)) || []; } catch { perfil._enviados = []; }
   const TANDA = 5, tandas = Math.max(1, Math.ceil(CANTIDAD / TANDA));
   let totRev = 0, totNue = 0, falloInicial = false;
   for (let t = 1; t <= tandas; t++) {
@@ -333,16 +335,18 @@ async function regenerarMails() {
   for (const e of pend) {
     const perfil = (await api("perfiles_empleo?id=eq." + e.perfil_id + "&select=*"))?.[0];
     if (!perfil) { await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ regenerar: false }) }); continue; }
+    try { perfil._enviados = (await api(`empleos?perfil_id=eq.${perfil.id}&status=in.(enviado,respondio)&mail_cuerpo=not.is.null&select=empresa,mail_cuerpo&order=enviado_at.desc.nullslast&limit=4`)) || []; } catch { perfil._enviados = []; }
     console.log(`  ↻ Regenerando mail para ${e.empresa}…`);
     const partes = [
       "Reescribí este mail de contacto para un puesto. Devolvé SOLO el mail final en inglés, sin markdown ni comillas, listo para enviar.",
       "\n## REGLAS DEL MAIL",
-      "- Partí del MAIL BASE del candidato; mantené su estructura, tono y largo. Reemplazá {nombre} (primer nombre del decisor), {empresa}, {rol} y {gancho}.",
-      "- El gancho (primera frase, completa 'I saw ___') es CORTO y con REACCIÓN: UNA oración, máx ~22 palabras. Media frase dice qué hacen (brevísimo) y la otra media es la reacción honesta del candidato de por qué le copa o lo motivaría sumarse — NO un resumen de lo que hicieron. MAL (largo, solo repite): 'I saw Opaxa is building agents that tell each manager at a restaurant, stadium or hotel what to do today. Turning scattered operational data into a clear daily decision is where AI really changes how a business runs'. BIEN (corto, con reacción): 'I saw Opaxa puts the daily call in front of the manager on the floor, not just HQ — that's exactly the kind of product I'd want to contribute to'. Reacción por defecto: \"that's exactly the kind of product I'd want to contribute to\" (variá solo para no repetir: \"that's the problem I'd most want to solve\", \"that's the kind of work I'd want to put my code behind\"). Primera persona, honesto, nada de halago vacío. NUNCA de plata (montos, rondas, 'raised', inversores, valuación).",
-      "- Si no hay dato verificable para el gancho, sacá esa frase entera y arrancá directo con el puesto.",
-      "- Cierre sin pedir una llamada de 15 minutos ni 'quick chat' (lo usan todos). Usá algo como 'Let me know if it makes sense to connect.'",
-      "- Sin guiones largos, sin emojis, sin signos de exclamación. Máximo ~130 palabras.",
+      "- NO es una plantilla: escribí el mail COMPLETO como lo escribiría el candidato a mano. Si abajo hay ÚLTIMOS MAILS ENVIADOS, esa es LA VARA: imitá su calidad, voz, estructura y largo (sin copiar los datos de esas empresas).",
+      "- Construilo desde el ÁNGULO: la ventaja injusta del candidato para ESTA empresa, la más fuerte que sea VERDAD: (1) construyó algo muy parecido con su motor Cronos ('I built my own version of that'); (2) es el usuario exacto del producto; (3) misma ciudad (vive en Miami; desde marzo pasa tiempo en NY) → ofrecer verse en persona; (4) vivió el problema como dueño de negocio (6 años con su marca de eventos, comunidad de 25.000, eventos de 2.000 en 4 ciudades); (5) el aviso pide literalmente su perfil (ex-founder, forward deployed, autodidacta que shippea); (6) la misión lo motiva de verdad.",
+      "- Estructura: saludo con primer nombre · P1: observación específica de la empresa integrada natural + el ángulo, SIN plata · P2: Cronos en espejo de lo que ellos hacen (agente principal que delega, control de calidad antes de enviar, aprende de correcciones) · P3: ex-CEO seis años, Hi Dr (2018), criterio de producto · extra solo si aplica al aviso (trial paga ok / estoy probando su producto / verse en persona) · cierre 'Let me know if it makes sense to connect. My resume is attached.'",
+      "- NUNCA plata (montos, rondas, 'raised', inversores, valuación). Nunca '15-minute call' ni 'quick chat'.",
+      "- Inglés simple y natural (el candidato tiene inglés intermedio). Sin guiones largos, sin emojis, sin signos de exclamación. Máximo ~150 palabras.",
       perfil.ejemplo_mail ? "\n## MAIL QUE EL CANDIDATO DEJÓ A MANO (tono EXACTO que quiere; copiá voz, estructura, largo y nivel de inglés, NO los datos de esa empresa):\n" + perfil.ejemplo_mail : "",
+      (perfil._enviados && perfil._enviados.length) ? "\n## ÚLTIMOS MAILS ENVIADOS POR EL CANDIDATO — LA VARA DE CALIDAD (imitá voz, enfoque, estructura y largo; NO copies los datos de esas empresas):\n" + perfil._enviados.map((m, i) => "--- MAIL " + (i + 1) + " (a " + m.empresa + ") ---\n" + m.mail_cuerpo).join("\n\n") : "",
       perfil.notas_estilo ? "\n## CÓMO LE GUSTAN LOS MAILS AL CANDIDATO (respetalo):\n" + perfil.notas_estilo : "",
       e.feedback_nota ? "\n## OBSERVACIÓN DEL CANDIDATO SOBRE ESTE MAIL:\n" + e.feedback_nota : "",
       e.instruccion_mail ? "\n## INSTRUCCIÓN PARA ESTA REESCRITURA (lo más importante):\n" + e.instruccion_mail : "",
