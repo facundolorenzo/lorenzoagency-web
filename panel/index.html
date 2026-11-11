@@ -2557,10 +2557,18 @@ async function empInsertarGancho(id, full){
   const rep = nuevo.replace(/\$/g,"$$$$");  // escapar $ para String.replace
   let cuerpo = String(e.mail_cuerpo||"");
   if(/I saw[\s\S]*?\.(?=\s|$)/.test(cuerpo)){
-    cuerpo = cuerpo.replace(/I saw[\s\S]*?\.(?=\s|$)/, rep);   // reemplaza la frase "I saw …" vieja
+    cuerpo = cuerpo.replace(/I saw[\s\S]*?\.(?=\s|$)/, rep);   // si hay frase "I saw …", la reemplaza
   } else {
-    const ls = cuerpo.split("\n"); let i = ls.findIndex(l=>/^\s*hi\b/i.test(l)); if(i<0) i=0;
-    ls.splice(i+1,0,"",nuevo); cuerpo = ls.join("\n");          // si no había, lo inserta tras el saludo
+    // si no: reemplaza la primera ORACIÓN del primer párrafo después del saludo
+    const ls = cuerpo.split("\n"); let g = ls.findIndex(l=>/^\s*(hi|hello|hey|hola)\b/i.test(l));
+    let p = -1; for(let i=g+1;i<ls.length;i++){ if(ls[i].trim()){ p=i; break; } }
+    if(p>=0){
+      const m = ls[p].match(/^[\s\S]*?\.(?=\s|$)/);
+      ls[p] = m ? nuevo + ls[p].slice(m[0].length) : nuevo;
+      cuerpo = ls.join("\n");
+    } else {
+      const i = g<0?0:g; ls.splice(i+1,0,"",nuevo); cuerpo = ls.join("\n");  // mail vacío: lo inserta tras el saludo
+    }
   }
   if(empTrad[id]) delete empTrad[id];
   await sb.from("empleos").update({mail_cuerpo:cuerpo,updated_at:new Date().toISOString()}).eq("id",id);
