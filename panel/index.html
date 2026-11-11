@@ -3096,7 +3096,7 @@ function renderProspeccion(){
       ${["Cadena grande","Muy chico","No es el target","Mala zona","Otro"].map(m=>`<button class="btn sm ghost" data-fbmotivo="${p.id}|${esc(m)}" style="margin-right:6px">${esc(m)}</button>`).join("")}
       <button class="linkbtn" data-fbcancel="1" style="margin-left:6px;color:var(--faint)">Cancelar</button></td></tr>`:""}${apolloAsk===p.id?`<tr><td colspan="6" style="padding:4px 18px 16px">
       <div style="font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--accent);margin-bottom:7px">⚡ ${apolloMes+1}/75</div>
-      <span class="bs" style="margin-right:12px">¿Reforzar con Apollo? Busca el email directo de ${p.contacto?esc(String(p.contacto).split(/[—(,]/)[0].trim()):"la persona de contacto"}.</span><button class="btn sm" data-apolloconfirm="${p.id}" style="margin-right:8px">Confirmar</button><button class="btn sm ghost" data-apollocancel="1">Cancelar</button></td></tr>`:""}`;};
+      <span class="bs" style="margin-right:12px">¿Reforzar con Apollo? ${(p.contacto&&String(p.contacto).split(/[—(,]/)[0].trim().includes(" "))?`Busca el email directo de ${esc(String(p.contacto).split(/[—(,]/)[0].trim())}.`:`No hay persona cargada: Apollo va a identificar al dueño por la web del lugar y buscar su email.`}</span><button class="btn sm" data-apolloconfirm="${p.id}" style="margin-right:8px">Confirmar</button><button class="btn sm ghost" data-apollocancel="1">Cancelar</button></td></tr>`:""}`;};
   // Puntuales (lugar específico) arriba como "Búsquedas recientes", una por una; los nichos (bases enteras) abajo
   const espKeys = new Set(busquedas.filter(b=>b.modo==="especifico").map(b=>String((b.rubro||"")+" — "+(b.zona||"")).toLowerCase().trim()));
   const entradas = Object.entries(grupos);
@@ -4196,7 +4196,8 @@ document.addEventListener("click", async e=>{
   if(t.dataset.apollocancel){ apolloAsk=null; renderApp(); return; }
   if(t.dataset.apolloconfirm){
     const p=prospectos.find(x=>x.id===t.dataset.apolloconfirm); if(!p) return;
-    if(!p.contacto||!String(p.contacto).split(/[—(,]/)[0].trim().includes(" ")){ apolloAsk=null; renderApp(); note("Apollo necesita nombre y apellido de una persona, y esta ficha no lo tiene. Cargale el contacto con Editar y volvé a intentar."); return; }
+    const _tienePersona = p.contacto && String(p.contacto).split(/[—(,]/)[0].trim().includes(" ");
+    if(!_tienePersona && !p.web){ apolloAsk=null; renderApp(); note("Para buscar con Apollo hace falta una persona con nombre y apellido O la web del lugar (con la web identifica al dueño solo). Cargá una de las dos con Editar.",3500); return; }
     const {error}=await sb.from("prospectos").update({apollo_estado:"pendiente",updated_at:new Date().toISOString()}).eq("id",p.id);
     if(error){ note("No se pudo pedir: "+error.message); return; }
     apolloAsk=null; await loadAll();
