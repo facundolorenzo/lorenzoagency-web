@@ -178,7 +178,7 @@ async function radar(perfil) {
       const th = await radarFetch("https://hn.algolia.com/api/v1/items/" + id);
       let n = 0;
       for (const c of (th && th.children) || []) {
-        if (n >= 15) break;
+        if (n >= 40) break;
         const txt = radarTxt(c && c.text); if (!txt || !matchKw(txt)) continue;
         if (!/remote|usa|united states|miami|new york|nyc|san francisco|austin|boston|denver|seattle/i.test(txt)) continue;
         items.push("HN Who is hiring (" + String(c.created_at || "").slice(0, 10) + "): " + txt.slice(0, 260) + " — https://news.ycombinator.com/item?id=" + c.id);
@@ -191,7 +191,7 @@ async function radar(perfil) {
     const j = await radarFetch("https://remoteok.com/api");
     let n = 0;
     for (const o of Array.isArray(j) ? j : []) {
-      if (!o || !o.position || n >= 12) continue;
+      if (!o || !o.position || n >= 40) continue;
       const blob = o.position + " " + (Array.isArray(o.tags) ? o.tags.join(" ") : "") + " " + String(o.description || "").slice(0, 300);
       if (!matchKw(blob)) continue;
       if (minSal && o.salary_max && Number(o.salary_max) < minSal) continue;
@@ -205,7 +205,7 @@ async function radar(perfil) {
     if (typeof x === "string") {
       let n = 0;
       for (const m of x.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
-        if (n >= 8) break;
+        if (n >= 20) break;
         const it = m[1];
         const title = radarTxt((it.match(/<title>([\s\S]*?)<\/title>/) || [])[1]);
         const link = radarTxt((it.match(/<link>([\s\S]*?)<\/link>/) || [])[1]);
@@ -230,31 +230,32 @@ async function correr(perfil, motivo) {
   const ya = new Set(existentes.map(x => String(x.empresa).toLowerCase().trim()));
   try { perfil._enviados = (await api(`empleos?perfil_id=eq.${perfil.id}&status=in.(enviado,respondio)&mail_cuerpo=not.is.null&select=empresa,mail_cuerpo&order=enviado_at.desc.nullslast&limit=4`)) || []; } catch { perfil._enviados = []; }
   try { perfil._radar = await radar(perfil); } catch { perfil._radar = []; }
-  const TANDA = 5, tandas = Math.max(1, Math.ceil(CANTIDAD / TANDA));
-  let totRev = 0, totNue = 0, falloInicial = false;
-  for (let t = 1; t <= tandas; t++) {
-    console.log(`  Tanda ${t}/${tandas} (de a ${TANDA})…`);
+  const TANDA = 5;
+  const OBJETIVO = Number(env.EMPLEO_OBJETIVO || 15);   // cuántas CON email del decisor querés listas por día
+  const MAX_REVISAR = Number(env.EMPLEO_MAX || 50);     // tope de empresas a analizar a fondo (cuida tiempo y créditos)
+  let totRev = 0, totNue = 0, totConEmail = 0, falloInicial = false, t = 0;
+  while (totConEmail < OBJETIVO && totRev < MAX_REVISAR) {
+    t++;
+    console.log(`  Tanda ${t} (de a ${TANDA}) — listas con email: ${totConEmail}/${OBJETIVO}, revisadas ${totRev}/${MAX_REVISAR}…`);
     const rows = await cerebro(perfil, [...ya], TANDA);
     if (!rows) { if (t === 1) falloInicial = true; else console.log("  Esta tanda falló; me quedo con lo ya cargado."); break; }
     totRev += rows.length;
-    const base = 5 + Math.round(((t - 1) / tandas) * 90), top = 5 + Math.round((t / tandas) * 90);
-    const nuevos = await procesarTanda(perfil, rows, ya, async (i, n) => {
-      // callback por empresa: la mete al panel al instante y mueve la barra, para verlas aparecer de a una
-      await avance({ progreso: Math.min(95, base + Math.round(((i + 1) / Math.max(1, n)) * (top - base))) });
-    });
-    totNue += nuevos;
-    console.log(`  Tanda ${t}: +${nuevos} nuevas (van ${totNue}). Ya están en el panel.`);
-    await avance({ progreso: Math.min(95, top) });
-    if (nuevos === 0) { console.log("  Esta tanda no sumó empresas nuevas; corto acá."); break; }  // solo corta si YA no aparece nada nuevo
+    const r = await procesarTanda(perfil, rows, ya, async () => { await avance({ progreso: Math.min(95, 5 + Math.round((totConEmail / OBJETIVO) * 90)) }); });
+    totNue += r.insertadas; totConEmail += r.conEmail;
+    console.log(`  Tanda ${t}: +${r.insertadas} nuevas (${r.conEmail} con email del decisor). Listas para enviar: ${totConEmail}/${OBJETIVO}.`);
+    await avance({ progreso: Math.min(95, 5 + Math.round((totConEmail / OBJETIVO) * 90)) });
+    if (r.insertadas === 0) { console.log("  Esta tanda no sumó empresas nuevas; corto acá."); break; }
   }
   if (falloInicial) { await patchPerfil(perfil.id, { estado_motor: "error", ultima_corrida: new Date().toISOString() }); await avance({ progreso: null, busqueda_inicio: null }); return; }
   await patchPerfil(perfil.id, { estado_motor: "lista", ultima_corrida: new Date().toISOString(), ultima_revisadas: totRev, ultima_nuevas: totNue });
   await avance({ progreso: null, busqueda_inicio: null });
-  console.log(`  Listo: ${totRev} revisadas, ${totNue} nuevas cargadas en el panel (EMPLEO → Para hoy).`);
+  console.log(`  Listo: ${totRev} revisadas, ${totNue} nuevas (${totConEmail} con email directo, listas para enviar) en el panel (EMPLEO → Para hoy).`);
   try { await controlCalidad(perfil); } catch (e) { console.error("  Control: " + String(e.message).slice(0, 160)); }
 }
 async function procesarTanda(perfil, rows, ya, onCada) {
-  let insertadas = 0;
+  let insertadas = 0, conEmail = 0;
+  // procesar las de MAYOR match primero, para que lo mejor caiga antes en el panel
+  rows = [...rows].sort((a, b) => (Number(b.match) || 0) - (Number(a.match) || 0));
   for (let idx = 0; idx < rows.length; idx++) {
     const r = rows[idx];
     const emp = limpio(r.empresa); if (!emp || ya.has(emp.toLowerCase())) continue;
@@ -282,10 +283,10 @@ async function procesarTanda(perfil, rows, ya, onCada) {
       notas: [nota, limpio(r.gancho_fuente) ? "Gancho: " + r.gancho_fuente + (limpio(r.gancho_fecha) ? " (" + r.gancho_fecha + ")" : "") : null].filter(Boolean).join(" · ") || null,
       created_at: new Date().toISOString(),
     };
-    try { await api("empleos", { method: "POST", body: JSON.stringify([fila]) }); insertadas++; console.log("    + " + emp + " (aparece en el panel ahora)"); } catch (e) { console.error("    no se pudo insertar " + emp + ": " + String(e.message).slice(0, 120)); }
+    try { await api("empleos", { method: "POST", body: JSON.stringify([fila]) }); insertadas++; if (email) conEmail++; console.log("    + " + emp + (email ? " ⭐ (con email, lista para enviar)" : "") + " — match " + (fila.match ?? "?")); } catch (e) { console.error("    no se pudo insertar " + emp + ": " + String(e.message).slice(0, 120)); }
     if (onCada) { try { await onCada(idx, rows.length); } catch {} }
   }
-  return insertadas;
+  return { insertadas, conEmail };
 }
 
 // ---------- PILOTO AUTOMÁTICO ----------
