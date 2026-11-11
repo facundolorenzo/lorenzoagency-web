@@ -144,9 +144,14 @@ async function cerebro(perfil, yaTengo, cant) {
     child.child.stdin.end(PROMPT_BASE + "\n\n" + vars);
     out = (await child).stdout || "";
   } catch (e) { console.error("  El cerebro falló: " + String(e.message).slice(0, 300)); return null; }
-  const m = out.match(/<EMPRESAS>([\s\S]*?)<\/EMPRESAS>/);
-  if (!m) { console.error("  Salida sin bloque <EMPRESAS>. Final:\n" + out.slice(-400)); return null; }
-  try { const rows = JSON.parse(m[1]); return Array.isArray(rows) ? rows : []; } catch { console.error("  JSON inválido."); return null; }
+  // Rescate robusto: a veces el CLI devuelve el array sin el bloque <EMPRESAS> o dentro de ```json```
+  const intentos = [];
+  const m = out.match(/<EMPRESAS>([\s\S]*?)<\/EMPRESAS>/); if (m) intentos.push(m[1]);
+  const f = out.match(/```(?:json)?\s*([\s\S]*?)```/); if (f) intentos.push(f[1]);
+  const i = out.indexOf("["), j = out.lastIndexOf("]"); if (i >= 0 && j > i) intentos.push(out.slice(i, j + 1));
+  for (const s of intentos) { try { const v = JSON.parse(String(s).trim()); if (Array.isArray(v)) return v; } catch {} }
+  console.error("  El cerebro no devolvió empresas en formato usable (reintentá la búsqueda). Final:\n" + out.slice(-400));
+  return null;
 }
 
 // ---- RADAR: fuentes estructuradas gratis (complemento del cerebro, nunca lo reemplaza) ----
