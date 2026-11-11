@@ -237,12 +237,15 @@ async function correr(perfil, motivo) {
     const rows = await cerebro(perfil, [...ya], TANDA);
     if (!rows) { if (t === 1) falloInicial = true; else console.log("  Esta tanda falló; me quedo con lo ya cargado."); break; }
     totRev += rows.length;
-    const nuevos = await procesarTanda(perfil, rows, ya);
-    if (nuevos.length) await api("empleos", { method: "POST", body: JSON.stringify(nuevos) });
-    totNue += nuevos.length;
-    console.log(`  Tanda ${t}: +${nuevos.length} nuevas (van ${totNue}). Ya están en el panel.`);
-    await avance({ progreso: Math.min(95, 5 + Math.round((t / tandas) * 90)) });
-    if (rows.length < TANDA) break;  // el cerebro no encontró más
+    const base = 5 + Math.round(((t - 1) / tandas) * 90), top = 5 + Math.round((t / tandas) * 90);
+    const nuevos = await procesarTanda(perfil, rows, ya, async (i, n) => {
+      // callback por empresa: la mete al panel al instante y mueve la barra, para verlas aparecer de a una
+      await avance({ progreso: Math.min(95, base + Math.round(((i + 1) / Math.max(1, n)) * (top - base))) });
+    });
+    totNue += nuevos;
+    console.log(`  Tanda ${t}: +${nuevos} nuevas (van ${totNue}). Ya están en el panel.`);
+    await avance({ progreso: Math.min(95, top) });
+    if (nuevos === 0) { console.log("  Esta tanda no sumó empresas nuevas; corto acá."); break; }  // solo corta si YA no aparece nada nuevo
   }
   if (falloInicial) { await patchPerfil(perfil.id, { estado_motor: "error", ultima_corrida: new Date().toISOString() }); await avance({ progreso: null, busqueda_inicio: null }); return; }
   await patchPerfil(perfil.id, { estado_motor: "lista", ultima_corrida: new Date().toISOString(), ultima_revisadas: totRev, ultima_nuevas: totNue });
@@ -250,9 +253,10 @@ async function correr(perfil, motivo) {
   console.log(`  Listo: ${totRev} revisadas, ${totNue} nuevas cargadas en el panel (EMPLEO → Para hoy).`);
   try { await controlCalidad(perfil); } catch (e) { console.error("  Control: " + String(e.message).slice(0, 160)); }
 }
-async function procesarTanda(perfil, rows, ya) {
-  const nuevos = [];
-  for (const r of rows) {
+async function procesarTanda(perfil, rows, ya, onCada) {
+  let insertadas = 0;
+  for (let idx = 0; idx < rows.length; idx++) {
+    const r = rows[idx];
     const emp = limpio(r.empresa); if (!emp || ya.has(emp.toLowerCase())) continue;
     let email = limpio(r.decisor_email), verif = !!r.decisor_email_verificado, nota = limpio(r.notas), apEst = null;
     if (email && /^(jobs|careers|hello|info|contact|hr|talent|team)@/i.test(email)) { nota = [nota, "email genérico: " + email].filter(Boolean).join(" · "); email = null; verif = false; }
@@ -264,7 +268,7 @@ async function procesarTanda(perfil, rows, ya) {
       else apEst = "sin_resultado";
     }
     ya.add(emp.toLowerCase());
-    nuevos.push({
+    const fila = {
       perfil_id: perfil.id, empresa: emp, web: limpio(r.web), ciudad: limpio(r.ciudad), tamano: limpio(r.tamano), etapa: limpio(r.etapa),
       rol: limpio(r.rol), salario: limpio(r.salario), modalidad: limpio(r.modalidad), fuente: limpio(r.fuente), url_aviso: limpio(r.url_aviso),
       publicado: limpio(r.publicado), senal: limpio(r.senal), descripcion: limpio(r.descripcion),
@@ -277,9 +281,11 @@ async function procesarTanda(perfil, rows, ya) {
       status: "nuevo", apollo_estado: apEst, apollo_nota: apEst === "sin_resultado" ? "Apollo no encontró email verificado" : null,
       notas: [nota, limpio(r.gancho_fuente) ? "Gancho: " + r.gancho_fuente + (limpio(r.gancho_fecha) ? " (" + r.gancho_fecha + ")" : "") : null].filter(Boolean).join(" · ") || null,
       created_at: new Date().toISOString(),
-    });
+    };
+    try { await api("empleos", { method: "POST", body: JSON.stringify([fila]) }); insertadas++; console.log("    + " + emp + " (aparece en el panel ahora)"); } catch (e) { console.error("    no se pudo insertar " + emp + ": " + String(e.message).slice(0, 120)); }
+    if (onCada) { try { await onCada(idx, rows.length); } catch {} }
   }
-  return nuevos;
+  return insertadas;
 }
 
 // ---------- PILOTO AUTOMÁTICO ----------
