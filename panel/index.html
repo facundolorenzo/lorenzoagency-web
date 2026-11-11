@@ -1521,7 +1521,7 @@ function renderApp(){
   const el = document.getElementById("root");
   el.innerHTML = `<div class="wrap">
     <header>
-      <span class="wordmark" style="display:inline-flex;align-items:center"><span aria-hidden="true" style="display:inline-block;height:14px;width:46px;margin-right:12px;background:var(--accent);-webkit-mask:url(/email/firma-bigote.png) center/contain no-repeat;mask:url(/email/firma-bigote.png) center/contain no-repeat"></span><b>LORENZO</b><span>AGENCY · PANEL</span></span>
+      <span class="wordmark" style="display:inline-flex;align-items:center"><span aria-hidden="true" style="display:inline-block;height:14px;width:46px;margin-right:12px;background:var(--accent);-webkit-mask:url(/email/firma-bigote.png) center/contain no-repeat;mask:url(/email/firma-bigote.png) center/contain no-repeat"></span><b>LORENZO</b><span>AGENCY · PANEL</span><span style="margin-left:10px;font-size:10px;color:var(--faint);letter-spacing:.08em" title="Versión del panel que está corriendo esta ventana">v15</span></span>
       <div style="display:flex;gap:10px;align-items:center">
         <span style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--faint)">${esc(sessionEmail)}</span>
         <button class="actico nar" id="refrescar" title="Actualizar los datos del panel"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
