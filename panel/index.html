@@ -3352,6 +3352,24 @@ function busqModo(m){
   // En modo puntual, tipo de empresa y detalles de nicho no aplican
   if(f){ ["target","detalles"].forEach(n=>{ const el=f.querySelector('[name="'+n+'"]'); if(el){ const lab=el.closest('label'); if(lab) lab.style.display=esp?"none":""; } }); }
 }
+// Corrector de nicho: si escribís mal el rubro (ej. "gimnacios"), sugiere la corrección abajo del casillero
+const NICHOS_DICC = "gimnasio gimnasios gym gyms fitness restaurante restaurantes restaurant restaurants bar bares cafeteria cafeterias cafe coffee panaderia panaderias bakery pasteleria heladeria pizzeria pizzerias barberia barberias barbershop peluqueria peluquerias salon spa dentista dentistas dentist clinica clinicas clinic veterinaria veterinarias farmacia farmacias pharmacy hotel hoteles hostal discoteca discotecas nightclub lounge lounges licoreria ferreteria lavanderia tintoreria gomeria taller concesionaria concesionarias dealer dealers inmobiliaria inmobiliarias realtor abogado abogados lawyer contador contadores accountant seguros floristeria joyeria optica tatuajes tattoo yoga pilates crossfit sushi taqueria catering eventos venue venues galeria boutique supermercado carniceria fruteria distribuidor distribuidores mayorista imprenta marketing iglesia escuela guarderia academia daycare laundromat liquor brewery cerveceria".split(" ");
+function _lev(a,b){ if(Math.abs(a.length-b.length)>2) return 9; const m=[...Array(a.length+1)].map((_,i)=>[i]); for(let j=0;j<=b.length;j++) m[0][j]=j; for(let i=1;i<=a.length;i++) for(let j=1;j<=b.length;j++) m[i][j]=Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); return m[a.length][b.length]; }
+function rubroSug(inp){
+  const box=document.getElementById("rubro-sug"); if(!box) return;
+  let cambio=false;
+  const corr=String(inp.value||"").split(/(\s+|\/)/).map(w=>{
+    const lw=w.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+    if(lw.length<4||!/^[a-z]+$/.test(lw)||NICHOS_DICC.includes(lw)) return w;
+    let mejor=null, tope=lw.length>=7?3:2;
+    for(const d of NICHOS_DICC){ const dd=_lev(lw,d); if(dd<tope){ tope=dd; mejor=d; } }
+    if(mejor){ cambio=true; return mejor; }
+    return w;
+  }).join("");
+  box.innerHTML = (cambio && corr.trim().toLowerCase()!==String(inp.value).trim().toLowerCase())
+    ? `<button type="button" class="linkbtn" style="color:var(--accent);font-size:12.5px;padding:0" data-v="${esc(corr)}" onclick="const f=this.closest('form');if(f){f.querySelector('[name=rubro]').value=this.dataset.v;}document.getElementById('rubro-sug').innerHTML=''">✏️ ¿Quisiste decir <b>${esc(corr)}</b>? Tocá para corregirlo</button>`
+    : "";
+}
 function busquedaForm(){
   return `<div class="panel">
     <button class="btnpro" type="button" data-cancel="1" style="margin-bottom:14px">${BPI_BACK}Volver</button>
@@ -3361,7 +3379,7 @@ function busquedaForm(){
     <label class="full"><span class="fl">Modo</span><select name="modo" onchange="busqModo(this.value)">
       <option value="nicho">Por nicho — traé varios negocios</option>
       <option value="especifico">Lugar puntual — un negocio por su nombre</option></select></label>
-    <label><span class="fl" id="lbl-rubro">Rubro</span><input name="rubro" required placeholder="gimnasios / lounges / dealers de autos"></label>
+    <label><span class="fl" id="lbl-rubro">Rubro</span><input name="rubro" required placeholder="gimnasios / lounges / dealers de autos" oninput="rubroSug(this)" autocomplete="off"><div id="rubro-sug" style="margin-top:6px"></div></label>
     <label><span class="fl">Zona</span><div style="display:flex;gap:8px;align-items:center"><input name="zona" style="flex:1" placeholder="Miami · Brickell · toda Florida">
       <button class="btn ghost" type="button" data-abrirmapa="1" title="Elegir en el mapa con un radio en millas" style="height:40px;white-space:nowrap;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;line-height:1"><span style="color:var(--bad);display:inline-flex">${ICON_PIN}</span> Mapa</button></div>
       <input type="hidden" name="lat"><input type="hidden" name="lng"><input type="hidden" name="radio"></label>
