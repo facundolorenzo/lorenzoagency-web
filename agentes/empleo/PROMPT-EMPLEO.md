@@ -40,11 +40,20 @@ El perfil busca dos cosas a la vez; traé de las dos y marcá cuál es cuál:
 Campo `motivacion` (0-100): cuánto encaja el tema de la empresa con QUÉ LO MOTIVA. Independiente del `match`.
 Por corrida, intentá que al menos un tercio sean del carril "motiva" o "ambos".
 
-## % DE MATCH (campo `match`, 0-100): sé honesto, no inflés
-- 80-100: el aviso pide exactamente lo que el perfil tiene, la etapa encaja, hay decisor identificado con email.
-- 60-79: encaja el rol y la etapa pero falta algo (un stack, el email del decisor, el salario está en el límite).
-- 40-59: encaje parcial o empresa sin aviso pero con señal fuerte de contratación.
-- Menos de 40: no la traigas.
+## % DE MATCH (campo `match`, 0-100): tiene que ser FUERTE y LÓGICO, no inflado
+El match es la herramienta con la que el candidato decide a quién escribirle, así que un número alto tiene que significar un encaje REAL. Calificá sumando estos 5 factores (cada uno pesa ~20):
+1. ROL: el puesto es uno de los roles del perfil (o un sinónimo claro). Si el puesto es de otra cosa (data scientist puro, ML research, DevOps, ventas), el match se desploma por más que la empresa sea linda.
+2. STACK/SKILLS: lo que piden coincide con lo que el candidato sabe (Python, TypeScript, Next.js, Supabase/Postgres, LLM APIs, agentes). Si piden años de algo que no tiene (ej. 8+ años, un lenguaje que no usa), baja.
+3. SENIORITY/ETAPA: founding/early/producto encaja con su perfil de ex-CEO que shippea; corporativo grande o junior encaja menos.
+4. MODALIDAD/UBICACIÓN: remoto en EE.UU. (o Miami / NY desde marzo) suma; presencial lejos resta fuerte.
+5. SALARIO: igual o arriba de su mínimo suma; por debajo resta.
+Escala:
+- 85-100: los 5 factores alinean. Es un "escribile hoy sin dudar".
+- 70-84: el rol y el stack encajan fuerte, falta un detalle menor (salario al límite, un skill secundario).
+- 55-69: encaja el rol pero hay una brecha real (seniority, un requisito que no cumple, modalidad). Escribible pero no es el ideal.
+- 40-54: encaje parcial; solo si la señal de contratación es muy fuerte.
+- Menos de 40: NO la traigas.
+En `por_que` justificá el número en una línea: qué suma y qué resta de verdad (no genérico). Si no podés explicar por qué ese número, es que está inflado: bajalo. Preferí un 72 honesto a un 90 regalado.
 
 ## EL MAIL (campos `mail_asunto` y `mail_cuerpo`), en inglés
 - NO es una plantilla a rellenar. Escribí el mail COMPLETO para esta empresa, como lo escribiría el candidato a mano. Si en este prompt hay "ÚLTIMOS MAILS ENVIADOS", esa es LA VARA: imitá su calidad, voz, estructura y largo (sin copiar los datos de esas empresas). El MAIL BASE del perfil es solo referencia de firma y cierre.
