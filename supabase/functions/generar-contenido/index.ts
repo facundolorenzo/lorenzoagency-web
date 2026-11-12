@@ -140,20 +140,58 @@ SALIDA: SOLO este JSON válido, sin texto extra:
 {"motor":"marketing-studio","prompts":["prompt imagen 1","..."],"descripcion":"caption del post"}
 Exactamente ${n} prompts.`;
     const user = `IDEA: ${pieza.idea || "(sin idea)"}\nReferencias cargadas: ${refs.length}\nCantidad de imágenes: ${n}`;
-    const lr = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: MDL, max_tokens: 1500, system: sys, messages: [{ role: "user", content: user }] }),
-    });
-    const lt = await lr.text();
-    if (!lr.ok) return json({ error: "LLM " + lr.status + ": " + lt.slice(0, 160) }, 502);
-    const lj = JSON.parse(lt);
-    const out = (lj.content || []).map((c: any) => c.text || "").join("");
-    const m = out.match(/\{[\s\S]*\}/);
-    if (!m) return json({ error: "El LLM no devolvió JSON" }, 502);
-    let plan: any; try { plan = JSON.parse(m[0]); } catch { return json({ error: "JSON del LLM inválido" }, 502); }
+
+    // --- Plan de respaldo: cuando NO hay crédito de Anthropic, armamos prompts desde la idea
+    //     (sin LLM) para que las imágenes igual se generen y el dueño pueda ver/aprobar.
+    //     La descripción queda vacía: la escribe el dueño a mano. ---
+    function planRespaldo() {
+      const idea = String(pieza.idea || "contenido de marca").trim();
+      const cola = "premium advertising aesthetic for an aspirational Miami Latino audience, cohesive color palette and lighting across the series, vertical 3:4 composition, key content centered with safe margins, high contrast and legible, high detail, sharp focus, professional studio photography, no watermark, no logos, no gibberish";
+      const roles = [];
+      for (let i = 0; i < n; i++) {
+        let papel;
+        if (i === 0) papel = `opening hook slide that stops the scroll for: "${idea}". Bold, intriguing, a clear strong visual`;
+        else if (i === n - 1) papel = `closing slide with one simple call to action, themed around: "${idea}"`;
+        else papel = `value slide ${i + 1} that develops the idea with a concrete, clean visual example about: "${idea}"`;
+        roles.push(papel + ", " + cola);
+      }
+      return { motor: (pieza.motor || "marketing-studio"), prompts: roles, descripcion: "", _respaldo: true };
+    }
+
+    let plan: any = null;
+    let sinTexto = false;        // true = no hubo LLM, el dueño escribe el caption
+    let avisoLLM = "";
+    try {
+      const lr = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        body: JSON.stringify({ model: MDL, max_tokens: 1500, system: sys, messages: [{ role: "user", content: user }] }),
+      });
+      const lt = await lr.text();
+      if (!lr.ok) {
+        // Sin crédito u otro error del LLM: no cortamos, usamos el plan de respaldo.
+        avisoLLM = /credit|balance/i.test(lt) ? "Sin crédito de Anthropic: las imágenes se generaron, escribí vos el texto." : ("LLM " + lr.status);
+        plan = planRespaldo(); sinTexto = true;
+      } else {
+        const lj = JSON.parse(lt);
+        const out = (lj.content || []).map((c: any) => c.text || "").join("");
+        const mm = out.match(/\{[\s\S]*\}/);
+        let parsed: any = null;
+        if (mm) { try { parsed = JSON.parse(mm[0]); } catch { parsed = null; } }
+        if (parsed && Array.isArray(parsed.prompts) && parsed.prompts.length) {
+          plan = parsed;
+        } else {
+          avisoLLM = "El LLM no devolvió prompts usables; se usó respaldo.";
+          plan = planRespaldo(); sinTexto = true;
+        }
+      }
+    } catch (e) {
+      avisoLLM = "No se pudo contactar al LLM: " + String((e as Error).message).slice(0, 80);
+      plan = planRespaldo(); sinTexto = true;
+    }
+
     const prompts: string[] = (Array.isArray(plan.prompts) ? plan.prompts : []).slice(0, n);
-    if (!prompts.length) return json({ error: "El LLM no armó prompts" }, 502);
+    if (!prompts.length) return json({ error: "No se pudieron armar prompts para las imágenes" }, 502);
 
     // 2) Generar cada imagen en paralelo con Higgsfield
     const motor = ["grok", "marketing-studio", "recraft"].includes(plan.motor) ? plan.motor : (pieza.motor || "marketing-studio");
@@ -178,17 +216,19 @@ Exactamente ${n} prompts.`;
 
     if (!urls.length) return json({ error: "No se generó ninguna imagen", detalle: errores.slice(0, 4) }, 502);
 
-    // 4) Guardar en la pieza
-    const { error: ue } = await admin.from("contenido_piezas").update({
+    // 4) Guardar en la pieza. Si no hubo texto del LLM, NO pisamos la descripción:
+    //    se respeta la que el dueño ya haya escrito (o queda vacía para que la escriba).
+    const patch: Record<string, unknown> = {
       imagenes: urls,
-      descripcion: plan.descripcion || pieza.descripcion || null,
       prompt: prompts.join("\n---\n"),
       motor,
       updated_at: new Date().toISOString(),
-    }).eq("id", pieza_id);
+    };
+    if (!sinTexto) patch.descripcion = plan.descripcion || pieza.descripcion || null;
+    const { error: ue } = await admin.from("contenido_piezas").update(patch).eq("id", pieza_id);
     if (ue) return json({ error: "No se pudo guardar: " + ue.message }, 500);
 
-    return json({ ok: true, imagenes: urls.length, descripcion: plan.descripcion || null, errores });
+    return json({ ok: true, imagenes: urls.length, descripcion: sinTexto ? null : (plan.descripcion || null), sin_texto: sinTexto, aviso: avisoLLM || null, errores });
   } catch (e) {
     return json({ error: String((e as Error).message || e) }, 500);
   }
