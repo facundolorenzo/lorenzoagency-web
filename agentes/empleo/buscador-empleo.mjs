@@ -58,14 +58,17 @@ async function emailVivo(email) {
 }
 
 // Apollo People Match: email verificado del decisor (1 crédito solo si lo encuentra)
+// Tope por corrida para no vaciar los ~75 créditos/mes en un solo día. Se reinicia en cada correr().
+let apolloUsados = 0;
+const APOLLO_MAX = Number(env.EMPLEO_APOLLO_MAX || 8);
 async function apolloMatch(nombre, empresa, web) {
-  if (!APOLLO) return null;
+  if (!APOLLO || apolloUsados >= APOLLO_MAX) return null;
   let dominio; try { dominio = new URL(String(web || "").startsWith("http") ? web : "https://" + web).hostname.replace(/^www\./, ""); } catch {}
   try {
     const r = await fetch("https://api.apollo.io/api/v1/people/match", { method: "POST", headers: { "x-api-key": APOLLO, "Content-Type": "application/json", accept: "application/json" }, body: JSON.stringify({ name: nombre, organization_name: empresa, domain: dominio }) });
     if (!r.ok) return null;
     const j = await r.json(); const p = j && j.person;
-    if (p && p.email && p.email_status === "verified") return p.email;
+    if (p && p.email && p.email_status === "verified") { apolloUsados++; return p.email; }  // cuenta solo cuando gasta crédito
   } catch {}
   return null;
 }
@@ -172,7 +175,7 @@ async function webEmailDecisor(web, nombre) {
       found.set(em, Math.max(found.get(em) ?? -99, score));
     }
     const mejor = [...found.values()].sort((a, b) => b - a)[0];
-    if (mejor >= 5) break;                                // ya hay un personal que matchea el nombre: cortar
+    if (mejor >= 3) break;                                // ya hay un email personal usable: no sigo recorriendo rutas
   }
   if (!found.size) return null;
   const best = [...found.entries()].sort((a, b) => b[1] - a[1])[0];
@@ -333,6 +336,7 @@ async function radar(perfil, tope = 100) {
 
 async function correr(perfil, motivo) {
   console.log(`\n[${new Date().toLocaleTimeString()}] Buscando para ${perfil.nombre} (${motivo})…`);
+  apolloUsados = 0; hunterUsadosEmp = 0; hunterDomUsados = 0;   // cupos frescos por búsqueda (si no, en modo vigilancia se agotan para siempre)
   await patchPerfil(perfil.id, { estado_motor: "buscando", pedido_busqueda: false });
   // Barra de avance (best-effort: si falta el SQL v7 solo deja un aviso en consola y sigue)
   const avance = (obj) => patchPerfil(perfil.id, obj);
@@ -382,8 +386,9 @@ async function procesarTanda(perfil, rows, ya, onCada) {
     let decNombre = limpio(r.decisor_nombre), decCargo = limpio(r.decisor_cargo), decLinkedin = limpio(r.decisor_linkedin);
     if (email && /^(jobs|careers|hello|info|contact|hr|talent|team)@/i.test(email)) { nota = [nota, "email genérico: " + email].filter(Boolean).join(" · "); email = null; verif = false; }
     if (email && !(await emailVivo(email))) { nota = [nota, "dominio sin correo, descartado: " + email].filter(Boolean).join(" · "); email = null; verif = false; }
-    // Candidatos fuertes sin email: cascada completa (nombre → Apollo por dominio → Hunter por dominio)
-    if (!email && (APOLLO || HUNTER) && (r.web || decNombre) && Number(r.match) >= 60) {
+    // Candidatos fuertes sin email: cascada completa. Nuestro motor (scrape) es gratis y corre siempre;
+    // Apollo/Hunter adentro se saltan solos si no hay key o si se acabó su cupo.
+    if (!email && (r.web || decNombre) && Number(r.match) >= 60) {
       const res = await decisorYEmail(r, emp);
       if (res && res.email && (await emailVivo(res.email))) {
         email = res.email; verif = true; apEst = "hecho";
