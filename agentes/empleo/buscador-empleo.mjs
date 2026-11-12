@@ -60,7 +60,7 @@ async function emailVivo(email) {
 // Apollo People Match: email verificado del decisor (1 crédito solo si lo encuentra)
 // Tope por corrida para no vaciar los ~75 créditos/mes en un solo día. Se reinicia en cada correr().
 let apolloUsados = 0;
-const APOLLO_MAX = Number(env.EMPLEO_APOLLO_MAX || 8);
+const APOLLO_MAX = Number(env.EMPLEO_APOLLO_MAX || 4);   // ~4/día estira los 75 créditos todo el mes
 async function apolloMatch(nombre, empresa, web) {
   if (!APOLLO || apolloUsados >= APOLLO_MAX) return null;
   let dominio; try { dominio = new URL(String(web || "").startsWith("http") ? web : "https://" + web).hostname.replace(/^www\./, ""); } catch {}
@@ -76,7 +76,7 @@ async function apolloMatch(nombre, empresa, web) {
 // Hunter.io (misma key del .env que usa el Agente 4): email del decisor por nombre + dominio
 const HUNTER = env.HUNTER_API_KEY || null;
 let hunterUsadosEmp = 0;
-const HUNTER_MAX_EMP = 5;
+const HUNTER_MAX_EMP = Number(env.EMPLEO_HUNTER_NOMBRE || 1);   // refuerzo final; Hunter free es solo 25/mes
 async function hunterMatch(nombre, web) {
   if (!HUNTER || hunterUsadosEmp >= HUNTER_MAX_EMP) return null;
   let dominio; try { dominio = new URL(String(web || "").startsWith("http") ? web : "https://" + web).hostname.replace(/^www\./, ""); } catch { return null; }
@@ -123,7 +123,7 @@ async function apolloQuienes(web) {
 
 // Hunter domain-search: email PERSONAL por dominio cuando no tenemos el nombre del decisor.
 let hunterDomUsados = 0;
-const HUNTER_DOM_MAX = 6;
+const HUNTER_DOM_MAX = Number(env.EMPLEO_HUNTER_DOM || 1);   // refuerzo final por dominio; cuida el cupo de 25/mes
 async function hunterDominio(web) {
   if (!HUNTER || hunterDomUsados >= HUNTER_DOM_MAX) return null;
   let dominio; try { dominio = new URL(String(web || "").startsWith("http") ? web : "https://" + web).hostname.replace(/^www\./, ""); } catch { return null; }
