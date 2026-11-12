@@ -98,6 +98,68 @@ async function emailDecisor(nombre, empresa, web) {
   return null;
 }
 
+// Apollo People Search: QUIÉN decide contratación en la empresa, por DOMINIO (no necesita el nombre).
+// No gasta créditos de email. Si el plan free no lo permite, se apaga solo.
+let APOLLO_SEARCH_OK = true;
+async function apolloQuienes(web) {
+  if (!APOLLO || !APOLLO_SEARCH_OK) return [];
+  let dominio; try { dominio = new URL(String(web || "").startsWith("http") ? web : "https://" + web).hostname.replace(/^www\./, ""); } catch {}
+  if (!dominio) return [];
+  try {
+    const r = await fetch("https://api.apollo.io/api/v1/mixed_people/search", {
+      method: "POST",
+      headers: { "x-api-key": APOLLO, "Content-Type": "application/json", accept: "application/json", "Cache-Control": "no-cache" },
+      body: JSON.stringify({ q_organization_domains_list: [dominio], person_titles: ["founder","co-founder","ceo","cto","chief technology officer","head of engineering","vp engineering","vp of engineering","engineering manager","head of product","head of talent","hiring manager"], per_page: 5 }),
+    });
+    if (r.status === 402 || r.status === 403) { APOLLO_SEARCH_OK = false; console.log("  ⚡ People Search de Apollo no entra en tu plan — sigo sin eso."); return []; }
+    if (!r.ok) return [];
+    const j = await r.json();
+    return (j.people || []).map(x => ({ nombre: [x.first_name, x.last_name].filter(Boolean).join(" ").trim(), cargo: x.title || "", linkedin: x.linkedin_url || null })).filter(x => x.nombre.includes(" "));
+  } catch { return []; }
+}
+
+// Hunter domain-search: email PERSONAL por dominio cuando no tenemos el nombre del decisor.
+let hunterDomUsados = 0;
+const HUNTER_DOM_MAX = 6;
+async function hunterDominio(web) {
+  if (!HUNTER || hunterDomUsados >= HUNTER_DOM_MAX) return null;
+  let dominio; try { dominio = new URL(String(web || "").startsWith("http") ? web : "https://" + web).hostname.replace(/^www\./, ""); } catch { return null; }
+  if (!dominio) return null;
+  try {
+    const r = await fetch(`https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(dominio)}&limit=10&api_key=${HUNTER}`);
+    if (!r.ok) return null;
+    hunterDomUsados++;
+    const ems = ((((await r.json()) || {}).data) || {}).emails || [];
+    const dec = /founder|ceo|cto|chief|engineer|product|head|hiring|talent|owner/i;
+    const buenos = ems.filter(e => e.type === "personal" && (e.confidence || 0) >= 80);
+    const pri = buenos.filter(e => dec.test([e.position, e.first_name].filter(Boolean).join(" "))).sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+    const per = pri || buenos.sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+    if (!per) return null;
+    return { email: per.value, nombre: [per.first_name, per.last_name].filter(Boolean).join(" ").trim() || null, cargo: per.position || null };
+  } catch { return null; }
+}
+
+// Cascada COMPLETA para una empresa que puede no traer el nombre del decisor:
+// 1) si ya sabemos el nombre → Apollo/Hunter por nombre
+// 2) si no → Apollo People Search por dominio descubre al decisor, y buscamos su email
+// 3) último recurso → Hunter domain-search (email personal por dominio, sin nombre)
+async function decisorYEmail(r, emp) {
+  if (limpio(r.decisor_nombre)) {
+    const res = await emailDecisor(r.decisor_nombre, emp, r.web);
+    if (res) return { email: res.email, via: res.via, nombre: r.decisor_nombre, cargo: limpio(r.decisor_cargo), linkedin: limpio(r.decisor_linkedin) };
+  }
+  if (r.web) {
+    const gente = await apolloQuienes(r.web);
+    for (const g of gente.slice(0, 2)) {
+      const res = await emailDecisor(g.nombre, emp, r.web);
+      if (res) return { email: res.email, via: res.via, nombre: g.nombre, cargo: g.cargo || null, linkedin: g.linkedin || null };
+    }
+    const hd = await hunterDominio(r.web);
+    if (hd) return { email: hd.email, via: "Hunter (dominio)", nombre: hd.nombre || limpio(r.decisor_nombre), cargo: hd.cargo || limpio(r.decisor_cargo), linkedin: limpio(r.decisor_linkedin) };
+  }
+  return null;
+}
+
 async function aprendizaje(perfilId) {
   try {
     const no = await api(`empleos?perfil_id=eq.${perfilId}&feedback=eq.no&select=empresa,rol,etapa&order=updated_at.desc&limit=20`);
@@ -274,20 +336,25 @@ async function procesarTanda(perfil, rows, ya, onCada) {
     const r = rows[idx];
     const emp = limpio(r.empresa); if (!emp || ya.has(emp.toLowerCase())) continue;
     let email = limpio(r.decisor_email), verif = !!r.decisor_email_verificado, nota = limpio(r.notas), apEst = null;
+    let decNombre = limpio(r.decisor_nombre), decCargo = limpio(r.decisor_cargo), decLinkedin = limpio(r.decisor_linkedin);
     if (email && /^(jobs|careers|hello|info|contact|hr|talent|team)@/i.test(email)) { nota = [nota, "email genérico: " + email].filter(Boolean).join(" · "); email = null; verif = false; }
     if (email && !(await emailVivo(email))) { nota = [nota, "dominio sin correo, descartado: " + email].filter(Boolean).join(" · "); email = null; verif = false; }
-    // Apollo solo para los candidatos fuertes sin email (cuida los créditos)
-    if (!email && APOLLO && limpio(r.decisor_nombre) && Number(r.match) >= 60) {
-      const res = await emailDecisor(r.decisor_nombre, emp, r.web);
-      if (res && (await emailVivo(res.email))) { email = res.email; verif = true; apEst = "hecho"; nota = [nota, res.via + " encontró el email del decisor"].filter(Boolean).join(" · "); console.log("  ⭐ " + res.via + ": " + r.decisor_nombre + " @ " + emp); }
-      else apEst = "sin_resultado";
+    // Candidatos fuertes sin email: cascada completa (nombre → Apollo por dominio → Hunter por dominio)
+    if (!email && (APOLLO || HUNTER) && (r.web || decNombre) && Number(r.match) >= 60) {
+      const res = await decisorYEmail(r, emp);
+      if (res && res.email && (await emailVivo(res.email))) {
+        email = res.email; verif = true; apEst = "hecho";
+        if (res.nombre) decNombre = res.nombre; if (res.cargo) decCargo = res.cargo; if (res.linkedin) decLinkedin = res.linkedin;
+        nota = [nota, res.via + " encontró el email del decisor"].filter(Boolean).join(" · ");
+        console.log("  ⭐ " + res.via + ": " + (decNombre || "(decisor)") + " @ " + emp);
+      } else apEst = "sin_resultado";
     }
     ya.add(emp.toLowerCase());
     const fila = {
       perfil_id: perfil.id, empresa: emp, web: limpio(r.web), ciudad: limpio(r.ciudad), tamano: limpio(r.tamano), etapa: limpio(r.etapa),
       rol: limpio(r.rol), salario: limpio(r.salario), modalidad: limpio(r.modalidad), fuente: limpio(r.fuente), url_aviso: limpio(r.url_aviso),
       publicado: limpio(r.publicado), senal: limpio(r.senal), descripcion: limpio(r.descripcion),
-      decisor_nombre: limpio(r.decisor_nombre), decisor_cargo: limpio(r.decisor_cargo), decisor_email: email, decisor_email_verificado: verif, decisor_linkedin: limpio(r.decisor_linkedin),
+      decisor_nombre: decNombre, decisor_cargo: decCargo, decisor_email: email, decisor_email_verificado: verif, decisor_linkedin: decLinkedin,
       match: Number.isFinite(Number(r.match)) ? Math.max(0, Math.min(100, Math.round(Number(r.match)))) : null,
       motivacion: Number.isFinite(Number(r.motivacion)) ? Math.max(0, Math.min(100, Math.round(Number(r.motivacion)))) : null,
       carril: ["remoto", "motiva", "ambos"].includes(r.carril) ? r.carril : null,
@@ -429,13 +496,16 @@ async function revisarRespuestas() {
 // Pedidos sueltos de Apollo desde el panel ("⚡ Buscar email")
 async function refuerzosApollo() {
   if (!APOLLO) return;
-  const pend = (await api("empleos?apollo_estado=eq.pendiente&select=id,empresa,web,decisor_nombre")) || [];
+  const pend = (await api("empleos?apollo_estado=eq.pendiente&select=id,empresa,web,decisor_nombre,decisor_cargo,decisor_linkedin")) || [];
   for (const e of pend) {
-    if (!e.decisor_nombre) { await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ apollo_estado: "sin_resultado", apollo_nota: "No hay nombre del decisor para buscar" }) }); continue; }
-    const res = await emailDecisor(e.decisor_nombre, e.empresa, e.web);
+    if (!e.decisor_nombre && !e.web) { await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify({ apollo_estado: "sin_resultado", apollo_nota: "No hay nombre del decisor ni web para buscar" }) }); continue; }
+    const res = await decisorYEmail(e, e.empresa);     // cascada: nombre → Apollo por dominio → Hunter por dominio
     const ap = res && res.email;
     const ok = ap && (await emailVivo(ap));
-    await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify(ok ? { decisor_email: ap, decisor_email_verificado: true, apollo_estado: "hecho", apollo_nota: (res.via || "Apollo") + " encontró el email verificado", updated_at: new Date().toISOString() } : { apollo_estado: "sin_resultado", apollo_nota: "Ni Hunter ni Apollo encontraron un email verificado de " + e.decisor_nombre, updated_at: new Date().toISOString() }) });
+    const patch = ok
+      ? { decisor_email: ap, decisor_email_verificado: true, apollo_estado: "hecho", apollo_nota: (res.via || "Apollo") + " encontró el email", decisor_nombre: res.nombre || e.decisor_nombre, decisor_cargo: res.cargo || e.decisor_cargo, decisor_linkedin: res.linkedin || e.decisor_linkedin, updated_at: new Date().toISOString() }
+      : { apollo_estado: "sin_resultado", apollo_nota: "No se encontró email del decisor (Apollo+Hunter, por nombre y por dominio)", updated_at: new Date().toISOString() };
+    await api("empleos?id=eq." + e.id, { method: "PATCH", body: JSON.stringify(patch) });
     console.log((ok ? "  ⭐ " + (res.via || "?") + " encontró: " : "  Sin resultado (Hunter+Apollo): ") + e.decisor_nombre + " @ " + e.empresa);
   }
 }
