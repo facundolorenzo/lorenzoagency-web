@@ -139,23 +139,62 @@ async function hunterDominio(web) {
   } catch { return null; }
 }
 
-// Cascada COMPLETA para una empresa que puede no traer el nombre del decisor:
-// 1) si ya sabemos el nombre → Apollo/Hunter por nombre
-// 2) si no → Apollo People Search por dominio descubre al decisor, y buscamos su email
-// 3) último recurso → Hunter domain-search (email personal por dominio, sin nombre)
-async function decisorYEmail(r, emp) {
-  if (limpio(r.decisor_nombre)) {
-    const res = await emailDecisor(r.decisor_nombre, emp, r.web);
-    if (res) return { email: res.email, via: res.via, nombre: r.decisor_nombre, cargo: limpio(r.decisor_cargo), linkedin: limpio(r.decisor_linkedin) };
-  }
-  if (r.web) {
-    const gente = await apolloQuienes(r.web);
-    for (const g of gente.slice(0, 2)) {
-      const res = await emailDecisor(g.nombre, emp, r.web);
-      if (res) return { email: res.email, via: res.via, nombre: g.nombre, cargo: g.cargo || null, linkedin: g.linkedin || null };
+// NUESTRO MOTOR (gratis, sin límite): lee la propia web de la empresa y saca el email real.
+// Mira home + rutas típicas de contacto/equipo. Prioriza el email que coincide con el nombre del decisor.
+const RUTAS_CONTACTO = ["", "/contact", "/contact-us", "/contacto", "/about", "/about-us", "/team", "/our-team", "/company", "/people", "/careers", "/jobs"];
+const EMAIL_GENERICO = /^(jobs|careers|hello|info|contact|contacto|hr|talent|team|support|admin|sales|press|media|hi|hey|office|help|no-?reply|privacy|legal|billing)@/i;
+async function webEmailDecisor(web, nombre) {
+  let base; try { base = new URL(String(web || "").startsWith("http") ? web : "https://" + web); } catch { return null; }
+  const dom = base.hostname.replace(/^www\./, "");
+  const nombreToks = String(nombre || "").toLowerCase().split(/\s+/).filter(x => x.length > 2);
+  const found = new Map(); // email -> score
+  for (const ruta of RUTAS_CONTACTO) {
+    let html = "";
+    try {
+      const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 7000);
+      const r = await fetch(base.origin + ruta, { signal: ctrl.signal, redirect: "follow", headers: { "User-Agent": "Mozilla/5.0 (compatible; LorenzoBot/1.0)" } });
+      clearTimeout(to);
+      if (!r.ok) continue;
+      html = await r.text();
+    } catch { continue; }
+    const crudos = html.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) || [];
+    for (let em of crudos) {
+      em = em.toLowerCase().replace(/\.$/, "");
+      if (!em.endsWith("@" + dom)) continue;              // solo emails del propio dominio de la empresa
+      if (/\.(png|jpg|jpeg|gif|svg|webp)$/.test(em)) continue;
+      let score = EMAIL_GENERICO.test(em) ? -2 : 3;
+      const local = em.split("@")[0];
+      for (const t of nombreToks) if (local.includes(t)) score += 5;
+      found.set(em, Math.max(found.get(em) ?? -99, score));
     }
-    const hd = await hunterDominio(r.web);
-    if (hd) return { email: hd.email, via: "Hunter (dominio)", nombre: hd.nombre || limpio(r.decisor_nombre), cargo: hd.cargo || limpio(r.decisor_cargo), linkedin: limpio(r.decisor_linkedin) };
+    const mejor = [...found.values()].sort((a, b) => b - a)[0];
+    if (mejor >= 5) break;                                // ya hay un personal que matchea el nombre: cortar
+  }
+  if (!found.size) return null;
+  const best = [...found.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (best[1] < 1) return null;                           // solo genéricos: no sirve para escribirle al decisor
+  return { email: best[0], nombre: nombre || null, cargo: null };
+}
+
+// Cascada ordenada POR COSTO (gratis primero, Apollo al final porque son solo ~75 créditos/mes):
+// 1) NUESTRO motor: scrape de la web de la empresa (gratis, ilimitado)
+// 2) Hunter (free ~25/mes): por nombre si lo hay, si no por dominio
+// 3) Apollo (ÚLTIMO recurso): por nombre, o People Search por dominio para descubrir al decisor
+async function decisorYEmail(r, emp) {
+  const web = r.web, nom = limpio(r.decisor_nombre), cargo = limpio(r.decisor_cargo), lk = limpio(r.decisor_linkedin);
+  // 1) NUESTRO — gratis
+  if (web) {
+    const w = await webEmailDecisor(web, nom);
+    if (w) return { email: w.email, via: "web propia", nombre: w.nombre || nom, cargo, linkedin: lk };
+  }
+  // 2) Hunter — free
+  if (nom) { const hu = await hunterMatch(nom, web); if (hu) return { email: hu, via: "Hunter", nombre: nom, cargo, linkedin: lk }; }
+  if (web) { const hd = await hunterDominio(web); if (hd) return { email: hd.email, via: "Hunter (dominio)", nombre: hd.nombre || nom, cargo: hd.cargo || cargo, linkedin: lk }; }
+  // 3) Apollo — último, para no quemar los 75 créditos
+  if (nom) { const ap = await apolloMatch(nom, emp, web); if (ap) return { email: ap, via: "Apollo", nombre: nom, cargo, linkedin: lk }; }
+  if (web) {
+    const gente = await apolloQuienes(web);
+    for (const g of gente.slice(0, 2)) { const ap = await apolloMatch(g.nombre, emp, web); if (ap) return { email: ap, via: "Apollo", nombre: g.nombre, cargo: g.cargo || cargo, linkedin: g.linkedin || lk }; }
   }
   return null;
 }
