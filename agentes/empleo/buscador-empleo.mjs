@@ -128,7 +128,7 @@ async function cerebro(perfil, yaTengo, cant) {
     perfil.linkedin ? "LINKEDIN: " + perfil.linkedin : "",
     perfil.ejemplo_mail ? "\n## MAIL QUE EL DUEÑO DEJÓ A MANO (es el tono EXACTO que quiere; copiá voz, estructura, largo y nivel de inglés. NO copies los datos de esa empresa ni su gancho, solo el estilo):\n" + perfil.ejemplo_mail : "",
     (perfil._enviados && perfil._enviados.length) ? "\n## ÚLTIMOS MAILS ENVIADOS POR EL CANDIDATO — LA VARA DE CALIDAD (imitá voz, enfoque, estructura y largo; NO copies los datos de esas empresas):\n" + perfil._enviados.map((m, i) => "--- MAIL " + (i + 1) + " (a " + m.empresa + ") ---\n" + m.mail_cuerpo).join("\n\n") : "",
-    (perfil._radar && perfil._radar.length) ? "\n## AVISOS FRESCOS DEL RADAR (bajados hoy de fuentes estructuradas, ya pasaron el filtro de rol/remoto/sueldo): EMPEZÁ investigando estos — verificá cada uno, encontrá al decisor y armá la ficha — y ADEMÁS sumá otros que encuentres por tu cuenta como siempre:\n- " + perfil._radar.join("\n- ") : "",
+    (perfil._radar && perfil._radar.length) ? "\n## AVISOS FRESCOS DEL RADAR (complemento para volumen; su match suele ser más bajo). Revisá los que peguen de verdad con los roles, PERO tu prioridad sigue siendo cazar startups de IA chicas con decisor identificable (match alto). Hacé LAS DOS COSAS; no te quedes solo con el radar:\n- " + perfil._radar.join("\n- ") : "",
     perfil.notas_estilo ? "\n## CÓMO LE GUSTAN LOS MAILS (respetalo):\n" + perfil.notas_estilo : "",
     "\n## MAIL BASE (respetá estructura y tono; completá {nombre} {empresa} {rol} {gancho})",
     "ASUNTO BASE: " + (perfil.mail_asunto || "(vacío)"),
