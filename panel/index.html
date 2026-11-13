@@ -2801,7 +2801,8 @@ function empMailEditor(e, pf){
   const {asunto, cuerpo} = empMailDe(e);
   const adj = empAdj[e.id]||[];
   return `<div class="emailbox">
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><span class="bs">Para</span><b style="font-size:13px">${esc(e.decisor_email)}</b><span class="bs" style="margin-left:auto">sale de <b style="color:var(--fg)">${esc(pf&&pf.email_envio||"tu Gmail")}</b></span></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px"><span class="bs">Para</span><input id="empto-${e.id}" value="${esc(e.decisor_email||"")}" placeholder="email@empresa.com" style="flex:1;min-width:220px;font-size:13px"><span class="bs" style="margin-left:auto">sale de <b style="color:var(--fg)">${esc(pf&&pf.email_envio||"tu Gmail")}</b></span></div>
+    <div class="bs" style="margin:0 0 8px;color:var(--faint);font-size:11px">Podés editarlo, sumar varios separados por coma, o borrar y poner otro.</div>
     <input id="empasunto-${e.id}" value="${esc(asunto)}" placeholder="Asunto" style="margin-bottom:8px">
     <textarea id="empcuerpo-${e.id}" rows="12">${esc(cuerpo)}</textarea>
     <div class="bs" style="margin:14px 0 10px;color:var(--accent);line-height:1.6">✍️ Escribí o corregí directo acá. Tocá <b>Guardar</b> y el motor copia tu tono en los próximos mails. <span style="color:var(--faint)">· v14</span></div>
@@ -2964,18 +2965,26 @@ async function empPresskitAdjunto(pf){
 }
 async function empEnviar(id, soloBorrador){
   const e=empleos.find(x=>x.id===id); if(!e) return; const pf=empPerfiles.find(p=>p.id===e.perfil_id);
+  // Destinatarios: del campo "Para" editable (varios separados por coma/; ), con fallback al email del decisor
+  const toInput=document.getElementById("empto-"+id);
+  const destinos=String((toInput?toInput.value:e.decisor_email)||"").split(/[,;\s]+/).map(s=>s.trim()).filter(Boolean);
+  const validos=[...new Set(destinos.filter(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)))];
   const {asunto,cuerpo}=await empCuerpoFinal(id); empResetIdioma(id);  // leer lo editado ANTES de redibujar
   if(!cuerpo.trim()){ note("El mail está vacío"); return; }
+  if(!validos.length){ note("Poné al menos un email válido en 'Para'"); return; }
   empBusy=id; renderApp();
   try{
     const adj=[]; const pk=await empPresskitAdjunto(pf); if(pk) adj.push(pk); for(const a of (empAdj[id]||[])) adj.push(a);
-    const body={to:e.decisor_email,subject:asunto,body:cuerpo,adjuntos:adj.slice(0,5),cuenta:(pf&&pf.cuenta)||"empleo"};
-    const r=await callFn(soloBorrador?"guardar-borrador":"enviar",body);
+    let r=null;
+    for(const to of validos){   // una copia a cada destinatario
+      const body={to,subject:asunto,body:cuerpo,adjuntos:adj.slice(0,5),cuenta:(pf&&pf.cuenta)||"empleo"};
+      r=await callFn(soloBorrador?"guardar-borrador":"enviar",body);
+    }
     const upd={mail_asunto:asunto,mail_cuerpo:cuerpo,updated_at:new Date().toISOString()};
-    if(!soloBorrador){ upd.status="enviado"; upd.enviado_at=new Date().toISOString(); }
+    if(!soloBorrador){ upd.status="enviado"; upd.enviado_at=new Date().toISOString(); if(validos[0]&&validos[0]!==e.decisor_email) upd.decisor_email=validos[0]; }
     await sb.from("empleos").update(upd).eq("id",id);
     empMailOpen=null; delete empAdj[id]; await empLoad();
-    note(soloBorrador?("📝 Guardado en tus borradores"+(r&&r.carpeta?" ("+r.carpeta+")":"")):"✓ Enviado a "+e.decisor_email, 1800);
+    note(soloBorrador?("📝 Guardado en tus borradores"+(r&&r.carpeta?" ("+r.carpeta+")":"")):"✓ Enviado a "+validos.join(", "), 1800);
   }catch(err){ note("No salió: "+String(err.message||err).slice(0,160),3500); }
   empBusy=null; renderApp();
 }
